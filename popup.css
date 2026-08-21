@@ -1,0 +1,1400 @@
+/* Popup styles. */
+
+:root {
+  --apple-blue: #0071e3;
+  --apple-blue-hover: #0077ed;
+  --apple-green: #34c759;
+  --apple-orange: #ff9500;
+  --apple-red: #ff3b30;
+
+  --bg-page: #f5f5f7;
+  --bg-grouped: #ffffff;
+
+  --label-primary: #111827;
+  --label-secondary: #4b5563;
+  --label-tertiary: #9ca3af;
+
+  --separator: rgba(60, 60, 67, 0.12);
+  --segmented-bg: rgba(118, 118, 128, 0.12);
+
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
+
+  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  width: 360px;
+  background-color: var(--bg-page);
+  color: var(--label-primary);
+  user-select: none;
+  overflow-x: hidden;
+}
+
+.apple-container {
+  padding: 12px;
+  position: relative;
+  min-height: 420px;
+}
+
+/* View Switching */
+.popup-view {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.popup-view.active {
+  display: flex;
+  animation: fadeIn 0.18s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Nav Bar */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 2px;
+}
+
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brand-svg {
+  flex-shrink: 0;
+}
+
+.app-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--label-primary);
+  letter-spacing: -0.015em;
+}
+
+.badge-pill {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--apple-blue);
+  background: rgba(0, 113, 227, 0.1);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  display: inline-block;
+  margin-left: 2px;
+  transition: all 0.2s ease;
+}
+
+.status-dot.translating {
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+  animation: pulseDot 1s infinite alternate;
+}
+
+@keyframes pulseDot {
+  from { transform: scale(0.85); opacity: 0.7; }
+  to { transform: scale(1.2); opacity: 1; }
+}
+
+.settings-btn {
+  width: 28px;
+  height: 28px;
+  background: #ffffff;
+  border: 0.5px solid var(--separator);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--label-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.settings-btn:hover {
+  background: #f0f0f2;
+  color: var(--label-primary);
+}
+
+.back-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--apple-blue);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.subview-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--label-primary);
+}
+
+/* 1. 顶部独立查词搜索栏 (Spotlight 级质感) */
+.top-search-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.search-bar-clean {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 113, 227, 0.22);
+  border-radius: var(--radius-md);
+  padding: 4px 8px;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.06);
+  transition: all 0.15s ease;
+}
+
+.search-bar-clean:focus-within {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}
+
+.search-icon-svg {
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.apple-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 4px;
+  font-size: 12.5px;
+  color: var(--label-primary);
+  outline: none;
+}
+
+.apple-search-btn {
+  display: inline-flex;
+  align-items: center;
+  background: var(--apple-blue);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.apple-search-btn:hover {
+  background: var(--apple-blue-hover);
+}
+
+.popup-dict-result-box {
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 0.5px solid var(--separator);
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  line-height: 1.5;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.dict-res-phonetic {
+  color: var(--apple-blue);
+  font-family: monospace;
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+.dict-res-trans {
+  font-weight: 650;
+  color: #111827;
+  font-size: 13.5px;
+}
+
+.dict-res-defs {
+  margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dict-res-pos {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--apple-blue);
+  background: rgba(0, 113, 227, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-right: 4px;
+}
+
+/* 2. Hero Section */
+.hero-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.apple-primary-btn.full-width {
+  width: 100%;
+  height: 44px;
+  padding: 10px 12px;
+  background: var(--apple-blue);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 113, 227, 0.25);
+}
+
+.apple-primary-btn.full-width:hover {
+  background: var(--apple-blue-hover);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.35);
+}
+
+.apple-primary-btn.full-width.active-state {
+  background: var(--apple-green);
+  box-shadow: 0 2px 6px rgba(52, 199, 89, 0.25);
+}
+
+.hero-sub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.apple-secondary-action-btn {
+  height: 40px;
+  padding: 8px 10px;
+  background: #ffffff;
+  color: var(--label-primary);
+  border: 0.5px solid var(--separator);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.apple-secondary-action-btn:hover {
+  background: #f8fafc;
+  border-color: var(--apple-blue);
+  color: var(--apple-blue);
+}
+
+/* Inset Group Cards */
+.inset-group {
+  background: var(--bg-grouped);
+  border-radius: var(--radius-lg);
+  border: 0.5px solid var(--separator);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 0.5px solid var(--separator);
+  gap: 8px;
+}
+
+.list-row:last-child {
+  border-bottom: none;
+}
+
+.list-row.clickable-row {
+  cursor: pointer;
+}
+
+.list-row.clickable-row:hover {
+  background: #f8fafc;
+}
+
+.list-row.vertical {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.row-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.row-title-with-svg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--label-primary);
+}
+
+.row-sub {
+  font-size: 11px;
+  color: var(--label-secondary);
+}
+
+/* In-Popup API Quick Drawer */
+.api-quick-drawer {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-top: 0.5px solid var(--separator);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drawer-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.apple-input.sm {
+  padding: 5px 8px;
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  border: 0.5px solid rgba(0, 0, 0, 0.15);
+  color: #111827;
+  outline: none;
+}
+
+.apple-input.sm:focus {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.15);
+}
+
+.drawer-action-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.drawer-test-status {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.drawer-test-status.success { color: var(--apple-green); }
+.drawer-test-status.error { color: var(--apple-red); }
+.drawer-test-status.loading { color: var(--apple-orange); }
+
+/* Live Preview Card */
+.popup-live-card-preview {
+  padding: 10px 12px;
+  background: #ffffff;
+  border-top: 0.5px solid var(--separator);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-mini-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--label-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.preview-mini-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #f8fafc;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 0.5px solid var(--separator);
+  text-align: left !important;
+}
+
+.preview-orig-text {
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.4;
+  text-align: left !important;
+  margin: 0;
+  padding: 0;
+}
+
+.preview-trans-text {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #111827;
+  line-height: 1.5;
+  text-align: left !important;
+  margin: 0;
+  padding: 2px 0;
+  transition: all 0.15s;
+}
+
+/* Font Stepper */
+.font-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f5f5f7;
+  border: 0.5px solid var(--separator);
+  border-radius: 8px;
+  padding: 2px 4px;
+}
+
+.stepper-btn {
+  background: #ffffff;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  padding: 3px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--apple-blue);
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.stepper-btn:hover {
+  background: #e5e5ea;
+}
+
+.stepper-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--label-primary);
+  min-width: 40px;
+  text-align: center;
+}
+
+/* Underline navigation without a pill background. */
+.popup-underline-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--separator);
+  padding: 0 4px;
+  gap: 12px;
+}
+
+.underline-tab-item {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 6px 2px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--label-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: -1px;
+}
+
+.underline-tab-item:hover {
+  color: var(--label-primary);
+}
+
+.underline-tab-item.active {
+  color: var(--apple-blue);
+  font-weight: 700;
+  border-bottom-color: var(--apple-blue);
+}
+
+.popup-full-vocab-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.vocab-card-mini {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 0.5px solid var(--separator);
+  border-radius: var(--radius-sm);
+}
+
+.vocab-word-bold {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.vocab-tag-pill {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--apple-blue);
+  background: rgba(0, 113, 227, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 4px;
+  text-transform: uppercase;
+}
+
+.vocab-phonetic-sub {
+  font-size: 10px;
+  color: var(--apple-blue);
+  margin-left: 4px;
+  font-family: monospace;
+}
+
+.vocab-trans-sub {
+  font-size: 11.5px;
+  color: #4b5563;
+  margin-top: 2px;
+}
+
+.vocab-del-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--label-tertiary);
+  font-size: 12px;
+  padding: 4px;
+}
+
+.vocab-del-btn:hover {
+  color: var(--apple-red);
+}
+
+.secondary-btn {
+  background: #f5f5f7;
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--label-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.secondary-btn.sm {
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.secondary-btn:hover {
+  background: #e5e5ea;
+}
+
+.apple-select {
+  appearance: none;
+  background: #f5f5f7 url('data:image/svg+xml;utf8,<svg width="8" height="5" viewBox="0 0 8 5" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L4 4L7 1" stroke="%234B5563" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat right 8px center;
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 4px 22px 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--label-primary);
+  outline: none;
+  cursor: pointer;
+  width: auto;
+  max-width: 100%;
+}
+
+.apple-select:focus {
+  border-color: var(--apple-blue);
+}
+
+.segmented-control {
+  display: flex;
+  background: var(--segmented-bg);
+  padding: 3px;
+  border-radius: 8px;
+  gap: 2px;
+}
+
+.segmented-control.sm .segment-item {
+  padding: 4px 10px;
+  font-size: 11.5px;
+}
+
+.segment-item {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--label-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.segment-item.active {
+  background: #ffffff;
+  color: var(--label-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.palette-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-dot.none {
+  background: #f5f5f7;
+  border: 1px dashed rgba(0, 0, 0, 0.3);
+}
+
+.color-dot:hover {
+  transform: scale(1.1);
+}
+
+.color-dot.active {
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+  transform: scale(1.12);
+}
+
+.apple-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.apple-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-knob {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e5e5ea;
+  transition: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 20px;
+}
+
+.switch-knob:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .switch-knob {
+  background-color: var(--apple-green);
+}
+
+input:checked + .switch-knob:before {
+  transform: translateX(16px);
+}
+
+.app-footer {
+  text-align: center;
+  padding-top: 2px;
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  color: var(--apple-blue);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.link-btn:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.link-btn svg {
+  stroke: currentColor;
+}
+
+/* Flat collection views. */
+.collection-row-title { color: #59616d; gap: 8px; }
+.collection-icon { flex: 0 0 auto; color: #6f7782; }
+.collection-open-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #939aa4;
+  cursor: pointer;
+}
+.collection-open-btn:hover { background: rgba(17,24,39,.05); color: #4b5563; }
+
+.popup-full-vocab-list { gap: 0; }
+.vocab-row-compact {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 28px;
+  gap: 8px;
+  align-items: start;
+  padding: 11px 2px 11px 0;
+  border-bottom: 1px solid var(--separator);
+}
+.vocab-row-compact:last-child { border-bottom: 0; }
+.vocab-row-compact-main { min-width: 0; }
+.vocab-row-compact-head { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.vocab-row-compact .vocab-word-bold { font-size: 14px; line-height: 1.35; color: #171a1f; font-weight: 700; overflow-wrap:anywhere; }
+.vocab-lang-compact { color:#9aa0aa; font-size:9.5px; font-weight:600; letter-spacing:.02em; }
+.vocab-row-compact .vocab-phonetic-sub { margin-top: 2px; color:#8a919c; font-size:10.5px; line-height:1.35; }
+.vocab-row-compact .vocab-trans-sub { margin-top: 4px; color:#515966; font-size:11.5px; line-height:1.5; }
+.vocab-delete-compact,
+.popup-highlight-delete { border-radius: 5px; color:#a3a8b0; background:transparent; border:0; }
+.vocab-delete-compact:hover,
+.popup-highlight-delete:hover { background:#f1f2f4; color:#5f6670; }
+
+.popup-highlight-group { padding: 0; border-bottom: 1px solid var(--separator); }
+.popup-highlight-group:last-child { border-bottom: 0; }
+.popup-highlight-group-head { padding: 12px 0 7px; }
+.popup-highlight-group-copy { min-width: 0; }
+.popup-highlight-group-title { color:#252a31; font-size:12.5px; font-weight:700; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.popup-highlight-group-domain { margin-top:2px; color:#9aa0a8; font-size:9.7px; line-height:1.3; }
+.popup-highlight-items { display:flex; flex-direction:column; }
+.popup-highlight-row { position:relative; padding:10px 30px 10px 0; border-top:1px solid rgba(60,60,67,.07); }
+.popup-highlight-original { color:#555d69; font-size:11.5px; line-height:1.52; }
+.popup-highlight-translation { margin-top:5px; color:#1f242b; font-size:12px; line-height:1.55; font-weight:600; }
+.popup-highlight-date { margin-top:5px; color:#a2a7ae; font-size:9.5px; }
+.popup-highlight-delete { position:absolute; top:7px; right:0; width:25px; height:25px; display:inline-flex; align-items:center; justify-content:center; padding:0; }
+
+
+/* ==========================================================================
+   主操作层级、滑动 Tab 与收藏入口
+   ========================================================================== */
+
+/* 网页双语翻译作为弹窗中最明确的主动作。 */
+.apple-primary-btn.full-width {
+  height: 70px;
+  border-radius: 12px;
+  font-size: 15px;
+  gap: 8px;
+  box-shadow: none;
+}
+.apple-primary-btn.full-width:hover { box-shadow: none; }
+.apple-primary-btn.full-width svg { width: 18px; height: 18px; }
+.hero-section { gap: 7px; }
+.hero-sub-grid { gap: 7px; }
+.apple-secondary-action-btn { height: 42px; box-shadow: none; }
+
+/* 搜索放到沉浸阅读/分栏对照之后，弱化为工具而非主操作。 */
+.top-search-section { margin-top: 1px; }
+.search-bar-clean {
+  border-color: var(--separator);
+  border-radius: 10px;
+  box-shadow: none;
+  padding: 5px 8px;
+}
+.search-bar-clean:focus-within { box-shadow: 0 0 0 2px rgba(0,113,227,.10); }
+.apple-search-input { font-size: 13px; padding: 7px 4px; }
+.apple-search-btn { font-size: 13px; padding: 6px 13px; }
+
+/* Sliding indicator for segmented controls. */
+.segmented-control {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.segment-indicator {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: 0;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.10);
+  transform: translateX(0);
+  transition: transform .22s cubic-bezier(.2,.8,.2,1);
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform, width;
+}
+.segment-item { position: relative; z-index: 1; }
+.segment-item.active { background: transparent; box-shadow: none; }
+
+/* 生词本语言栏使用移动下划线，而不是每个 tab 自己突然变色。 */
+.popup-underline-tabs { position: relative; }
+.underline-tab-indicator {
+  position: absolute;
+  height: 2px;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  background: var(--apple-blue);
+  transition: transform .22s cubic-bezier(.2,.8,.2,1), width .22s cubic-bezier(.2,.8,.2,1);
+  pointer-events: none;
+}
+.underline-tab-item.active { border-bottom-color: transparent; }
+
+/* 收藏入口：图标略放大，图标与文字距离收紧。 */
+.collection-row-title { gap: 5px !important; }
+.collection-icon { width: 17px !important; height: 17px !important; }
+.collection-open-btn svg { width: 15px; height: 15px; }
+
+/* ==========================================================================
+   Popup hierarchy and connected API state
+   ========================================================================== */
+.apple-secondary-action-btn { display:flex; align-items:center; justify-content:center; gap:7px; }
+.apple-secondary-action-btn .reader-action-icon { flex:0 0 auto; transform: translateY(.25px); }
+
+.api-quick-drawer.is-connected .drawer-input-group,
+.api-quick-drawer.is-connected .drawer-action-row { display:none !important; }
+.api-connected-summary {
+  width:100%; min-height:38px; box-sizing:border-box;
+  align-items:center; gap:8px; padding:8px 2px;
+  color:#303641; font-size:13px;
+}
+.connected-dot { width:7px; height:7px; border-radius:50%; background:#22a06b; flex:0 0 auto; }
+.connected-copy { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.api-edit-btn { border:0; background:transparent; color:#0071e3; font:inherit; font-weight:650; cursor:pointer; padding:3px 2px; }
+.api-edit-btn:hover { text-decoration:underline; }
+.app-footer { justify-content:space-between; }
+.donate-link { margin-left:auto; }
+.popup-dict-sense-list{display:grid!important;gap:3px!important;font-style:normal!important}
+.popup-dict-sense-list i{display:grid!important;grid-template-columns:16px minmax(0,1fr)!important;gap:4px!important;font-style:normal!important;font-weight:540!important;line-height:1.48!important}
+.popup-dict-sense-list em{font-style:normal!important;color:#9aa1aa!important;font-size:10.5px!important;padding-top:1px!important}
+
+/* “参考原网页风格”在预览中保持克制，不制造额外视觉符号。 */
+.preview-trans-text[data-native="true"] { opacity:.72; }
+
+/* Keep secondary collection information readable without extra cards. */
+.vocab-lang-compact,
+.vocab-row-compact .vocab-phonetic-sub,
+.vocab-row-compact .vocab-trans-sub,
+.popup-highlight-group-title,
+.popup-highlight-group-domain,
+.popup-highlight-original,
+.popup-highlight-translation,
+.popup-highlight-date { font-size:13px !important; }
+.vocab-row-compact .vocab-trans-sub,
+.popup-highlight-original,
+.popup-highlight-translation { line-height:1.52; }
+
+/* Persistent site blacklist dock. */
+.site-blacklist-dock { position:sticky; bottom:0; z-index:40; margin:2px -2px -4px; padding:9px 10px; display:flex; align-items:center; gap:10px; background:rgba(248,248,249,.96); border-top:1px solid rgba(60,60,67,.12); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+.site-dock-copy { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.site-dock-copy > span { font-size:13px; line-height:1.25; color:#4e5661; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.site-dock-copy small { font-size:13px; line-height:1.25; color:#9298a1; transition:color .18s ease; }
+.site-dock-copy small.show-note { color:#4f5965; }
+.site-dock-action { flex:0 0 auto; border:0; border-radius:6px; background:#1f2328; color:#fff; min-height:30px; padding:0 10px; font-size:13px; font-weight:650; cursor:pointer; }
+.site-dock-action.is-blocked { background:#f0f1f3; color:#c43232; }
+
+
+/* Local collections and multilingual vocabulary. */
+.collection-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 12px}
+.collection-home-card{appearance:none;min-height:88px;border:1px solid #e4e6e9;border-radius:9px;background:#fff;color:#343941;padding:13px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:3px;text-align:left;cursor:pointer;transition:border-color .14s ease,background .14s ease}
+.collection-home-card:hover{background:#fafafa;border-color:#d4d7dc}.collection-home-card .collection-icon{margin-bottom:auto;width:20px!important;height:20px!important;color:#69717c}.collection-card-title{font-size:14px;font-weight:650}.collection-card-sub{font-size:13px;color:#949aa3}
+.visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.popup-vocab-filter-row{padding:8px 12px}.popup-vocab-filter{width:100%;font-size:13px!important}
+.vocab-lang-compact,.vocab-row-compact .vocab-phonetic-sub,.vocab-row-compact .vocab-trans-sub{font-size:13px!important}.vocab-row-compact .vocab-word-bold{font-size:14.5px!important}.vocab-row-compact .vocab-trans-sub{line-height:1.5!important}
+.popup-dict-loading,.popup-dict-error{font-size:13px;color:#7d838c}.popup-dict-error{color:#b54845}.popup-dict-wordline{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-bottom:8px}.popup-dict-wordline strong{font-size:17px;color:#20242a}.popup-dict-wordline span{font-size:13px;color:#8b9199}.popup-dict-cross,.popup-dict-senses{display:grid;gap:5px}.popup-dict-cross>div,.popup-dict-senses>div{display:grid;grid-template-columns:42px 1fr;gap:8px;align-items:start}.popup-dict-cross span,.popup-dict-senses span{font-size:13px;color:#969ca4}.popup-dict-cross b,.popup-dict-senses b{font-size:13.5px;line-height:1.5;font-weight:500;color:#3c424a}.popup-dict-translation{font-size:14px;line-height:1.5;color:#30353c}
+
+/* ==========================================================================
+   Compact controls, visual collections and hierarchy
+   ========================================================================== */
+.native-select-hidden{position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important}
+.popup-select{position:relative;min-width:138px;max-width:190px}.popup-select-trigger{width:100%;height:32px;border:1px solid var(--separator);border-radius:8px;background:#fff;color:#333940;padding:0 9px 0 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;font:inherit;font-size:13px;cursor:pointer}.popup-select-trigger span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.popup-select-trigger svg{width:14px;height:14px;fill:none;stroke:#7e8792;stroke-width:1.8}.popup-select.open .popup-select-trigger{border-color:#9ab2cc;box-shadow:0 0 0 2px rgba(0,113,227,.07)}
+.popup-select-menu{display:none;position:absolute;z-index:120;top:36px;right:0;min-width:100%;width:max-content;max-width:260px;max-height:238px;overflow:auto;padding:4px;border:1px solid rgba(17,24,39,.13);border-radius:9px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.13)}.popup-select.open .popup-select-menu{display:block;animation:popupMenuIn .13s ease-out}@keyframes popupMenuIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}.popup-select-menu button{border:0;width:100%;border-radius:6px;background:transparent;padding:7px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#444b54;font:inherit;font-size:13px;text-align:left;cursor:pointer}.popup-select-menu button:hover{background:#f3f5f7}.popup-select-menu button.active{color:#171b20;font-weight:650}.popup-select-menu button svg{width:13px;height:13px;fill:none;stroke:#0071e3;stroke-width:2}
+
+/* Collections live at the bottom of main content, aligned with inset cards. */
+.collection-card-grid{margin:10px 12px 12px!important;gap:8px!important}.collection-home-card{position:relative;overflow:hidden;min-height:82px!important;padding:12px 13px!important;border-radius:10px!important;border:1px solid rgba(17,24,39,.08)!important;box-shadow:none!important;justify-content:flex-end!important}.collection-home-card::after{content:"";position:absolute;width:76px;height:76px;border-radius:50%;right:-23px;top:-29px;opacity:.55;pointer-events:none}.collection-home-card:first-child{background:linear-gradient(145deg,#fbfdff,#f4f8fc)!important}.collection-home-card:first-child::after{background:rgba(95,149,204,.12)}.collection-home-card:nth-child(2){background:linear-gradient(145deg,#fffdf9,#faf6ee)!important}.collection-home-card:nth-child(2)::after{background:rgba(203,154,78,.12)}.collection-home-card .collection-icon{position:absolute;top:12px;left:13px;width:21px!important;height:21px!important;color:#68727e!important}.collection-home-card:first-child .collection-icon{color:#507aa5!important}.collection-home-card:nth-child(2) .collection-icon{color:#99703e!important}.collection-card-title{position:relative;z-index:1;font-size:14px!important}.collection-card-sub{position:relative;z-index:1;font-size:13px!important}
+
+/* API model selection in popup: text input and preset action are separate. */
+.popup-model-picker{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;position:relative}.popup-model-picker>.apple-input{min-width:0}.popup-model-preset-btn{height:34px;border:1px solid var(--separator);border-radius:7px;background:#fff;color:#59616c;padding:0 9px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}.popup-model-menu{display:none;position:absolute;z-index:140;right:0;top:38px;min-width:220px;padding:4px;border:1px solid rgba(17,24,39,.13);border-radius:8px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.13)}.popup-model-picker.open .popup-model-menu{display:block}.popup-model-menu button{width:100%;border:0;border-radius:6px;background:transparent;padding:7px 8px;text-align:left;color:#414851;font:inherit;font-size:13px;cursor:pointer}.popup-model-menu button:hover{background:#f3f5f7}.popup-model-menu button.active{font-weight:650;color:#111827}.popup-model-menu>div{padding:8px;color:#8d949d;font-size:13px}
+
+/* Primary selectors should not look visually thin. */
+#view-main .inset-group .list-row{min-height:46px}.row-title{font-size:13.5px!important}.row-sub:empty{display:none}.popup-live-card-preview{margin-top:3px}.preview-mini-title{font-size:13px!important;color:#737b86!important}
+
+/* Keep footer quiet; blacklist dock remains the lowest fixed action. */
+.app-footer{padding:5px 13px 7px!important}.site-blacklist-dock{margin-top:0!important}.link-btn{font-size:13px!important}
+
+/* Direct render-style choices. */
+.popup-style-choice-grid{width:218px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.popup-style-choice-grid button{min-width:0;height:42px;padding:5px 4px;border:1px solid rgba(15,23,42,.08);border-radius:7px;background:#fff;color:#535964;font:500 11.5px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:border-color .16s ease,background .16s ease,transform .16s ease}.popup-style-choice-grid button:hover{background:#f8f9fb}.popup-style-choice-grid button.active{border-color:#20242b;background:#f5f6f8;color:#111827;box-shadow:inset 0 0 0 .5px #20242b}.popup-style-choice-grid i{display:block;width:25px;height:7px;border-radius:2px;position:relative}.ps-native{background:linear-gradient(90deg,#b8c0ca 0 52%,#dfe3e8 52%)}.ps-classic{background:linear-gradient(#9da5af 0 2px,transparent 2px 4px,#c6ccd3 4px 6px)}.ps-highlight{background:rgba(250,221,101,.72)}.ps-underline{border-bottom:1.5px solid #3978c8;border-radius:0!important}.ps-hover{background:#c5cbd2;opacity:.42}.ps-blur{background:#b7bec6;filter:blur(1.5px)}.ps-click{background:#30343a}.app-footer:empty{display:none}.site-dock-copy>span{max-width:205px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.site-blacklist-dock{position:relative}.site-dock-toast{position:absolute;left:12px;right:12px;bottom:calc(100% + 7px);padding:8px 10px;border-radius:8px;background:rgba(28,30,34,.94);color:#fff;font-size:12px;line-height:1.35;opacity:0;transform:translateY(4px);pointer-events:none;transition:.18s ease;box-shadow:0 5px 16px rgba(0,0,0,.14)}.site-dock-toast.show-note{opacity:1;transform:translateY(0)}
+
+/* Collection cards align with the main inset groups. */
+.collection-card-grid{margin:0!important;gap:8px!important}.collection-home-card{min-height:78px!important;border-radius:9px!important;padding:12px!important}.collection-home-card::before{content:"";position:absolute;right:11px;top:10px;width:30px;height:30px;opacity:.35;pointer-events:none;background-repeat:no-repeat;background-position:center;background-size:contain}.collection-home-card:first-child::before{background-image:linear-gradient(90deg,transparent 0 18%,rgba(71,111,151,.35) 18% 22%,transparent 22% 46%,rgba(71,111,151,.26) 46% 50%,transparent 50% 74%,rgba(71,111,151,.18) 74% 78%,transparent 78%)}.collection-home-card:nth-child(2)::before{border:1px solid rgba(153,112,62,.22);border-radius:5px;box-sizing:border-box;background:linear-gradient(135deg,transparent 43%,rgba(153,112,62,.18) 44% 48%,transparent 49%)}.collection-home-card::after{width:64px!important;height:64px!important;right:-18px!important;top:-24px!important;opacity:.42!important}.collection-home-card .collection-icon{top:11px!important;left:12px!important}.collection-card-title{font-size:13.5px!important}.collection-card-sub{font-size:12.5px!important}
+.popup-local-dicts{margin-top:10px;padding-top:9px;border-top:1px solid #eef0f2;display:grid;gap:8px}
+.popup-local-dict{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;align-items:start}
+.popup-local-dict span{font-size:13px;color:#8b9199;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.popup-local-dict b{font-size:13.5px;line-height:1.48;font-weight:500;color:#3b4149;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* Readable compact controls. */
+.popup-style-choice-grid button{font-size:13px!important}
+.collection-card-sub{font-size:13px!important}
+
+
+/* Layout safeguards. */
+.visually-hidden-select{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;clip-path:inset(50%)!important;white-space:nowrap!important;border:0!important;opacity:0!important;pointer-events:none!important}
+/* Custom menus must be allowed to escape their settings group. */
+.inset-group{overflow:visible!important;position:relative}
+.popup-select.open,.popup-model-picker.open{z-index:500!important}
+.popup-select-menu,.popup-model-menu{z-index:520!important}
+.render-style-row{align-items:stretch!important;gap:9px!important}
+.render-style-row>.row-label{width:100%!important;min-width:0!important}
+.render-style-row .row-title{white-space:nowrap!important}
+.popup-style-choice-grid{width:100%!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important}
+.popup-style-choice-grid button{height:44px!important;font-size:12px!important}
+/* The three stepper pieces are enough; no extra surrounding capsule. */
+.font-stepper{background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;gap:5px!important}
+.stepper-btn{border:1px solid var(--separator)!important;border-radius:7px!important;background:#fff!important;min-width:42px!important}
+.stepper-val{min-width:48px!important;text-align:center!important;border:0!important;background:transparent!important}
+/* Collections are deliberately quiet and live near the bottom. */
+.collection-card-grid{margin:12px 0 10px!important;gap:8px!important}
+.collection-home-card{min-height:66px!important;padding:12px 13px!important;justify-content:center!important;background:#fff!important;border:1px solid rgba(17,24,39,.09)!important;overflow:hidden!important}
+.collection-home-card:first-child{background:linear-gradient(145deg,#fbfdff,#f7fafc)!important}
+.collection-home-card:nth-child(2){background:linear-gradient(145deg,#fffdfa,#fbf8f2)!important}
+.collection-home-card::before,.collection-home-card::after,.collection-home-card .collection-icon{display:none!important}
+.collection-card-title{font-size:13.5px!important;font-weight:680!important}
+.collection-card-sub{font-size:12.5px!important;color:#8a919b!important;margin-top:2px!important}
+
+
+/* Popup details. */
+.brand-group{gap:7px}.badge-pill{font-size:11.5px!important;font-weight:650!important;background:rgba(0,113,227,.08)!important;border-radius:6px!important;padding:3px 6px!important}.settings-btn{width:auto!important;height:30px!important;border-radius:8px!important;padding:0 9px!important;gap:5px!important;font-size:12.5px!important;font-weight:620!important}.settings-btn svg{width:14px;height:14px}.render-style-row{flex-direction:column!important;align-items:stretch!important}.render-style-row>.row-label{width:auto!important}.popup-style-choice-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}.ps-italic{background:transparent!important;border-bottom:0!important}.ps-italic::after{content:"Aa";font:italic 600 11px/1 Georgia,serif;color:#626b76}.popup-style-choice-grid button[hidden]{display:none!important}.popup-live-card-preview{border-top:0!important}.popup-color-palette,.text-color-palette{display:flex;align-items:center;gap:8px}.popup-color-palette button,.text-color-palette button{width:21px;height:21px;padding:0;border-radius:50%;border:1px solid rgba(15,23,42,.12);background:var(--c,#fff);cursor:pointer;box-shadow:0 0 0 2px transparent}.popup-color-palette button.active,.text-color-palette button.active{box-shadow:0 0 0 2px #fff,0 0 0 4px #4f5965}.popup-color-palette .inherit-color,.text-color-palette .inherit-color{background:#fff;color:#5f6772;font:650 11px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}.compact-color-row{gap:8px!important}.collection-card-grid{margin:8px 0 4px!important}.collection-home-card,.collection-home-card:first-child,.collection-home-card:nth-child(2){background:#fff!important}.site-blacklist-dock{position:fixed!important;left:12px!important;right:12px!important;bottom:10px!important;z-index:700!important;margin:0!important;box-shadow:0 8px 24px rgba(15,23,42,.10)!important;border:1px solid rgba(17,24,39,.10)!important;background:rgba(255,255,255,.96)!important;backdrop-filter:blur(14px)!important}#view-main{padding-bottom:52px!important}.selection-tool-btn{} .popup-vocab-filter-row{gap:10px!important}.back-nav-btn{display:inline-flex!important;align-items:center!important;height:30px!important;padding:0 6px!important;border-radius:6px!important;color:#59616d!important}.back-nav-btn:hover{background:#f0f2f4!important}.popup-full-vocab-list{margin-top:2px!important}
+
+/* Popup layout details. */
+#view-main.active{padding-bottom:58px!important}
+.collection-card-grid{margin-bottom:4px!important;gap:8px!important}
+.collection-home-card{background:#fff!important;border-color:#e5e7eb!important;box-shadow:none!important}
+.site-blacklist-dock{position:fixed!important;left:12px!important;right:12px!important;bottom:10px!important;z-index:1000!important}
+.settings-btn{gap:5px!important;padding:0 9px!important;min-width:auto!important}
+.popup-style-choice-grid button[hidden]{display:none!important}
+
+/* Popup interactions. */
+.inline-action-group{display:flex;align-items:center;gap:9px}.text-action-btn{border:0;background:transparent;color:#65707c;font:560 12.5px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;padding:5px 3px;cursor:pointer;border-radius:5px}.text-action-btn:hover{color:#1f252c;background:#f3f5f7}.collection-home-card{align-items:flex-start!important;text-align:left!important}.collection-card-grid{margin-top:6px!important}.popup-style-choice-grid button{min-height:44px!important}
+
+/* Popup control consolidation. */
+.badge-pill{display:none!important}
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#34c759;box-shadow:0 0 0 2px rgba(52,199,89,.10)}
+.popup-live-card-preview{border-radius:0 0 10px 10px!important;overflow:hidden!important}
+.collection-card-grid{margin:6px 0 2px!important;gap:7px!important}
+.collection-home-card{min-height:58px!important;padding:10px 12px!important;position:relative!important}
+.collection-chevron{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:20px;line-height:1;color:#a1a7af;font-weight:400}
+.collection-card-title,.collection-card-sub{padding-right:18px}
+
+/* fixed, flush blacklist strip — deliberately weaker than the main actions */
+.site-blacklist-dock{position:fixed!important;left:0!important;right:0!important;bottom:0!important;z-index:1000!important;margin:0!important;padding:8px 12px!important;border:0!important;border-top:1px solid rgba(17,24,39,.09)!important;border-radius:0!important;background:rgba(249,249,250,.97)!important;backdrop-filter:blur(16px)!important;box-shadow:none!important}
+#view-main.active{padding-bottom:48px!important}
+.site-dock-toast{left:10px!important;right:10px!important;bottom:calc(100% + 6px)!important}
+
+/* compact color chooser */
+.popup-color-select{position:relative;min-width:128px}
+.popup-color-trigger{width:100%;height:32px;border:1px solid rgba(17,24,39,.10);border-radius:7px;background:#fff;padding:0 8px;display:flex;align-items:center;gap:7px;color:#4c5561;font:520 13px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;cursor:pointer}
+.popup-color-trigger i,.popup-color-menu button i{width:12px;height:12px;border-radius:50%;display:inline-block;flex:0 0 auto;background:var(--c,#111827);border:1px solid rgba(17,24,39,.10)}
+.popup-color-trigger i.color-wheel-dot,.popup-color-menu button i.color-wheel-dot{
+  width:14px;height:14px;flex-basis:14px;border:1px solid rgba(17,24,39,.08);box-shadow:0 1px 2px rgba(15,23,42,.12),inset 0 0 0 .5px rgba(255,255,255,.55)
+}
+.popup-color-trigger span{flex:1;text-align:left}.popup-color-trigger svg{width:14px;height:14px;fill:none;stroke:#8a929b;stroke-width:1.8;transition:transform .16s ease}
+.popup-color-select.open .popup-color-trigger svg{transform:rotate(180deg)}
+.popup-color-menu{position:absolute;right:0;top:calc(100% + 5px);z-index:850;min-width:148px;padding:5px;border:1px solid rgba(17,24,39,.10);border-radius:9px;background:rgba(255,255,255,.98);box-shadow:0 10px 28px rgba(15,23,42,.13);display:none}
+.popup-color-select.open .popup-color-menu{display:grid}
+.popup-color-menu button{border:0;background:transparent;border-radius:6px;min-height:31px;padding:0 7px;display:flex;align-items:center;gap:8px;text-align:left;color:#555f6b;font:500 13px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;cursor:pointer}
+.popup-color-menu button:hover{background:#f4f5f7}.popup-color-menu button.active{background:#f0f2f5;color:#161a20;font-weight:650}
+
+/* dictionary enablement is a different level from trigger method */
+.popup-trigger-mode-row{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:1px 0 7px;padding:0 12px 7px}
+.popup-trigger-mode-row button{height:31px;border:1px solid rgba(17,24,39,.09);border-radius:7px;background:#fff;color:#636c77;font:520 12.5px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;cursor:pointer;transition:.15s ease}
+.popup-trigger-mode-row button:hover{background:#f7f8f9}.popup-trigger-mode-row button.active{border-color:#3d4651;background:#f2f3f5;color:#111827;font-weight:650}
+.popup-trigger-mode-row.is-disabled{opacity:.42}.popup-trigger-mode-row.is-disabled button{cursor:default}
+
+.popup-highlight-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:205px}
+.popup-highlight-grid button{border:1px solid rgba(17,24,39,.08);border-radius:7px;background:#fff;min-height:42px;padding:5px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:#68717b}
+.popup-highlight-grid button.active{border-color:#313842;background:#f5f6f7;color:#171b20;box-shadow:inset 0 0 0 .5px #313842}
+.popup-highlight-grid b{font-size:11.5px;font-weight:600}.mini-highlight{font-size:10px;line-height:1.25;color:#30343a}.mini-highlight.soft{background:rgba(253,224,71,.38)}.mini-highlight.full{background:rgba(253,224,71,.68)}.mini-highlight.line{border-bottom:2px solid rgba(234,179,8,.72)}
+
+/* keep local-dictionary priority quiet */
+#toggle-local-dict-priority{accent-color:#111827}
+#btn-open-local-dict{white-space:nowrap}
+
+/* empty vocab view must not jump when view mode changes */
+.popup-full-vocab-list,.popup-full-highlight-list{min-height:112px}
+.vocab-empty-mini,.highlight-empty-mini{min-height:112px;display:grid;place-items:center;text-align:center;margin:0!important;padding:18px 12px!important;box-sizing:border-box}
+
+
+/* ==========================================================================
+   Popup interaction details
+   ========================================================================== */
+.popup-dictionary-group .list-row:first-child{border-bottom:0!important;padding-bottom:5px!important}
+.popup-trigger-mode-row{margin:4px 10px 8px!important;padding:0!important;border:0!important;gap:7px!important}
+.popup-trigger-mode-row button{min-height:34px!important;border-radius:7px!important}
+.local-dict-link{display:inline-flex!important;align-items:center!important;gap:4px!important;color:#3c6793!important;font-weight:620!important;padding:5px 6px!important}
+.local-dict-link:hover{background:#eef4fa!important;color:#24547f!important}
+.collection-card-grid{margin-top:5px!important;margin-bottom:3px!important;gap:7px!important}
+.collection-home-card{min-height:68px!important;padding:11px 12px!important;border-radius:9px!important;border:1px solid rgba(17,24,39,.075)!important}
+.collection-home-card:first-child{background:linear-gradient(145deg,#fbfdff,#f6f9fc)!important}
+.collection-home-card:nth-child(2){background:linear-gradient(145deg,#fffdf9,#fbf8f2)!important}
+.collection-home-card::after{opacity:.22!important}
+.collection-card-title{font-size:13.5px!important}
+.collection-card-sub{font-size:12.5px!important}
+.site-blacklist-dock{min-height:42px!important}
+.popup-style-choice-grid button{overflow:hidden!important}
+.popup-live-card-preview{border-radius:0 0 10px 10px!important;overflow:hidden!important}
+.api-connected-summary{color:#24734f!important;background:#f2faf5!important;border:1px solid #d9ede0!important}
+.api-connected-summary .connected-copy::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#34a56f;margin-right:6px;vertical-align:1px}
+
+/* Context options sit directly below the presentation-style grid. */
+.popup-style-dependent-options{display:grid;grid-template-rows:0fr;opacity:0;margin-top:0;transition:grid-template-rows .18s ease,opacity .16s ease,margin-top .18s ease;overflow:hidden}
+.popup-style-dependent-options.has-option{grid-template-rows:1fr;opacity:1;margin-top:8px}
+.popup-style-option{min-height:0;display:flex;align-items:center;gap:9px;padding:8px 9px;border:1px solid rgba(15,23,42,.08);border-radius:8px;background:#fafbfc;color:#626b76;font-size:11.5px}
+.popup-style-option[hidden]{display:none!important}
+.popup-style-option>span:first-child{flex:0 0 auto;font-weight:620;color:#4f5864;white-space:nowrap}
+.popup-style-option .palette-bar.compact{display:flex;flex:1;align-items:center;justify-content:flex-end;gap:7px;padding:0;margin:0}
+.popup-style-option .palette-bar.compact .color-dot{width:20px;height:20px;flex:0 0 20px}
+.popup-underline-picker{display:flex;align-items:center;gap:4px;flex:1;min-width:0}
+.popup-underline-picker button{width:24px;height:24px;padding:0;border:1px solid rgba(15,23,42,.08);border-radius:6px;background:#fff;position:relative;cursor:pointer}
+.popup-underline-picker button::after{content:"";position:absolute;left:5px;right:5px;top:11px;border-top:2px solid #65707c}
+.popup-underline-picker button[data-value="dotted"]::after{border-top-style:dotted}
+.popup-underline-picker button[data-value="dashed"]::after{border-top-style:dashed}
+.popup-underline-picker button[data-value="double"]::after{border-top:3px double #65707c}
+.popup-underline-picker button[data-value="wavy"]::after{border:0;height:5px;top:9px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='5' viewBox='0 0 12 5'%3E%3Cpath d='M0 3 Q3 0 6 3 T12 3' fill='none' stroke='%2365707c' stroke-width='1.5'/%3E%3C/svg%3E") repeat-x center/12px 5px}
+.popup-underline-picker button.active{border-color:#48515d;background:#fff;box-shadow:inset 0 0 0 1px #48515d}
+.compact-style-select{width:78px!important;min-width:78px!important;height:28px!important;font-size:11.5px!important;padding:0 22px 0 8px!important}
+
+/* ==========================================================================
+   Popup connection and collections
+   ========================================================================== */
+.api-connected-summary{width:100%!important;min-height:32px!important;padding:5px 0!important;background:transparent!important;border:0!important;border-radius:0!important;color:#555d67!important;display:flex;align-items:center!important;gap:8px!important;box-sizing:border-box!important}
+.api-connected-summary .connected-copy::before,.connected-dot{display:none!important;content:none!important}.connected-copy{font-size:12.5px!important;color:#555d67!important;line-height:1.3!important}.api-edit-btn{margin-left:auto!important;text-decoration:none!important}
+.popup-model-preset-btn{height:34px!important;min-height:34px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;line-height:1!important;padding-top:0!important;padding-bottom:0!important;box-sizing:border-box!important}
+#view-vocab .nav-bar,#view-highlight .nav-bar{min-height:42px!important;display:grid!important;grid-template-columns:1fr auto 1fr!important;align-items:center!important;gap:8px!important}.back-nav-btn{justify-self:start!important;height:34px!important;min-height:34px!important;padding:0 9px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;line-height:1!important;font-size:12.5px!important}.subview-title{justify-self:center!important}.nav-bar .secondary-btn.sm{justify-self:end!important}
+.popup-full-vocab-list{max-height:360px!important;padding:2px 0 8px!important}.vocab-row-compact{grid-template-columns:minmax(0,1fr) 30px!important;gap:10px!important;padding:12px 2px!important;align-items:center!important}.vocab-row-compact-head{align-items:baseline!important;gap:7px!important}.vocab-lang-compact{font-size:11px!important;color:#9aa1aa!important}.vocab-row-compact .vocab-phonetic-sub{margin:3px 0 0!important;font-family:inherit!important;font-size:12px!important;color:#7d8691!important;line-height:1.4!important}.vocab-row-compact .vocab-trans-sub{margin:5px 0 0!important;font-size:13px!important;color:#404852!important;line-height:1.5!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:3!important;overflow:hidden!important}.vocab-delete-compact{width:30px!important;height:30px!important;display:grid!important;place-items:center!important;padding:0!important}
+.popup-highlight-row{padding:12px 34px 12px 0!important}.popup-highlight-original{font-size:12.5px!important;line-height:1.6!important;white-space:pre-wrap!important}.popup-highlight-translation{font-size:12.5px!important;line-height:1.6!important;font-weight:520!important;white-space:pre-wrap!important;padding-left:9px!important;border-left:2px solid #e3e6ea!important}.popup-highlight-date{font-size:10.5px!important}
+.popup-dict-redirect{margin:0 0 8px;padding:6px 8px;border-radius:6px;background:#f6f7f8;color:#747c86;font-size:11.5px;line-height:1.45}.popup-dict-zh-defs{display:flex;flex-direction:column;gap:5px;margin:7px 0 10px}.popup-dict-zh-defs>div{display:grid;grid-template-columns:20px minmax(0,1fr);gap:7px;align-items:start}.popup-dict-zh-defs span{color:#9aa1aa;font-size:11.5px;text-align:right;line-height:1.55}.popup-dict-zh-defs b{color:#303740;font-size:12.5px;font-weight:520;line-height:1.55}
+
+/* Connected state and vocabulary list. */
+.api-connected-summary{min-height:38px!important;padding:6px 9px!important;border:1px solid #e7e9ec!important;border-radius:9px!important;background:#f8f9fa!important;color:#555d67!important}.api-connected-summary .connected-copy::before{content:"✓"!important;display:inline-grid!important;place-items:center!important;width:16px!important;height:16px!important;margin-right:5px!important;color:#2e8a5f!important;font-size:12px!important;font-weight:750!important;vertical-align:0!important}.connected-dot{display:none!important}
+.popup-full-vocab-list{padding:4px 0 10px!important}.vocab-row-compact{grid-template-columns:minmax(0,1fr) 28px!important;padding:11px 3px!important;border-bottom:1px solid #eef0f2!important}.vocab-row-compact-main{min-width:0!important}.vocab-row-compact-head{display:flex!important;align-items:baseline!important;min-width:0!important}.vocab-word-bold{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}.vocab-lang-compact{margin-left:auto!important;flex:none!important;padding:0!important;background:none!important;border:0!important}.vocab-phonetic-sub{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}.vocab-trans-sub{-webkit-line-clamp:2!important;margin-top:4px!important}.vocab-delete-compact{opacity:.45!important;border-radius:7px!important}.vocab-row-compact:hover .vocab-delete-compact{opacity:1!important}
+
+/* Vocabulary details. */
+.vocab-row-compact.has-detail .vocab-row-compact-main{cursor:pointer!important;border-radius:7px!important;padding:2px 3px!important;margin:-2px -3px!important;transition:background .14s ease!important}
+.vocab-row-compact.has-detail .vocab-row-compact-main:hover{background:#f7f8f9!important}
+.vocab-row-compact.detail-open{align-items:start!important}
+.vocab-row-compact.detail-open .vocab-trans-sub{-webkit-line-clamp:unset!important;display:block!important}
+.popup-vocab-detail{margin-top:9px!important;padding-top:9px!important;border-top:1px solid #eceff2!important;color:#535c66!important}
+.popup-vocab-detail[hidden]{display:none!important}
+.popup-vocab-detail-group+ .popup-vocab-detail-group{margin-top:9px!important}
+.popup-vocab-detail-group b{display:block!important;margin-bottom:5px!important;color:#7b848e!important;font-size:10.5px!important;font-weight:650!important}
+.popup-vocab-detail-group p{margin:0 0 5px!important;font-size:11.5px!important;line-height:1.55!important;color:#4c555f!important;white-space:normal!important}
+.popup-vocab-detail-group p span{display:block!important;margin-bottom:2px!important;color:#9098a1!important;font-size:10.5px!important}
+
+
+/* Popup vocabulary library. */
+#view-vocab .nav-bar{padding-bottom:7px!important;border-bottom:1px solid #eef0f2!important}
+.popup-full-vocab-list{max-height:382px!important;padding:6px 0 12px!important}
+.vocab-row-compact{position:relative!important;grid-template-columns:minmax(0,1fr)!important;gap:0!important;padding:12px 34px 12px 4px!important;border-bottom:1px solid #f0f1f3!important;align-items:start!important;transition:background .13s ease!important}
+.vocab-row-compact:last-child{border-bottom:0!important}.vocab-row-compact:hover{background:#fafbfc!important}
+.vocab-row-compact-main{padding:0!important;margin:0!important;border-radius:0!important;background:transparent!important}.vocab-row-compact.has-detail .vocab-row-compact-main:hover{background:transparent!important}
+.vocab-row-compact-head{display:flex!important;align-items:baseline!important;gap:8px!important}.vocab-word-bold{font-size:15px!important;font-weight:700!important;color:#232930!important;letter-spacing:-.01em!important}.vocab-lang-compact{margin-left:0!important;font-size:10.5px!important;color:#99a0a9!important;text-transform:none!important}
+.vocab-phonetic-sub{margin-top:3px!important;font-size:12px!important;color:#858d97!important;line-height:1.35!important}.vocab-trans-sub{margin-top:5px!important;font-size:12.8px!important;line-height:1.55!important;color:#49525c!important;-webkit-line-clamp:2!important}
+.vocab-delete-compact{position:absolute!important;right:3px!important;top:11px!important;width:27px!important;height:27px!important;border-radius:7px!important;opacity:0!important;color:#9ba1a9!important;background:transparent!important;transition:opacity .13s ease,background .13s ease,color .13s ease!important}.vocab-row-compact:hover .vocab-delete-compact{opacity:1!important}.vocab-delete-compact:hover{background:#f7eeee!important;color:#a94b45!important}
+.popup-vocab-detail{margin-top:10px!important;padding:10px 11px!important;border:0!important;border-radius:8px!important;background:#f7f8f9!important}.popup-vocab-detail-group b{font-size:11px!important;color:#7a828c!important}.popup-vocab-detail-group p{font-size:12px!important;line-height:1.58!important;color:#4d5660!important}.vocab-row-compact.detail-open .vocab-trans-sub{-webkit-line-clamp:2!important;display:-webkit-box!important}
+
+.popup-vocab-detail-page{max-height:390px!important;overflow:auto!important;padding:7px 3px 14px!important}.popup-vocab-detail-page[hidden]{display:none!important}.popup-vocab-detail-back{height:30px!important;border:0!important;background:transparent!important;color:#69727d!important;padding:0 6px 0 2px!important;border-radius:6px!important;display:inline-flex!important;align-items:center!important;gap:2px!important;font:600 12px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif!important;cursor:pointer!important}.popup-vocab-detail-back:hover{background:#f2f4f6!important;color:#293039!important}.popup-vocab-detail-back svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.popup-vocab-detail-head{display:flex!important;align-items:flex-start!important;gap:10px!important;margin-top:9px!important}.popup-vocab-detail-head>div{min-width:0!important;flex:1!important}.popup-vocab-detail-word{font-size:23px!important;font-weight:740!important;line-height:1.25!important;color:#20262d!important;letter-spacing:-.02em!important;overflow-wrap:anywhere!important}.popup-vocab-detail-phonetic{margin-top:4px!important;font-size:12.5px!important;color:#858d97!important}.popup-vocab-detail-lang{font-size:10.5px!important;color:#9aa1aa!important;padding-top:5px!important}.popup-vocab-detail-translation{margin-top:15px!important;font-size:14px!important;line-height:1.65!important;color:#343c45!important}.popup-vocab-detail-page section{margin-top:18px!important;padding-top:14px!important;border-top:1px solid #edf0f2!important}.popup-vocab-detail-page h4{margin:0 0 9px!important;font-size:11.5px!important;font-weight:680!important;color:#757e89!important}.popup-vocab-detail-sense{display:grid!important;grid-template-columns:20px minmax(0,1fr)!important;gap:7px!important;margin:0 0 7px!important}.popup-vocab-detail-sense>span{font-size:11px!important;color:#a0a6ae!important;text-align:right!important;line-height:1.6!important}.popup-vocab-detail-sense p{margin:0!important;font-size:12.5px!important;line-height:1.6!important;color:#4b545e!important}.popup-vocab-local-block+ .popup-vocab-local-block{margin-top:11px!important}.popup-vocab-local-block b{display:block!important;font-size:11px!important;color:#808893!important;margin-bottom:4px!important}.popup-vocab-local-block p{margin:0!important;font-size:12px!important;line-height:1.6!important;color:#505963!important}
+
+/* Compact popup dictionary list. */
+#view-vocab .nav-bar{border-bottom:0!important;padding-bottom:5px!important}.popup-vocab-filter-row{padding:7px 12px 5px!important}
+.popup-full-vocab-list{padding:4px 10px 12px!important;max-height:390px!important}
+.vocab-row-compact{padding:12px 32px 12px 0!important;border-bottom:1px solid #eef0f2!important;background:transparent!important}.vocab-row-compact:hover{background:transparent!important}
+.vocab-row-compact-main{cursor:pointer!important}.vocab-row-compact-head{gap:7px!important}.vocab-word-bold{font-size:15.5px!important;font-weight:720!important;color:#222831!important}.vocab-lang-compact{font-size:10px!important;color:#a0a6ae!important}
+.vocab-phonetic-sub{font-size:11.8px!important;color:#858d97!important;margin-top:4px!important}.vocab-trans-sub{font-size:13px!important;color:#444d57!important;line-height:1.55!important;margin-top:6px!important;-webkit-line-clamp:2!important}
+.vocab-delete-compact{right:0!important;top:10px!important;opacity:0!important}.vocab-row-compact:hover .vocab-delete-compact{opacity:.75!important}
+.popup-vocab-detail-page{padding:6px 12px 16px!important}.popup-vocab-detail-back{margin-left:-6px!important}.popup-vocab-detail-word{font-size:24px!important}.popup-vocab-detail-translation{font-size:14.5px!important;line-height:1.68!important}.popup-vocab-detail-page section{margin-top:20px!important;padding-top:14px!important}.popup-vocab-detail-page h4{font-size:11px!important;letter-spacing:.02em!important;color:#838b95!important}.popup-vocab-detail-sense{grid-template-columns:22px minmax(0,1fr)!important;gap:8px!important;margin-bottom:9px!important}.popup-vocab-detail-sense p{font-size:12.8px!important;line-height:1.62!important}.popup-vocab-local-block{padding:0!important;background:transparent!important;border:0!important}.popup-vocab-local-block p{font-size:12.5px!important;line-height:1.62!important}
+
+/* ==========================================================================
+   Popup vocabulary structure
+   ========================================================================== */
+#view-vocab .nav-bar{border-bottom:0!important;padding-bottom:6px!important}
+.popup-vocab-filter-row{
+  display:grid!important;grid-template-columns:minmax(0,1fr) 112px!important;gap:8px!important;
+  padding:7px 12px 10px!important;align-items:center!important;
+}
+.popup-vocab-search-field{
+  height:36px!important;display:flex!important;align-items:center!important;gap:7px!important;padding:0 9px!important;
+  border:1px solid #dfe4e8!important;border-radius:8px!important;background:#f7f8f9!important;box-sizing:border-box!important;
+  box-shadow:0 1px 0 #e6e9ec!important;
+}
+.popup-vocab-search-field:focus-within{background:#fff!important;border-color:#bdc7d0!important;box-shadow:0 0 0 3px rgba(92,126,156,.07)!important}
+.popup-vocab-search-field svg{width:15px;height:15px;fill:none;stroke:#8a939d;stroke-width:1.9;stroke-linecap:round;flex:none}
+.popup-vocab-search-field input{min-width:0;flex:1;height:32px;border:0;outline:0;background:transparent;color:#303840;font:500 12.5px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+.popup-vocab-search-field input::placeholder{color:#a1a7ae}
+.popup-vocab-filter{height:36px!important;min-height:36px!important;border-radius:8px!important;background:#f7f8f9!important;border-color:#dfe4e8!important;font-size:12px!important}
+.popup-full-vocab-list{max-height:390px!important;padding:2px 10px 12px!important;display:flex!important;flex-direction:column!important;gap:8px!important;overflow:auto!important}
+.popup-vocab-empty{padding:24px 12px!important;border:1px dashed #dde2e6!important;border-radius:9px!important;background:#fafbfc!important;text-align:center!important;color:#9199a2!important}
+.popup-vocab-card{
+  position:relative!important;display:block!important;padding:12px 34px 11px 12px!important;
+  border:1px solid #e1e5e9!important;border-radius:9px!important;background:#fff!important;
+  box-shadow:0 2px 0 #dfe3e7!important;cursor:pointer!important;outline:0!important;
+  transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease!important;
+}
+.popup-vocab-card:hover,.popup-vocab-card:focus-visible{transform:translateY(-1px)!important;border-color:#d3d9df!important;box-shadow:0 3px 0 #d9dee3!important}
+.popup-vocab-card-top{display:flex!important;align-items:flex-start!important;gap:8px!important}.popup-vocab-word-wrap{min-width:0!important;flex:1!important;display:flex!important;align-items:baseline!important;gap:7px!important;flex-wrap:wrap!important}
+.popup-vocab-card .vocab-word-bold{font-size:15.5px!important;font-weight:740!important;color:#232b33!important;letter-spacing:-.015em!important;max-width:100%!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.popup-vocab-card .vocab-phonetic-sub{margin:0!important;font-size:11.5px!important;line-height:1.3!important;color:#858e98!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.popup-vocab-lang{flex:none!important;font-size:10px!important;font-weight:640!important;color:#8d959e!important;padding-top:2px!important}
+.popup-vocab-card .vocab-trans-sub{margin:7px 0 0!important;font-size:12.8px!important;line-height:1.55!important;color:#46505a!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important}
+.vocab-source-sub{margin-top:6px!important;font-size:10px!important;line-height:1.35!important;color:#a0a6ad!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.popup-vocab-delete{position:absolute!important;right:7px!important;top:8px!important;width:26px!important;height:26px!important;padding:0!important;border:0!important;border-radius:7px!important;background:transparent!important;color:#9aa1a9!important;display:grid!important;place-items:center!important;opacity:0!important;cursor:pointer!important}.popup-vocab-card:hover .popup-vocab-delete,.popup-vocab-card:focus-within .popup-vocab-delete{opacity:.72!important}.popup-vocab-delete:hover{opacity:1!important;background:#f7eeee!important;color:#a54a44!important}
+
+/* Popup detail: stronger lexical hierarchy, no decorative separator stack. */
+.popup-vocab-detail-page{max-height:404px!important;padding:7px 12px 18px!important;overflow:auto!important}
+.popup-vocab-detail-page section{margin-top:19px!important;padding-top:0!important;border:0!important}
+.popup-vocab-detail-head{margin-top:10px!important;align-items:flex-start!important}.popup-vocab-detail-word{font-size:25px!important;font-weight:760!important}.popup-vocab-detail-lang{padding:4px 7px!important;border:1px solid #e2e6ea!important;border-radius:6px!important;background:#f7f8f9!important;color:#737d88!important}
+.popup-vocab-detail-translation{margin-top:14px!important;padding:11px 12px!important;border-radius:8px!important;background:#f7f8f9!important;color:#3d4650!important;font-size:14px!important;line-height:1.62!important}
+.popup-vocab-detail-page h4{font-size:11px!important;font-weight:720!important;color:#7f8892!important;margin-bottom:9px!important}.popup-vocab-detail-sense{margin-bottom:8px!important}.popup-vocab-local-block{padding:9px 10px!important;border-radius:8px!important;background:#f8f9fa!important}.popup-vocab-local-block+ .popup-vocab-local-block{margin-top:8px!important}
+
+
+/* ==========================================================================
+   Popup navigation sizing and optical alignment
+   ========================================================================== */
+.back-nav-btn{gap:2px!important;padding-left:3px!important;padding-right:8px!important}
+.back-nav-btn .back-home-icon{width:23px!important;height:23px!important;flex:0 0 23px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.9!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+#view-vocab .nav-bar,#view-highlight .nav-bar{align-items:center!important}
+
+/* Replacement mode keeps host typography
+   native so interactive components remain visually stable. */
+.replace-mode-native-hint{
+  margin:0 12px 10px;
+  padding:9px 10px;
+  border-radius:8px;
+  background:rgba(118,118,128,.07);
+  color:#747b85;
+  font-size:11.5px;
+  line-height:1.5;
+}
+#replace-mode-native-hint[hidden],
+.translation-style-only-row[hidden],
+.render-style-row[hidden]{display:none!important}
+
+
+/* ==========================================================================
+   Popup footer
+   ========================================================================== */
+.popup-font-family-select,.popup-color-select{width:156px!important;min-width:156px!important;max-width:156px!important}
+.popup-dictionary-group{margin-bottom:5px!important}
+.collection-card-grid{margin-top:0!important;margin-bottom:4px!important}
+.local-dict-link-icon{display:inline-flex!important;align-items:center!important;justify-content:center!important;font-size:16.5px!important;line-height:1!important;height:16px!important;transform:translateY(-.25px)!important}
+.app-footer{margin:2px 0 0!important;padding:0!important;border:0!important}
+.popup-tail-choice{width:100%!important;min-height:38px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;padding:0 9px!important;border:0!important;border-radius:7px!important;background:transparent!important;color:#68717b!important;font:560 12.5px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif!important;cursor:pointer!important}
+.popup-tail-choice:hover{background:#f3f5f7!important;color:#2f3740!important}
+.popup-tail-choice-copy{display:inline-flex!important;align-items:center!important;gap:7px!important}
+.popup-tail-choice-copy svg{width:14px!important;height:14px!important;flex:none!important}
+.popup-tail-choice-arrow{font-size:16px!important;line-height:1!important;color:#a1a7ae!important}
+
+/* Popup detail safeguards. */
+.hero-sub-grid .apple-secondary-action-btn{height:49px!important;min-height:49px!important;border-radius:10px!important}
+.floating-entry-row{border-bottom:0!important}
+.popup-dictionary-group{margin-bottom:3px!important}
+.collection-card-grid{margin-top:3px!important}
+.local-dict-link{
+  min-height:30px!important;padding:0 9px!important;border:1px solid #dbe2e8!important;
+  border-radius:7px!important;background:#fff!important;color:#4a6278!important;text-decoration:none!important;
+}
+.local-dict-link:hover{background:#f3f7fa!important;border-color:#cbd6df!important;color:#2f526f!important}
+.popup-tail-choice{
+  min-height:56px!important;padding:8px 10px!important;border:1px solid #e2e6e9!important;
+  border-radius:10px!important;background:linear-gradient(145deg,#fbfcfd,#f5f7f8)!important;
+  justify-content:flex-start!important;gap:9px!important;text-align:left!important;
+}
+.popup-tail-choice:hover{background:#f1f4f6!important;border-color:#d5dbe0!important}
+.popup-tail-project-icon{width:30px;height:30px;flex:0 0 30px;border-radius:8px;background:#fff;color:#63707c;display:grid;place-items:center;border:1px solid #e3e7ea}
+.popup-tail-project-icon svg{width:16px;height:16px}
+.popup-tail-choice .popup-tail-choice-copy{min-width:0;flex:1;display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:3px!important}
+.popup-tail-choice-copy strong{font-size:12.8px;line-height:1.2;color:#37414a;font-weight:680}
+.popup-tail-choice-copy small{font-size:10.5px;line-height:1.2;color:#8a929a;white-space:nowrap}
+.popup-tail-open{font-size:11px;color:#70808d;padding:4px 6px;border-radius:5px;background:#fff;border:1px solid #e0e5e8}
+
+
+/* ==========================================================================
+   Compact inline highlight choices
+   ========================================================================== */
+.popup-highlight-style-row{flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:10px!important}
+.popup-highlight-style-row>.row-label{flex:0 0 auto!important}
+.popup-highlight-style-row .popup-highlight-grid{width:205px!important;flex:0 0 205px!important}
+
+/* ==========================================================================
+   Menu geometry, motion and visual hierarchy
+   ========================================================================== */
+/* Context menus are allowed to escape the animated option row once opened. */
+.popup-style-dependent-options.has-option:has(.popup-select.open){overflow:visible!important}
+.popup-style-option:has(.popup-select.open){position:relative;z-index:900!important}
+.popup-style-option .popup-select{width:82px!important;min-width:82px!important;max-width:82px!important;flex:0 0 82px!important}
+.popup-style-option .popup-select-menu{min-width:122px!important;max-width:150px!important;right:0!important}
+
+/* Font and translation colour intentionally share the same compact width. */
+.popup-font-family-select,.popup-color-select{width:136px!important;min-width:136px!important;max-width:136px!important}
+.popup-dictionary-mode-select{width:142px!important;min-width:142px!important;max-width:142px!important;flex:0 0 142px!important}
+.popup-color-menu{max-height:248px!important;overflow-y:auto!important;overscroll-behavior:contain!important}
+
+/* The Web Animation owns geometry while it runs; a second CSS transition was
+   responsible for the brief flash at the source tab. */
+.segment-indicator.is-animating{transition:none!important}
+.segment-item{font-weight:620!important;transition:color .18s ease!important}
+.segment-item.active{font-weight:680!important}
+.inset-group.is-replace-mode>.list-row:first-child{border-bottom:0!important}
+
+/* Four pixels less distance from highlight controls to the related collection. */
+.collection-card-grid{margin-top:-1px!important}
+.collection-home-card,.collection-home-card:first-child,.collection-home-card:nth-child(2){
+  background:#fff!important;border-color:#dfe4e8!important;box-shadow:0 1px 0 rgba(15,23,42,.03)!important
+}
+.collection-home-card:first-child{background:#f4f7fb!important;border-color:#dbe4ee!important}
+.collection-home-card:nth-child(2){background:#f7f5fb!important;border-color:#e3def0!important}
+.collection-home-card::after{display:none!important}
+
+/* A real button, optically centred with the local-dictionary row. */
+.local-dict-link{
+  min-height:30px!important;height:30px!important;padding:0 10px!important;
+  border-color:#17191c!important;background:#17191c!important;color:#fff!important;
+  line-height:30px!important;align-self:center!important
+}
+.local-dict-link:hover{border-color:#30343a!important;background:#30343a!important;color:#fff!important}
+.inline-action-group{align-items:center!important}
+
+/* Plain project entry: no beige tint or decorative gradient. */
+.popup-tail-choice{
+  min-height:54px!important;background:#fff!important;border:1px solid #dfe4e8!important;
+  box-shadow:0 1px 0 rgba(15,23,42,.03)!important
+}
+.popup-tail-choice:hover{background:#f7f8f9!important;border-color:#cfd6dd!important}
+.popup-tail-project-icon{background:#f1f3f5!important;border:0!important;color:#303841!important}
+.popup-tail-open{background:#17191c!important;border-color:#17191c!important;color:#fff!important}
+
+/* The enhanced native select used to keep its global 138px minimum inside a
+   112px grid track, pushing the language control into the popup edge. */
+.popup-vocab-filter-row .popup-select{width:108px!important;min-width:0!important;max-width:108px!important;justify-self:end!important}
+.popup-vocab-filter-row .popup-select-menu{min-width:132px!important;max-width:160px!important;right:0!important}
+
+/* Plain collections and a distinct project entry. */
+.collection-card-grid{margin-top:-2px!important;gap:7px!important}
+.collection-home-card,.collection-home-card:first-child,.collection-home-card:nth-child(2){
+  background:#fff!important;border-color:#dfe4e8!important;box-shadow:0 1px 0 rgba(15,23,42,.025)!important
+}
+.popup-tail-choice{
+  min-height:56px!important;background:#fff!important;border-color:#dbe2df!important;
+  box-shadow:0 1px 0 rgba(15,23,42,.025)!important
+}
+.popup-tail-choice:hover{background:#f8faf9!important;border-color:#c8d4cf!important}
+.popup-tail-project-icon{background:#edf4f0!important;color:#38644f!important;border:0!important}
+.popup-tail-open{padding:0!important;border:0!important;background:transparent!important;color:#49705d!important;font-size:11.5px!important;font-weight:650!important;white-space:nowrap!important}
+
+/* The engine control lines up with the local-dictionary action group. */
+.popup-dictionary-group .list-row:has(#select-dictionary-mode) .popup-select{
+  width:190px!important;min-width:190px!important;max-width:190px!important;flex:0 0 190px!important;
+  transition:width .16s ease,min-width .16s ease,max-width .16s ease,flex-basis .16s ease!important
+}
+.popup-dictionary-group .list-row:has(#select-dictionary-mode) .popup-select.is-standard{
+  width:142px!important;min-width:142px!important;max-width:142px!important;flex-basis:142px!important
+}
+.popup-dictionary-group .list-row:has(#select-dictionary-mode) .popup-select.is-ai{
+  width:190px!important;min-width:190px!important;max-width:190px!important;flex-basis:190px!important
+}
+.api-quick-drawer{border-radius:0 0 9px 9px!important;background:#fff!important;background-clip:padding-box!important;overflow:hidden!important}
+.api-connected-summary{
+  min-height:40px!important;padding:7px 10px!important;border:1px solid #e1e6e3!important;
+  border-radius:9px!important;background:#f7faf8!important;box-sizing:border-box!important
+}
+
+/* 1.0 project and appreciation — selected editorial direction 01. */
+.app-footer{margin:5px 0 1px!important;padding:0!important;border:0!important}
+.popup-tail-choice{
+  width:100%!important;min-height:52px!important;padding:0 13px!important;
+  border:1px solid #25292e!important;border-radius:7px!important;background:#fff!important;
+  box-shadow:none!important;display:flex!important;align-items:center!important;justify-content:space-between!important;
+  gap:12px!important;color:#202429!important;text-align:left!important;cursor:pointer!important;
+  transition:background .14s ease,color .14s ease!important
+}
+.popup-tail-choice:hover{background:#0f1012!important;border-color:#0f1012!important;color:#fff!important;transform:none!important}
+.popup-tail-choice,.popup-tail-choice:hover,.popup-tail-choice:focus,.popup-tail-choice:active,
+.popup-tail-choice *{text-decoration:none!important}
+.popup-tail-choice .popup-tail-choice-copy{min-width:0;display:block!important}
+.popup-tail-choice-copy strong{color:inherit!important;font-size:13px!important;line-height:1.2!important;font-weight:700!important}
+.popup-tail-kicker,.popup-tail-choice-copy small,.popup-tail-project-icon{display:none!important}
+.popup-tail-open{
+  flex:none!important;width:auto!important;height:auto!important;padding:0!important;border:0!important;border-radius:0!important;
+  background:transparent!important;color:inherit!important;display:block!important;font-size:11px!important;line-height:1!important;
+  font-weight:720!important;white-space:nowrap!important
+}
+.popup-tail-open svg{display:none!important}
+
+/* Replacement mode: exactly two choices. Clean retains the typography rows;
+   Reference hides them and always renders upright text. */
+.inset-group.is-replace-mode .popup-style-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.inset-group.is-replace-mode .popup-style-choice-grid button{height:46px!important}

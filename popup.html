@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>极简翻译</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="apple-container" id="popup-container">
+
+    <!-- 1. 主页面视图 (Main View) -->
+    <div id="view-main" class="popup-view active">
+      <!-- Header -->
+      <header class="nav-bar">
+        <div class="brand-group">
+          <svg class="brand-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m5 8 6 6"/>
+            <path d="m4 14 6-6 2-3"/>
+            <path d="M2 5h12"/>
+            <path d="M7 2h1"/>
+            <path d="m22 22-5-10-5 10"/>
+            <path d="M14 18h6"/>
+          </svg>
+          <div class="app-name">
+            <span>极简翻译</span>
+            <span class="status-dot" id="status-dot" title="当前网页可使用极简翻译"></span>
+          </div>
+        </div>
+        <button id="btn-open-options" class="settings-btn" title="设置">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82-.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg><span>设置</span>
+        </button>
+      </header>
+
+      <!-- 1. 主操作按钮区域 -->
+      <div class="hero-section">
+        <button id="btn-toggle-page" class="apple-primary-btn full-width">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+          <span id="btn-toggle-text">网页翻译</span>
+        </button>
+
+        <div class="hero-sub-grid">
+          <button id="btn-toggle-reader" class="apple-secondary-action-btn" title="进入纯净双语沉浸式精排阅读">
+            <svg class="reader-action-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.8 5.3c2.9-.6 5.4-.1 8.2 1.6v12c-2.8-1.7-5.3-2.2-8.2-1.6z"/><path d="M20.2 5.3c-2.9-.6-5.4-.1-8.2 1.6v12c2.8-1.7 5.3-2.2 8.2-1.6z"/></svg>
+            <span>沉浸阅读</span>
+          </button>
+          <button id="btn-toggle-sidebar" class="apple-secondary-action-btn" title="展开侧边分栏双语对照">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></svg>
+            <span id="btn-sidebar-text">分栏对照</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. 快速查词搜索栏 -->
+      <div class="top-search-section">
+        <div class="search-bar-clean">
+          <svg class="search-icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2.3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="popup-dict-input" class="apple-search-input" placeholder="输入单词或短语按回车查词...">
+          <button type="button" id="btn-popup-dict-search" class="apple-search-btn">
+            <span>查询</span>
+          </button>
+        </div>
+        <div class="popup-dict-result-box" id="popup-dict-result-box" style="display: none;"></div>
+      </div>
+
+      <!-- 3. 呈现排版样式板块 -->
+      <div class="inset-group">
+        <div class="list-row">
+          <div class="row-label">
+            <span class="row-title">译文模式</span>
+          </div>
+          <div class="segmented-control sm" id="control-display-mode">
+            <button type="button" class="segment-item active" data-value="bilingual" title="正文保留原文与译文；导航、Tab 与按钮原位翻译">双语对照</button>
+            <button type="button" class="segment-item" data-value="replace" title="只替换文字节点，尽量保持网页布局与交互组件原样">替换原文</button>
+          </div>
+        </div>
+
+        <div class="list-row vertical render-style-row">
+          <div class="row-label">
+            <span class="row-title">呈现排版</span>
+          </div>
+          <select id="select-render-style" class="visually-hidden-select" tabindex="-1" aria-hidden="true">
+            <option value="native" data-bilingual-label="参考原网页" data-replace-label="参考原文">参考原网页</option><option value="classic" data-bilingual-label="纯净对照" data-replace-label="纯净排版">纯净对照</option><option value="highlight">高亮底色</option><option value="underline">下划线</option><option value="italic">斜体</option><option value="hover-reveal">悬停显示</option><option value="blur-reveal">模糊显示</option><option value="click-reveal">点按显示</option>
+          </select>
+          <div class="popup-style-choice-grid" id="popup-render-style-grid">
+            <button type="button" data-value="native"><i class="ps-native"></i><span data-bilingual-label="原网页" data-replace-label="参考原文">原网页</span></button>
+            <button type="button" data-value="classic"><i class="ps-classic"></i><span data-bilingual-label="纯净" data-replace-label="纯净排版">纯净</span></button>
+            <button type="button" data-value="highlight"><i class="ps-highlight"></i><span>高亮</span></button>
+            <button type="button" data-value="underline"><i class="ps-underline"></i><span>下划线</span></button>
+            <button type="button" data-value="italic"><i class="ps-italic"></i><span>斜体</span></button>
+            <button type="button" data-value="hover-reveal"><i class="ps-hover"></i><span>悬停</span></button>
+            <button type="button" data-value="blur-reveal"><i class="ps-blur"></i><span>模糊</span></button>
+            <button type="button" data-value="click-reveal"><i class="ps-click"></i><span>点按</span></button>
+          </div>
+          <div class="popup-style-dependent-options" id="popup-style-dependent-options">
+            <div class="popup-style-option" id="popup-highlight-options" hidden>
+              <span>底色</span>
+              <div class="palette-bar compact" id="palette-bg-highlight">
+                <button type="button" class="color-dot active" data-value="soft-yellow" style="background:#fef08a" title="柔黄"></button>
+                <button type="button" class="color-dot" data-value="soft-green" style="background:#bbf7d0" title="柔绿"></button>
+                <button type="button" class="color-dot" data-value="soft-purple" style="background:#e9d5ff" title="柔紫"></button>
+                <button type="button" class="color-dot" data-value="soft-orange" style="background:#fed7aa" title="柔橙"></button>
+                <button type="button" class="color-dot" data-value="soft-blue" style="background:#bfdbfe" title="柔蓝"></button>
+                <button type="button" class="color-dot none" data-value="none" title="无底色"></button>
+              </div>
+            </div>
+            <div class="popup-style-option" id="popup-underline-options" hidden>
+              <span>线型</span>
+              <div class="popup-underline-picker" id="popup-underline-picker">
+                <button type="button" data-value="solid" title="实线"></button><button type="button" data-value="dotted" title="点线"></button><button type="button" data-value="dashed" title="虚线"></button><button type="button" data-value="wavy" title="波浪线"></button><button type="button" data-value="double" title="双线"></button>
+              </div>
+              <select id="popup-underline-color" class="apple-select compact-style-select" aria-label="下划线颜色">
+                <option value="accent">蓝色</option><option value="slate">灰蓝</option><option value="green">绿色</option><option value="purple">紫色</option><option value="red">红色</option><option value="inherit">跟随文字</option>
+              </select>
+            </div>
+            <div class="popup-style-option" id="popup-click-options" hidden>
+              <span>遮罩</span>
+              <select id="popup-click-color" class="apple-select compact-style-select" aria-label="点按遮罩颜色">
+                <option value="charcoal">炭黑</option><option value="slate">石板灰</option><option value="navy">深蓝</option><option value="forest">深绿</option><option value="plum">深紫</option><option value="brown">棕色</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="list-row translation-style-only-row">
+          <div class="row-label">
+            <span class="row-title">中文字体</span>
+          </div>
+          <select id="select-font-family" class="apple-select">
+            <option value="system">系统默认</option>
+            <option value="kinghwa-song">京華老宋体</option>
+            <option value="source-serif">思源宋体</option>
+            <option value="source-sans">思源黑体</option>
+            <option value="pingfang">苹方</option>
+            <option value="lxgw-wenkai">霞鹜文楷</option>
+            <option value="smiley-sans">得意黑</option>
+            <option value="fangsong">仿宋</option>
+            <option value="kaiti">楷体</option>
+            <option value="yuanti">圆体</option>
+          </select>
+        </div>
+
+        <div class="list-row compact-color-row translation-style-only-row">
+          <div class="row-label"><span class="row-title">译文颜色</span></div>
+          <div class="popup-color-select" id="popup-text-color-select">
+            <button type="button" class="popup-color-trigger" id="popup-text-color-trigger"><i style="--c:#111827"></i><span>黑色</span><svg viewBox="0 0 20 20"><path d="m6 8 4 4 4-4"/></svg></button>
+            <div class="popup-color-menu" id="popup-text-color-menu">
+              <button type="button" data-value="black" data-name="黑色" style="--c:#111827"><i></i><span>黑色</span></button>
+              <button type="button" data-value="slate" data-name="石墨灰" style="--c:#5f6063"><i></i><span>石墨灰</span></button>
+              <button type="button" data-value="accent" data-name="蓝色" style="--c:#2563eb"><i></i><span>蓝色</span></button>
+              <button type="button" data-value="green" data-name="绿色" style="--c:#27835d"><i></i><span>绿色</span></button>
+              <button type="button" data-value="purple" data-name="紫色" style="--c:#7c5ac7"><i></i><span>紫色</span></button>
+              <button type="button" data-value="red" data-name="红色" style="--c:#b84a4a"><i></i><span>红色</span></button>
+              <button type="button" data-value="orange" data-name="橙色" style="--c:#b86d24"><i></i><span>橙色</span></button>
+              <button type="button" data-value="teal" data-name="青色" style="--c:#207f7a"><i></i><span>青色</span></button>
+              <button type="button" data-value="brown" data-name="棕色" style="--c:#8a6448"><i></i><span>棕色</span></button>
+              <button type="button" data-value="inherit" data-name="跟随网页" style="--c:radial-gradient(circle at center,#fff 0 27%,transparent 30%),conic-gradient(from -30deg,#ff453a,#ffd60a,#30d158,#64d2ff,#0a84ff,#5e5ce6,#bf5af2,#ff375f,#ff453a)"><i class="color-wheel-dot"></i><span>跟随网页</span></button>
+            </div>
+          </div>
+        </div>
+
+        <div class="list-row translation-style-only-row">
+          <div class="row-label">
+            <span class="row-title">字号大小</span>
+          </div>
+          <div class="font-stepper">
+            <button type="button" id="btn-font-dec" class="stepper-btn" title="缩小字号">A−</button>
+            <span id="label-font-size" class="stepper-val">100%</span>
+            <button type="button" id="btn-font-inc" class="stepper-btn" title="放大字号">A+</button>
+          </div>
+        </div>
+
+
+        <div class="popup-live-card-preview translation-style-only-row">
+          <div class="preview-mini-title">排版效果实时演示</div>
+          <div class="preview-mini-content">
+            <div class="preview-orig-text" id="preview-orig-text">Designing intuitive and effortless reading experience.</div>
+            <div class="preview-trans-text" id="preview-trans-text">为所有网页打造直观舒适的双语阅读体验。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. 翻译引擎与快捷行为 -->
+      <div class="inset-group">
+        <div class="list-row">
+          <div class="row-label"><span class="row-title">翻译引擎</span></div>
+          <select id="select-engine" class="apple-select">
+            <option value="google">Google 翻译</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="deepl">DeepL</option>
+            <option value="openai">OpenAI</option>
+            <option value="claude">Claude</option>
+            <option value="gemini">Gemini</option>
+            <option value="ollama">Ollama（本地）</option>
+            <option value="custom">自定义兼容 API</option>
+          </select>
+        </div>
+        <div class="list-row">
+          <div class="row-label"><span class="row-title">目标语言</span></div>
+          <select id="select-target-lang" class="apple-select">
+            <option value="zh-CN">简体中文</option><option value="zh-TW">繁體中文</option><option value="en">英语</option><option value="ja">日语</option><option value="ko">韩语</option><option value="fr">法语</option><option value="de">德语</option><option value="es">西班牙语</option>
+          </select>
+        </div>
+        <div class="list-row">
+          <div class="row-label"><span class="row-title">显示段落翻译按键</span></div>
+          <label class="apple-switch"><input type="checkbox" id="toggle-hover-translate"><span class="switch-knob"></span></label>
+        </div>
+        <div class="list-row">
+          <div class="row-label"><span class="row-title">显示段落操作栏</span></div>
+          <label class="apple-switch"><input type="checkbox" id="toggle-paragraph-actions"><span class="switch-knob"></span></label>
+        </div>
+        <div class="list-row floating-entry-row">
+          <div class="row-label"><span class="row-title">网页翻译悬浮入口</span></div>
+          <label class="apple-switch"><input type="checkbox" id="toggle-floating-ball"><span class="switch-knob"></span></label>
+        </div>
+        <div class="api-quick-drawer" id="api-quick-drawer" style="display:none;">
+          <div class="drawer-input-group">
+            <input type="password" id="popup-api-key" class="apple-input sm" placeholder="API Key">
+            <input type="text" id="popup-api-url" class="apple-input sm" placeholder="Base URL">
+            <input type="text" id="popup-api-model" class="apple-input sm" placeholder="模型名称">
+          </div>
+          <div class="drawer-action-row">
+            <button type="button" id="btn-popup-test-api" class="secondary-btn sm">测试并保存</button>
+            <span class="drawer-test-status" id="popup-api-status"></span>
+          </div>
+          <div class="api-connected-summary" id="popup-api-connected-summary" style="display:none;">
+            <span class="connected-copy" id="popup-api-connected-copy">已连接</span>
+            <button type="button" class="api-edit-btn" id="btn-popup-edit-api">编辑</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. 查词 -->
+      <div class="inset-group popup-dictionary-group">
+        <div class="list-row">
+          <div class="row-label"><span class="row-title">查词与高亮</span></div>
+          <label class="apple-switch"><input type="checkbox" id="toggle-dict-enabled"><span class="switch-knob"></span></label>
+        </div>
+        <div class="popup-trigger-mode-row" id="popup-dict-trigger-row">
+          <select id="select-dict-trigger" class="visually-hidden-select" tabindex="-1" aria-hidden="true"><option value="both">双击与划选</option><option value="double_click">仅双击</option><option value="selection">仅划选</option><option value="none">关闭</option></select>
+          <button type="button" data-value="double_click">双击</button><button type="button" data-value="selection">划选</button><button type="button" data-value="both">两者</button>
+        </div>
+        <div class="list-row">
+          <div class="row-label"><span class="row-title">查词引擎</span></div>
+          <select id="select-dictionary-mode" class="apple-select"><option value="standard">标准词典</option><option value="ai">AI 查词（需配置 API）</option></select>
+        </div>
+        <div class="list-row">
+          <div class="row-label"><span class="row-title">本地词典优先</span></div>
+          <div class="inline-action-group">
+            <button type="button" id="btn-open-local-dict" class="text-action-btn local-dict-link">进入本地词典</button>
+            <label class="apple-switch"><input type="checkbox" id="toggle-local-dict-priority"><span class="switch-knob"></span></label>
+          </div>
+        </div>
+        <div class="list-row popup-highlight-style-row">
+          <div class="row-label"><span class="row-title">高亮样式</span></div>
+          <div class="popup-highlight-grid" id="popup-highlight-style-grid"><button type="button" data-value="soft-marker"><span class="mini-highlight soft">重点</span><b>柔和</b></button><button type="button" data-value="full-marker"><span class="mini-highlight full">重点</span><b>荧光</b></button><button type="button" data-value="underline-marker"><span class="mini-highlight line">重点</span><b>细线</b></button></div>
+        </div>
+      </div>
+
+      <!-- 本地收藏 -->
+      <div class="collection-card-grid">
+        <button type="button" class="collection-home-card" id="row-open-vocab-view">
+          <span class="collection-card-title">生词本</span><span class="collection-card-sub" id="label-vocab-count">0 个生词</span><span class="collection-chevron">›</span>
+        </button>
+        <button type="button" class="collection-home-card" id="row-open-highlight-view">
+          <span class="collection-card-title">高亮收藏</span><span class="collection-card-sub" id="label-highlight-count">0 条高亮</span><span class="collection-chevron">›</span>
+        </button>
+        <button type="button" id="btn-goto-vocab-view" class="visually-hidden" aria-label="打开生词本"></button>
+        <button type="button" id="btn-goto-highlight-view" class="visually-hidden" aria-label="打开高亮收藏"></button>
+      </div>
+
+      <!-- Footer -->
+      <footer class="app-footer">
+        <button type="button" id="btn-donate" class="link-btn donate-link popup-tail-choice">
+          <span class="popup-tail-choice-copy"><strong>项目与赞赏</strong></span>
+          <span class="popup-tail-open" aria-hidden="true">前往</span>
+        </button>
+      </footer>
+      <div class="site-blacklist-dock" id="site-blacklist-dock">
+        <small id="site-dock-note" class="site-dock-toast"></small>
+        <div class="site-dock-copy"><span id="current-site-domain">当前网站</span></div>
+        <button type="button" id="btn-toggle-block-site" class="site-dock-action">加入黑名单</button>
+      </div>
+    </div>
+
+    <!-- 2. 生词本纯平子视图 (Underline Tab System) -->
+    <div id="view-vocab" class="popup-view">
+      <header class="nav-bar">
+        <button type="button" id="btn-back-to-main-from-vocab" class="back-nav-btn">
+          <svg class="back-home-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6.5-5.5 5.5 5.5 5.5"/></svg><span>返回主页</span>
+        </button>
+        <span class="subview-title">生词本</span>
+        <button type="button" id="btn-popup-export-csv" class="secondary-btn sm">导出 CSV</button>
+      </header>
+
+      <div class="popup-vocab-filter-row">
+        <div class="popup-vocab-search-field">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+          <input type="search" id="popup-vocab-search" placeholder="搜索生词或释义" autocomplete="off" aria-label="搜索生词">
+        </div>
+        <select id="popup-lang-filter" class="apple-select popup-vocab-filter" aria-label="筛选生词语言">
+          <option value="all">全部语言</option><option value="zh">中文</option><option value="en">英语</option><option value="ja">日语</option><option value="ko">韩语</option><option value="fr">法语</option><option value="de">德语</option><option value="es">西班牙语</option><option value="ru">俄语</option><option value="other">其他</option>
+        </select>
+      </div>
+
+      <div class="popup-full-vocab-list" id="popup-full-vocab-list">
+        <div class="vocab-empty-mini">暂无生词记录，双击或划词点星号即可收录</div>
+      </div>
+      <div class="popup-vocab-detail-page" id="popup-vocab-detail-page" hidden></div>
+    </div>
+
+    <!-- 3. 高亮金句收藏夹全屏子视图 -->
+    <div id="view-highlight" class="popup-view">
+      <header class="nav-bar">
+        <button type="button" id="btn-back-to-main-from-highlight" class="back-nav-btn">
+          <svg class="back-home-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 6.5-5.5 5.5 5.5 5.5"/></svg><span>返回主页</span>
+        </button>
+        <span class="subview-title">高亮金句</span>
+        <button type="button" id="btn-popup-export-highlight-md" class="secondary-btn sm">导出 Markdown</button>
+      </header>
+
+      <div class="popup-full-vocab-list" id="popup-full-highlight-list">
+        <div class="vocab-empty-mini">暂无高亮金句记录，在悬停段落或阅读模式中点击高亮即可收藏</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

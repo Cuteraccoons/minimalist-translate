@@ -1,0 +1,54 @@
+name: Bug 报告
+description: 报告可复现的功能、排版或网页兼容问题
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: 感谢反馈。请先移除截图、日志和示例中的账号、API Key 与私人内容。
+  - type: input
+    id: version
+    attributes:
+      label: 扩展与浏览器版本
+      placeholder: 极简翻译 1.0.0；Chrome 版本号
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: 复现网页
+      description: 如页面可以公开访问，请提供网址；私人页面可以留空。
+  - type: dropdown
+    id: feature
+    attributes:
+      label: 相关功能
+      options:
+        - 网页双语翻译
+        - 替换原文
+        - 沉浸阅读
+        - 分栏对照
+        - 查词 / 本地词典
+        - 图片 OCR
+        - Popup / 设置页
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: 请按顺序说明如何稳定复现。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期结果与实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充信息
+      description: 可提供已脱敏截图、页面语言、目标语言、翻译模式和引擎类型。不要粘贴 API Key。

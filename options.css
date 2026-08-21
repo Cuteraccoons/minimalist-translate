@@ -1,0 +1,1719 @@
+/* Settings page styles. */
+
+:root {
+  --apple-blue: #0071e3;
+  --apple-blue-hover: #0077ed;
+  --apple-green: #34c759;
+  --apple-orange: #ff9500;
+  --apple-red: #ff3b30;
+
+  --bg-page: #f5f5f7;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+
+  --label-primary: #111827;
+  --label-secondary: #4b5563;
+  --label-tertiary: #9ca3af;
+
+  --separator: rgba(60, 60, 67, 0.12);
+  --segmented-bg: rgba(118, 118, 128, 0.12);
+
+  --radius-xl: 14px;
+  --radius-lg: 10px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
+
+  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: var(--font-family);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--bg-page);
+  color: var(--label-primary);
+  min-height: 100vh;
+}
+
+.macos-window {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 250px;
+  background: var(--bg-sidebar);
+  border-right: 0.5px solid var(--separator);
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 6px;
+}
+
+.sidebar-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+.sidebar-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-app-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--label-primary);
+}
+
+.sidebar-version {
+  font-size: 11px;
+  color: var(--apple-blue);
+  font-weight: 600;
+}
+
+.nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.nav-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.nav-btn.active {
+  background: var(--apple-blue);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.nav-btn.active .nav-svg {
+  stroke: #ffffff;
+}
+
+.nav-svg {
+  stroke: var(--label-secondary);
+  flex-shrink: 0;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 8px;
+}
+
+.save-status {
+  font-size: 11px;
+  color: var(--apple-green);
+  font-weight: 600;
+}
+
+/* Content Panel */
+.content-panel {
+  flex: 1;
+  padding: 28px 40px;
+  max-width: 960px;
+}
+
+.tab-view {
+  display: none;
+}
+
+.tab-view.active {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.view-header {
+  margin-bottom: 4px;
+}
+
+.view-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--label-primary);
+  letter-spacing: -0.02em;
+}
+
+.view-desc {
+  font-size: 13px;
+  color: var(--label-secondary);
+  margin-top: 2px;
+}
+
+/* macOS Inset Card */
+.macos-card {
+  background: var(--bg-card);
+  border: 0.5px solid var(--separator);
+  border-radius: var(--radius-xl);
+  padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 0.5px solid var(--separator);
+  padding-bottom: 8px;
+}
+
+.card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+}
+
+.row-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.row-title {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--label-primary);
+}
+
+.row-hint {
+  font-size: 12px;
+  color: var(--label-secondary);
+  margin-top: 1px;
+}
+
+.badge-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--apple-blue);
+  background: rgba(0, 113, 227, 0.08);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* Forms */
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-row-2 {
+  display: flex;
+  gap: 14px;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.item-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--label-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.item-desc {
+  font-size: 11px;
+  color: var(--label-secondary);
+  font-weight: 400;
+  margin-top: 1px;
+}
+
+.apple-input, .apple-textarea {
+  background: #f5f5f7;
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--label-primary);
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.apple-input:focus, .apple-textarea:focus {
+  background: #ffffff;
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}
+
+.apple-textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.apple-select {
+  appearance: none;
+  background: #f5f5f7 url('data:image/svg+xml;utf8,<svg width="8" height="5" viewBox="0 0 8 5" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L4 4L7 1" stroke="%234B5563" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat right 10px center;
+  border: 0.5px solid rgba(0, 0, 0, 0.12);
+  border-radius: var(--radius-md);
+  padding: 7px 28px 7px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--label-primary);
+  outline: none;
+  cursor: pointer;
+}
+
+.apple-select:focus {
+  border-color: var(--apple-blue);
+}
+
+.segmented-control {
+  display: flex;
+  background: var(--segmented-bg);
+  padding: 2px;
+  border-radius: 8px;
+  gap: 2px;
+}
+
+.segment-item {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--label-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.segment-item.active {
+  background: #ffffff;
+  color: var(--label-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.color-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.palette-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f5f5f7;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--label-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.palette-btn:hover {
+  background: #ffffff;
+}
+
+.palette-btn.active {
+  background: #ffffff;
+  border-color: var(--apple-blue);
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+}
+
+.dot-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: var(--swatch);
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+}
+
+.dot-swatch.none-dot {
+  font-size: 11px;
+  border: none;
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.test-btn {
+  background: #f5f5f7;
+  border: 0.5px solid rgba(0, 0, 0, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--label-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.test-btn:hover {
+  background: #e8e8ed;
+}
+
+.test-result {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.test-result.success { color: var(--apple-green); }
+.test-result.error { color: var(--apple-red); }
+.test-result.loading { color: var(--apple-orange); }
+
+.apple-slider {
+  accent-color: var(--apple-blue);
+  cursor: pointer;
+  width: 100%;
+}
+
+.apple-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.apple-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-knob {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e5e5ea;
+  transition: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 22px;
+}
+
+.switch-knob:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .switch-knob {
+  background-color: var(--apple-green);
+}
+
+input:checked + .switch-knob:before {
+  transform: translateX(18px);
+}
+
+.layout-grid-2 {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.preview-card-sticky {
+  position: sticky;
+  top: 24px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.preview-safari-bar {
+  background: #ebebed;
+  border-bottom: 0.5px solid var(--separator);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.safari-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.safari-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.dot.red { background: #ff5f56; }
+.dot.yellow { background: #ffbd2e; }
+.dot.green { background: #27c93f; }
+
+.safari-url {
+  font-size: 11px;
+  color: var(--label-secondary);
+  background: #ffffff;
+  padding: 2px 12px;
+  border-radius: 4px;
+  flex: 1;
+  text-align: center;
+}
+
+.preview-body {
+  padding: 16px;
+  background: #ffffff;
+}
+
+.demo-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.demo-orig-h {
+  font-size: 15px;
+  font-weight: 700;
+  color: #000000;
+  line-height: 1.3;
+}
+
+.demo-trans-h {
+  font-size: 13px;
+  font-weight: 700;
+  color: #000000;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.demo-orig-p {
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.demo-trans-p {
+  font-size: 13px;
+  font-weight: 500;
+  color: #000000;
+  line-height: 1.6;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.preview-tip {
+  padding: 10px 14px;
+  background: #fafaf9;
+  border-top: 0.5px solid var(--separator);
+  font-size: 11px;
+  color: var(--label-secondary);
+  line-height: 1.4;
+}
+
+/* Multi-Language Vocabulary List */
+.lang-filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.lang-pill {
+  background: #f5f5f7;
+  border: 0.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--label-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lang-pill:hover {
+  background: #e5e5ea;
+}
+
+.lang-pill.active {
+  background: var(--apple-blue);
+  color: #ffffff;
+  font-weight: 600;
+  border-color: var(--apple-blue);
+}
+
+.vocab-top-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.vocab-list-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.vocab-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 0.5px solid var(--separator);
+  border-radius: var(--radius-md);
+  transition: all 0.15s;
+}
+
+.vocab-card-item:hover {
+  border-color: var(--apple-blue);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.vocab-word-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.vocab-lang-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--apple-blue);
+  background: rgba(0, 113, 227, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 6px;
+  text-transform: uppercase;
+}
+
+.vocab-phonetic-text {
+  font-size: 11px;
+  color: var(--apple-blue);
+  margin-left: 6px;
+  font-family: monospace;
+}
+
+.vocab-trans-text {
+  font-size: 12.5px;
+  color: #374151;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.vocab-empty {
+  text-align: center;
+  padding: 30px 10px;
+  color: var(--label-secondary);
+  font-size: 13px;
+}
+
+/* About Box */
+.about-box {
+  align-items: center;
+  text-align: center;
+  padding: 32px 20px;
+  gap: 10px;
+}
+
+.about-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+}
+
+.about-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.about-ver {
+  font-size: 12px;
+  color: var(--apple-blue);
+  font-weight: 600;
+}
+
+.about-desc {
+  max-width: 480px;
+  font-size: 13px;
+  color: var(--label-secondary);
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+/* Project & support: designed to work without a decorative illustration. */
+.project-hero-card{display:grid!important;grid-template-columns:92px minmax(0,1fr)!important;gap:22px!important;align-items:center!important;padding:28px 30px!important;background:linear-gradient(135deg,#fbfbfa 0%,#f5f7f4 100%)!important;overflow:hidden!important}
+.project-mark{width:84px;height:84px;display:grid;place-items:center;border-radius:22px;background:rgba(255,255,255,.76);box-shadow:0 8px 28px rgba(42,53,48,.08);transform:rotate(-2deg)}
+.project-mark img{width:66px;height:66px;border-radius:15px}
+.project-hero-copy{min-width:0;text-align:left}
+.project-eyebrow,.support-kicker{display:block;font-size:10.5px;font-weight:760;letter-spacing:.11em;color:#7d887f;margin-bottom:6px}
+.project-hero-copy .about-name{margin:0 0 7px;font-size:21px;letter-spacing:-.02em}
+.project-intro{max-width:650px;margin:0;color:#626b66;font-size:13px;line-height:1.68}
+.project-values{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}.project-values span{padding:5px 8px;border-radius:6px;background:rgba(255,255,255,.72);color:#647069;font-size:11px;font-weight:650;border:1px solid rgba(55,70,61,.07)}
+.project-hero-copy .about-ver{margin:12px 0 0;color:#8a938e;font-size:11px;font-weight:570}
+.support-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.support-card{display:flex!important;flex-direction:column!important;align-items:flex-start!important;min-height:210px;padding:23px 24px!important}
+.support-card h3{margin:0 0 8px;font-size:17px;letter-spacing:-.015em}.support-card p{margin:0 0 18px;color:#727981;font-size:12.5px;line-height:1.65;max-width:440px}
+.support-card small{display:block;margin-top:9px;color:#9aa1a8;font-size:10.5px;line-height:1.45}
+.support-primary{background:#222725!important;color:#f7f8f7!important;border-color:#222725!important}.support-primary .support-kicker{color:#aebbb3}.support-primary p{color:#b7c0ba}.support-primary small{color:#87918b}
+.support-open-btn{margin-top:auto;min-height:34px;padding:0 12px;border:0;border-radius:7px;background:#f5f6f5;color:#252b28;font:680 12px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;cursor:pointer}.support-open-btn span{margin-left:4px;color:#8a938e}.support-open-btn.secondary{background:#202428;color:#fff}.support-open-btn:hover:not(:disabled){transform:translateY(-1px)}.support-open-btn:disabled{opacity:.38;cursor:default}
+.support-config-card{padding:22px 24px!important}.support-config-head{margin-bottom:16px}.support-config-head>div{display:flex;flex-direction:column;gap:4px}.wechat-note{display:grid;grid-template-columns:105px minmax(0,1fr);gap:14px;margin:18px 0 0;padding:14px 15px;border-radius:8px;background:#f6f7f6;color:#747d77;font-size:11.5px;line-height:1.55}.wechat-note strong{color:#3e4942}
+@media (max-width:760px){.project-hero-card{grid-template-columns:1fr!important}.project-mark{width:68px;height:68px}.project-mark img{width:52px;height:52px}.support-grid{grid-template-columns:1fr}.wechat-note{grid-template-columns:1fr;gap:4px}}
+
+/* ==========================================================================
+   Service cards, model discovery and connected state
+   ========================================================================== */
+.model-input-row { display:flex; gap:8px; align-items:center; }
+.model-input-row .apple-input { flex:1; min-width:0; }
+.model-refresh-btn,
+.engine-edit-btn {
+  min-height:34px; padding:0 10px; border:1px solid rgba(17,24,39,.12); border-radius:7px;
+  background:#fff; color:#47515e; font:inherit; font-size:13px; font-weight:620; cursor:pointer; white-space:nowrap;
+}
+.model-refresh-btn:hover,.engine-edit-btn:hover { background:#f6f7f8; color:#111827; }
+.model-refresh-btn:disabled { opacity:.55; cursor:default; }
+.engine-connected-summary { display:none; min-height:44px; align-items:center; gap:9px; padding:3px 0 1px; font-size:13px; }
+.macos-card.is-connected > .form-item,
+.macos-card.is-connected > .form-row-2,
+.macos-card.is-connected > .form-actions { display:none !important; }
+.macos-card.is-connected .engine-connected-summary { display:flex; }
+.engine-connected-dot { width:8px; height:8px; border-radius:50%; background:#22a06b; flex:0 0 auto; }
+.engine-connected-copy { flex:1; color:#303641; font-weight:560; }
+.engine-edit-btn { border:0; min-height:30px; background:transparent; color:#0071e3; }
+
+/* Keep normal settings labels at or above 13 px. */
+#tab-api .item-label, #tab-api .item-desc, #tab-interaction .row-hint, #tab-interaction .row-title { font-size:13px; line-height:1.45; }
+
+/* Collection and about-page readability. */
+.vocab-lang-tag,.vocab-phonetic-text,.vocab-trans-text,.about-ver { font-size:13px !important; }
+
+/* ==========================================================================
+   Card-based settings choices
+   ========================================================================== */
+.visually-hidden-select { position:absolute !important; width:1px !important; height:1px !important; opacity:0 !important; pointer-events:none !important; }
+.style-card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.style-choice-card { appearance:none; border:1px solid #e2e5e9; background:#fff; border-radius:8px; padding:11px 12px; min-height:92px; text-align:left; cursor:pointer; transition:border-color .18s ease, background-color .18s ease, box-shadow .18s ease; color:#1d1d1f; }
+.style-choice-card:hover { border-color:#b9c3ce; background:#fbfcfd; }
+.style-choice-card.active { border-color:#1d1d1f; box-shadow:0 0 0 1px #1d1d1f inset; background:#fff; }
+.style-choice-name { display:block; font-size:14px; line-height:1.35; font-weight:650; margin-bottom:10px; }
+.style-choice-demo { display:flex; flex-direction:column; gap:5px; font-size:13px; line-height:1.45; color:#525866; }
+.style-choice-demo b { font-weight:550; color:#2f3540; }
+.style-choice-demo em { font-style:normal; color:#657080; }
+.style-choice-demo .demo-highlight { display:inline; width:max-content; max-width:100%; background:#fef08a; padding:0 2px; }
+.demo-underline { text-decoration:underline dotted; text-underline-offset:3px; }
+.demo-wavy { text-decoration:underline wavy #0071e3; text-underline-offset:3px; }
+.demo-faded { opacity:.42; }
+.style-inline-palette { display:flex; gap:7px; margin-top:9px; align-items:center; }
+.mini-swatch { width:15px; height:15px; border-radius:50%; background:var(--swatch); border:1px solid rgba(0,0,0,.08); cursor:pointer; box-sizing:border-box; }
+.mini-swatch.none { background:linear-gradient(135deg,transparent 45%,#aeb5bd 46%,#aeb5bd 54%,transparent 55%); }
+.mini-swatch.active { outline:2px solid #1d1d1f; outline-offset:2px; }
+.font-card-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.font-choice-card { appearance:none; min-height:70px; border:1px solid #e2e5e9; border-radius:8px; background:#fff; padding:9px 10px; cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; text-align:left; color:#1d1d1f; }
+.font-choice-card:hover { border-color:#b9c3ce; background:#fbfcfd; }
+.font-choice-card.active { border-color:#1d1d1f; box-shadow:0 0 0 1px #1d1d1f inset; }
+.font-choice-card span { font-size:13px; line-height:1.3; color:#555e6a; }
+.font-choice-card b { font-size:16px; line-height:1.3; font-weight:500; color:#1d1d1f; margin-top:8px; }
+.dict-trigger-panel { border-bottom:1px solid #eceef1; padding-bottom:16px; margin-bottom:2px; }
+.dict-trigger-head { border-bottom:0 !important; padding-bottom:9px !important; }
+.trigger-mode-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:0 18px 10px; }
+.trigger-mode-grid button { border:1px solid #e2e5e9; border-radius:8px; background:#fff; padding:9px 8px; cursor:pointer; text-align:left; min-height:60px; }
+.trigger-mode-grid button.active { border-color:#1d1d1f; box-shadow:0 0 0 1px #1d1d1f inset; }
+.trigger-mode-grid button:disabled { opacity:.42; cursor:default; }
+.trigger-mode-grid b { display:block; font-size:13px; margin-bottom:4px; }
+.trigger-mode-grid span { display:block; font-size:13px; line-height:1.35; color:#7a828d; }
+.trigger-demo { margin:0 18px; min-height:44px; padding:10px 12px; border:1px solid #eceef1; background:#fafbfc; display:flex; align-items:center; gap:9px; font-size:13px; color:#69727e; }
+.trigger-demo .demo-word { font-weight:650; color:#222832; border-bottom:2px solid #d7b453; }
+.trigger-demo .demo-selection { background:linear-gradient(transparent 36%,rgba(254,240,138,.75) 36%,rgba(254,240,138,.75) 94%,transparent 94%); }
+.trigger-demo .demo-pop { margin-left:auto; background:#1f2328; color:#fff; border-radius:5px; padding:4px 7px; white-space:nowrap; }
+.shortcut-sequence-box { padding:16px 18px; border-bottom:1px solid #eceef1; }
+.shortcut-sequence-fields { display:flex; gap:12px; margin-top:11px; }
+.shortcut-sequence-fields label { display:flex; align-items:center; gap:7px; font-size:13px; color:#66707d; }
+.compact-code { width:64px !important; text-align:center; text-transform:uppercase; font-family:ui-monospace,SFMono-Regular,Menlo,monospace !important; font-weight:650; letter-spacing:.06em; }
+@media (max-width: 920px) { .font-card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+
+/* Blacklist and vocabulary views. */
+.domain-list-card{max-width:880px;border:1px solid #e4e7eb;border-radius:10px;background:#fff;overflow:hidden}
+.domain-list-add{display:flex;gap:8px;padding:12px;border-bottom:1px solid #eceef1}.domain-list-add .apple-input{flex:1;margin:0!important}
+.exclude-domain-list{display:block}.domain-row{min-height:50px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 12px;border-bottom:1px solid #eceef1}.domain-row:last-child{border-bottom:0}.domain-row-main{display:flex;align-items:center;gap:10px;min-width:0}.domain-row-icon{width:24px;height:24px;display:grid;place-items:center;color:#858b94;flex:0 0 auto}.domain-row-domain{font-size:14px;font-weight:600;color:#252930;overflow-wrap:anywhere}.domain-row-note{font-size:13px;color:#8a9098;margin-top:2px}.domain-row-remove{border:0;background:transparent;color:#8a9098;font-size:13px;padding:6px 8px;border-radius:6px;cursor:pointer}.domain-row-remove:hover{background:#f5f5f5;color:#333}
+.vocab-view-switch{display:flex;gap:4px;padding:3px;border:1px solid #e2e5e9;border-radius:8px;background:#f8f9fa}.vocab-view-switch button{border:0;background:transparent;color:#747b85;font-size:13px;padding:5px 8px;border-radius:5px;cursor:pointer}.vocab-view-switch button.active{background:#fff;color:#20242a;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.vocab-list-box[data-view="list"]{display:block}.vocab-list-box[data-view="list"] .vocab-card-item{display:grid;grid-template-columns:minmax(140px,.8fr) minmax(0,1.4fr) auto;align-items:center;gap:18px;border:0;border-bottom:1px solid #eceef1;border-radius:0;padding:11px 3px;margin:0}.vocab-list-box[data-view="list"] .vocab-card-item:last-child{border-bottom:0}
+.vocab-list-box[data-view="cards"]{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}.vocab-list-box[data-view="cards"] .vocab-card-item{width:auto;min-width:125px;max-width:220px;padding:11px 12px;border:1px solid #e4e7eb;border-radius:8px}.vocab-list-box[data-view="cards"] .vocab-trans-text{display:none}
+.vocab-list-box[data-view="gallery"]{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}.vocab-list-box[data-view="gallery"] .vocab-card-item{min-height:120px;border:1px solid #e4e7eb;border-radius:9px;padding:13px;display:flex;flex-direction:column}.vocab-list-box[data-view="gallery"] .vocab-trans-text{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.vocab-lang-tag{border:0!important;background:transparent!important;padding:0!important;border-radius:0!important;color:#9298a1!important}
+.domain-row-basic{min-height:50px;display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid #eceef1}.domain-row-basic:last-child{border-bottom:0}.domain-row-copy{min-width:0;display:flex;flex-direction:column;gap:2px}.domain-row-copy strong{font-size:14px;color:#252930;font-weight:600;overflow-wrap:anywhere}.domain-row-copy span,.domain-list-empty{font-size:13px;color:#8a9098}.domain-list-empty{padding:16px 12px}.domain-remove-btn{border:0;background:transparent;color:#8a9098;font-size:13px;padding:6px 8px;border-radius:6px;cursor:pointer}.domain-remove-btn:hover{background:#f5f5f5;color:#333}
+.domain-list-card{padding:0!important}.domain-list-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 16px;border-bottom:1px solid #eceef1}.domain-add-row{display:flex;align-items:center;gap:7px;min-width:310px}.domain-add-row .apple-input{margin:0!important;min-width:190px}.domain-list{display:block}.domain-list-card .row-hint{font-size:13px!important}
+@media(max-width:760px){.domain-list-head{align-items:stretch;flex-direction:column}.domain-add-row{min-width:0;width:100%}.domain-add-row .apple-input{flex:1;min-width:0}}
+.vocab-list-box[data-view="list"] .vocab-card-item{grid-template-columns:minmax(0,1fr) auto!important}.vocab-list-box[data-view="list"] .vocab-card-main{display:grid;grid-template-columns:minmax(150px,.7fr) minmax(0,1.3fr);grid-template-rows:auto auto;column-gap:18px;align-items:start}.vocab-list-box[data-view="list"] .vocab-card-head{grid-column:1;grid-row:1}.vocab-list-box[data-view="list"] .vocab-phonetic-text{grid-column:1;grid-row:2}.vocab-list-box[data-view="list"] .vocab-trans-text{grid-column:2;grid-row:1 / span 2;margin-top:1px!important}
+
+/* ==========================================================================
+   Direct visual settings controls
+   ========================================================================== */
+.content-panel{max-width:1180px;padding:30px 38px 42px}
+.view-header{margin-bottom:2px}.view-desc{display:none!important}
+.row-hint:empty,.item-desc:empty{display:none}
+.macos-card{box-shadow:none}
+#tab-api>.macos-card:first-of-type{border-color:rgba(0,113,227,.22);background:linear-gradient(180deg,#fff,#fbfdff)}
+#tab-api>.macos-card:first-of-type .row-title{font-size:14px}
+
+/* Real custom select: native control is retained for value/events but no longer shown. */
+.jijian-select{position:relative;min-width:154px;max-width:100%;font-size:13px}.jijian-select>.native-select-hidden{position:absolute!important;opacity:0!important;pointer-events:none!important;width:1px!important;height:1px!important}
+.jijian-select-trigger{width:100%;min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 10px 0 12px;border:1px solid rgba(17,24,39,.12);border-radius:8px;background:#fff;color:#252a31;font:inherit;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s}
+.jijian-select-trigger:hover{background:#fbfbfc;border-color:rgba(17,24,39,.18)}.jijian-select.open .jijian-select-trigger{border-color:#8faecf;box-shadow:0 0 0 2px rgba(0,113,227,.08)}
+.jijian-select-trigger span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.jijian-select-trigger svg{width:15px;height:15px;fill:none;stroke:#7d8490;stroke-width:1.8;flex:0 0 auto}
+.jijian-select-menu{display:none;position:absolute;z-index:200;top:calc(100% + 5px);right:0;min-width:100%;width:max-content;max-width:320px;max-height:260px;overflow:auto;padding:5px;background:#fff;border:1px solid rgba(17,24,39,.12);border-radius:9px;box-shadow:0 10px 30px rgba(15,23,42,.12)}.jijian-select.open .jijian-select-menu{display:block;animation:jSelectIn .13s ease-out}@keyframes jSelectIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.jijian-select-menu button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:14px;border:0;background:transparent;border-radius:6px;padding:8px 9px;color:#343a43;font:inherit;font-size:13px;text-align:left;cursor:pointer}.jijian-select-menu button:hover{background:#f3f5f7}.jijian-select-menu button.active{color:#111827;font-weight:650}.jijian-select-menu button svg{width:14px;height:14px;fill:none;stroke:#0071e3;stroke-width:2.1}
+
+/* Model picker: typing and preset choice are separate actions. */
+.model-input-row{position:relative;display:grid!important;grid-template-columns:minmax(130px,1fr) auto 34px;gap:6px!important}.model-input-row .apple-input{min-width:0}.model-picker-btn{height:34px;border:1px solid rgba(17,24,39,.12);border-radius:7px;background:#fff;padding:0 9px;display:flex;align-items:center;gap:5px;color:#505864;font:inherit;font-size:13px;cursor:pointer}.model-picker-btn svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8}.model-picker-menu{display:none;position:absolute;z-index:210;top:39px;right:40px;min-width:220px;max-width:min(340px,90vw);max-height:250px;overflow:auto;padding:5px;border:1px solid rgba(17,24,39,.12);border-radius:9px;background:#fff;box-shadow:0 12px 32px rgba(15,23,42,.13)}.model-menu-open .model-picker-menu{display:block}.model-picker-menu button{width:100%;border:0;background:transparent;border-radius:6px;padding:8px 9px;display:flex;align-items:center;justify-content:space-between;gap:10px;color:#343a43;font:inherit;font-size:13px;text-align:left;cursor:pointer}.model-picker-menu button:hover{background:#f3f5f7}.model-picker-menu button.active{font-weight:650}.model-picker-menu svg{width:14px;height:14px;fill:none;stroke:#0071e3;stroke-width:2}.model-picker-empty{padding:9px;color:#858c96;font-size:13px}.model-refresh-btn{width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;display:grid!important;place-items:center;border-radius:7px!important}.model-refresh-btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8}.model-refresh-btn.is-loading svg{animation:modelSpin .8s linear infinite}@keyframes modelSpin{to{transform:rotate(360deg)}}
+
+/* Segment tabs share one actual sliding indicator. */
+.segmented-control,.vocab-view-switch{position:relative;isolation:isolate;overflow:hidden}.settings-segment-indicator{position:absolute;z-index:0;top:3px;bottom:3px;left:0;border-radius:6px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.09);transition:transform .22s cubic-bezier(.2,.8,.2,1),width .22s cubic-bezier(.2,.8,.2,1);pointer-events:none;will-change:transform,width}.segment-item,.vocab-view-switch button{position:relative;z-index:1}.segment-item.active,.vocab-view-switch button.active{background:transparent!important;box-shadow:none!important}
+
+/* Render cards and underline sub-style. */
+.style-card-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.style-choice-card{min-height:108px;padding:11px;border-radius:9px}.style-choice-card.active{border-color:#1f2937;box-shadow:0 0 0 1px #1f2937 inset}.underline-style-picker{display:flex;gap:7px;margin-top:10px;align-items:center}.underline-style-picker i{width:24px;height:13px;position:relative;border-radius:3px;cursor:pointer}.underline-style-picker i::after{content:"";position:absolute;left:2px;right:2px;top:6px;border-bottom:2px solid #68717d}.underline-style-picker i[data-value="dotted"]::after{border-bottom-style:dotted}.underline-style-picker i[data-value="dashed"]::after{border-bottom-style:dashed}.underline-style-picker i[data-value="double"]::after{border-bottom-style:double;border-bottom-width:3px}.underline-style-picker i[data-value="wavy"]::after{border:0;height:4px;top:5px;background:radial-gradient(circle at 3px -1px,transparent 3px,#68717d 3.5px,#68717d 4.3px,transparent 4.8px) 0 0/8px 5px repeat-x}.underline-style-picker i.active{background:#edf2f7}.demo-blur{filter:blur(3px);user-select:none}.demo-censor{background:#25282d;color:transparent!important;border-radius:3px;padding:0 3px}
+
+/* Larger, article-like live preview. */
+.layout-grid-2{grid-template-columns:minmax(480px,.93fr) minmax(420px,1.07fr)!important;align-items:start;gap:18px!important}.preview-card-sticky{position:sticky;top:24px;min-height:650px;padding:0!important;overflow:hidden}.preview-body{min-height:590px!important;padding:34px 38px!important;background:#fff}.demo-article{max-width:620px;margin:0 auto}.demo-kicker{font-size:11px;letter-spacing:.14em;font-weight:750;color:#9aa1aa;margin-bottom:18px}.demo-orig-h{font-size:25px!important;line-height:1.22!important;letter-spacing:-.025em;margin:0 0 9px!important}.demo-trans-h{font-size:21px!important;line-height:1.35!important;padding:0!important;margin:0 0 26px}.demo-orig-p{font-size:15px!important;line-height:1.72!important;margin:0 0 6px!important;color:#454d58!important}.demo-trans-p{font-size:15px!important;padding:0!important;margin:0 0 25px!important}.demo-article blockquote{margin:30px 0 0;padding:14px 0 14px 18px;border-left:2px solid #dfe3e8;color:#727984;font:500 14px/1.7 Georgia,serif}.preview-tip{display:none!important}
+.form-row-2{gap:12px}.form-row-2>.form-item{min-width:0}
+
+/* Trigger cards are the preview. */
+.dict-trigger-panel{padding-bottom:2px}.dict-trigger-head{padding:2px 0 10px}.trigger-mode-grid{padding:0!important;gap:9px!important}.trigger-mode-grid button{min-height:84px!important;padding:12px!important;position:relative}.trigger-mode-grid button b{font-size:14px!important;margin-bottom:8px!important}.trigger-mode-grid button span{font-size:13px!important}.trigger-mode-grid button[data-value="double_click"]::after{content:"word  word";font:600 12px/1 var(--font-family);letter-spacing:1px;color:#7e8792}.trigger-mode-grid button[data-value="selection"]::after{content:"selected text";font:600 12px/1 var(--font-family);color:#47515e;background:#e7eef8;padding:2px 4px}.trigger-mode-grid button[data-value="both"]::after{content:"word  +  selected";font:600 12px/1 var(--font-family);color:#657080}.trigger-demo{display:none!important}
+.shortcut-flat-row{align-items:flex-start!important}.shortcut-sequence-fields{margin:0!important;padding:0!important}.shortcut-sequence-fields label{font-size:13px!important;color:#6f7782!important}
+
+/* Vocab manager. */
+.vocab-toolbar-layout{align-items:center!important;gap:16px!important}.vocab-filter-group{display:grid!important;grid-template-columns:160px minmax(260px,1fr)!important;gap:14px!important;flex:1}.vocab-view-switch{height:36px;gap:0!important;padding:3px!important}.vocab-view-switch button{width:37px;height:28px;padding:0!important;display:grid;place-items:center}.vocab-view-switch button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.vocab-list-box{max-height:620px}.vocab-inline-delete{color:#9aa0a8!important}.vocab-inline-delete:hover{color:#b42318!important}
+
+/* Domain rules */
+.domain-list-head{align-items:end!important}.domain-list-head>div:first-child{flex:0 0 auto}.domain-add-row{flex:1;justify-content:flex-end}.domain-add-row .apple-input{width:min(460px,100%);min-width:260px}.domain-row-basic{grid-template-columns:minmax(0,1fr) auto!important;padding:11px 16px!important}.domain-row-icon{display:none!important}.domain-row-copy strong{font-size:14px!important;font-weight:560!important}.domain-row-copy span{display:none}.domain-remove-btn{min-width:54px;text-align:right}
+
+/* Local dictionaries */
+.local-dict-card{padding:0!important;overflow:hidden}.local-dict-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 17px;border-bottom:1px solid #eceef1}.primary-small{background:#1f2328!important;color:#fff!important;border-color:#1f2328!important}.local-dict-status{min-height:0;padding:0 17px;color:#7d8590;font-size:13px}.local-dict-status:not(:empty){padding-top:11px}.local-dict-list{padding:0}.local-dict-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 17px;border-top:1px solid #eceef1}.local-dict-row:first-child{border-top:0}.local-dict-row>div{display:flex;flex-direction:column;gap:3px}.local-dict-row strong{font-size:14px;font-weight:650;color:#242931}.local-dict-row span{font-size:13px;color:#89919b}.local-dict-ready{color:#288057!important}.local-dict-empty{padding:22px 17px;color:#969da6;font-size:13px}
+
+@media(max-width:980px){.layout-grid-2{grid-template-columns:1fr!important}.preview-card-sticky{position:static}.style-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.content-panel{padding:24px}.vocab-toolbar-layout{flex-wrap:wrap}.vocab-filter-group{grid-template-columns:150px minmax(180px,1fr)!important}}
+
+
+/* Settings layout details. */
+.compact-segment{min-width:178px}
+.card-row-stack{align-items:stretch!important;gap:12px!important}
+.highlight-style-row .row-info{align-self:flex-start}
+.micro-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;width:min(430px,100%)}
+.micro-choice-card{min-height:62px;border:1px solid #e0e3e7;background:#fff;border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:7px;color:#59616c;cursor:pointer;font:inherit}
+.micro-choice-card.active{border-color:#6c7785;box-shadow:0 0 0 2px rgba(76,87,101,.08);background:#fbfcfd}
+.micro-choice-card b{font-size:13px;font-weight:650;color:#424952}
+.mini-highlight-demo{font-size:13px;color:#252a31;line-height:1.4;padding:0 1px}.mini-highlight-demo.soft{background:linear-gradient(transparent 32%,rgba(253,224,71,.42) 32%,rgba(253,224,71,.42) 91%,transparent 91%)}.mini-highlight-demo.full{background:rgba(253,224,71,.58)}.mini-highlight-demo.line{text-decoration:underline 2px rgba(235,180,30,.72);text-underline-offset:2px}
+.domain-add-row{display:grid!important;grid-template-columns:minmax(250px,1fr) auto!important;gap:8px!important;min-width:min(480px,100%)!important}
+.local-dict-head{align-items:center!important}.local-dict-status:empty{display:none}
+
+/* Local dictionary enable switches. */
+.local-dict-copy{min-width:0;display:flex;flex-direction:column;gap:3px}.local-dict-copy strong{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.local-dict-copy span{font-size:12px;color:#8a8f98}.local-dict-switch{position:relative;width:34px;height:20px;flex:none;cursor:pointer}.local-dict-switch input{position:absolute;opacity:0;pointer-events:none}.local-dict-switch span{position:absolute;inset:0;border-radius:20px;background:#d8dce2;transition:.18s ease}.local-dict-switch span:after{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.15);transition:.18s ease}.local-dict-switch input:checked+span{background:#111827}.local-dict-switch input:checked+span:after{transform:translateX(14px)}
+
+/* Distinguish the primary engine without adding copy. */
+#tab-api>.macos-card:first-of-type{border-color:rgba(26,31,39,.16);background:linear-gradient(180deg,#fff,#fafbfc)}
+#tab-api>.macos-card:first-of-type .row-title{font-size:14px;font-weight:680;color:#171b21}
+#tab-api>.macos-card:first-of-type .jijian-select{min-width:210px}
+.style-choice-card[data-value="hover-reveal"] .demo-faded{opacity:.26;transition:opacity .15s ease}.style-choice-card[data-value="hover-reveal"] .style-choice-demo:hover .demo-faded{opacity:1}.style-choice-card[data-value="blur-reveal"] .demo-blur{filter:blur(2.4px);opacity:.75;transition:.15s ease}.style-choice-card[data-value="blur-reveal"] .style-choice-demo:hover .demo-blur{filter:none;opacity:1}
+/* Settings readability floor. */
+.row-hint,.item-label,.item-desc,.segment-item,.test-result,.test-btn,.local-dict-copy span{font-size:13px!important}
+
+
+/* Interaction and clipping safeguards. */
+.content-panel,.tab-view,.macos-card{overflow:visible}
+.preview-card-sticky,.local-dict-card,.domain-list-card{overflow:hidden!important}
+.jijian-select.open,.model-input-row.model-menu-open{z-index:800!important}
+.jijian-select-menu,.model-picker-menu{z-index:820!important}
+/* Keep menus inside the viewport instead of clipping them inside a card. */
+.jijian-select-menu{left:auto!important;right:0!important;max-width:min(360px,calc(100vw - 300px))!important}
+.model-picker-menu{right:0!important;top:calc(100% + 5px)!important}
+/* Simple sliders: the track is the control; no extra box. */
+.apple-slider{border:0!important;box-shadow:none!important;background:transparent!important;padding:0!important}
+/* Prevent the indicator from ever stealing clicks even if a browser paints a pseudo layer oddly. */
+.settings-segment-indicator{pointer-events:none!important}
+.segment-item,.vocab-view-switch button,.style-choice-card,.font-choice-card,.trigger-mode-grid button,.micro-choice-card{pointer-events:auto!important}
+
+/* Model input uses an input, preset picker and refresh control. */
+.model-input-row{grid-template-columns:minmax(160px,1fr) 86px 34px!important}
+.model-picker-btn{justify-content:center!important;padding:0 8px!important;white-space:nowrap!important}
+
+
+/* Settings interaction details. */
+.style-card-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}.style-choice-card.mode-disabled{display:none!important}.text-color-palette{display:flex;gap:10px;align-items:center;min-height:30px}.text-color-palette button{width:24px;height:24px;padding:0;border-radius:50%;border:1px solid rgba(15,23,42,.12);background:var(--c,#fff);cursor:pointer;box-shadow:0 0 0 2px transparent}.text-color-palette button.active{box-shadow:0 0 0 2px #fff,0 0 0 4px #4f5965}.text-color-palette .inherit-color{background:#fff;color:#5f6772;font:650 11px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}.form-divider{height:1px;background:#eceef1;margin:15px -17px 4px}.compact-row{min-height:48px}.local-dict-actions{display:flex;gap:8px;align-items:center}.local-dict-actions .secondary-btn{white-space:nowrap}.style-choice-card[data-value="italic"] .style-choice-demo em{font-style:italic!important}.sidebar-version{display:none!important}
+
+/* Local dictionary details. */
+.local-dict-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.local-dict-head{align-items:center!important;gap:16px}
+.style-choice-card[hidden]{display:none!important}
+
+/* Collection details. */
+.vocab-manager-card,.highlight-manager-card{overflow:visible}
+.vocab-list-box{padding:4px 2px 8px;overflow:auto}
+.vocab-card-item{position:relative;transition:border-color .15s ease,background .15s ease,transform .15s ease}
+.vocab-card-head{display:flex;align-items:center;gap:8px;min-width:0}
+.vocab-word-text{font-size:15px;font-weight:720;color:#222831;line-height:1.3;min-width:0;overflow-wrap:anywhere}
+.vocab-lang-dot{width:7px;height:7px;border-radius:50%;background:#cbd5e1;flex:0 0 auto}
+.vocab-card-item.lang-en .vocab-lang-dot{background:#a8c7fa}.vocab-card-item.lang-ja .vocab-lang-dot{background:#f4b9c0}.vocab-card-item.lang-zh .vocab-lang-dot{background:#f4c995}.vocab-card-item.lang-ko .vocab-lang-dot{background:#b7d9ca}.vocab-card-item.lang-fr .vocab-lang-dot,.vocab-card-item.lang-es .vocab-lang-dot{background:#d6c0ef}.vocab-card-item.lang-de .vocab-lang-dot{background:#e8d18d}
+.vocab-phonetic-text{font-size:12.5px!important;color:#89919c!important;line-height:1.35}
+.vocab-trans-text{font-size:13.5px!important;line-height:1.55!important;color:#555e69!important}
+.vocab-detail-preview{margin-top:7px;font-size:12.5px;line-height:1.55;color:#7c8490;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.vocab-inline-delete{width:30px;height:30px;border:0!important;border-radius:7px!important;background:transparent!important;display:grid!important;place-items:center;padding:0!important;cursor:pointer;opacity:.45;transition:opacity .15s,background .15s,color .15s}
+.vocab-card-item:hover .vocab-inline-delete{opacity:1}.vocab-inline-delete svg,.highlight-delete svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.vocab-inline-delete:hover{background:#fff1f0!important;color:#bd3b34!important}
+.vocab-list-box[data-view="cards"]{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:9px!important;align-items:stretch!important}
+.vocab-list-box[data-view="cards"] .vocab-card-item{width:auto!important;min-width:0!important;max-width:none!important;min-height:84px!important;border:1px solid #e4e7eb!important;border-radius:9px!important;padding:12px 38px 12px 13px!important;background:#fff}
+.vocab-list-box[data-view="cards"] .vocab-card-item.lang-en{background:#f8fbff}.vocab-list-box[data-view="cards"] .vocab-card-item.lang-ja{background:#fffafa}.vocab-list-box[data-view="cards"] .vocab-card-item.lang-zh{background:#fffdf8}
+.vocab-list-box[data-view="cards"] .vocab-inline-delete,.vocab-list-box[data-view="gallery"] .vocab-inline-delete{position:absolute;right:7px;top:7px}
+.vocab-list-box[data-view="gallery"]{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))!important;gap:10px!important}
+.vocab-list-box[data-view="gallery"] .vocab-card-item{height:148px!important;min-height:148px!important;overflow:hidden;border-radius:9px!important;padding:13px 40px 13px 14px!important;background:#fff}
+.vocab-list-box[data-view="gallery"] .vocab-card-main{min-height:0;overflow:hidden}
+.vocab-list-box[data-view="gallery"] .vocab-trans-text{margin-top:8px!important;-webkit-line-clamp:2!important}
+.vocab-list-box[data-view="list"] .vocab-card-item{padding:12px 36px 12px 6px!important;position:relative}.vocab-list-box[data-view="list"] .vocab-inline-delete{position:absolute;right:2px;top:50%;transform:translateY(-50%)}
+
+.highlight-toolbar{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #eceef1}.highlight-toolbar .apple-input{flex:1;margin:0!important}.highlight-count{font-size:12.5px;color:#8b929c;white-space:nowrap}
+.highlight-manager-list{padding:0 16px;max-height:680px;overflow:auto}.highlight-manager-item{position:relative;padding:16px 42px 16px 0;border-bottom:1px solid #eceef1}.highlight-manager-item:last-child{border-bottom:0}.highlight-quote{font-size:14.5px;line-height:1.65;color:#2a3038;font-weight:540}.highlight-translation{margin-top:6px;font-size:13px;line-height:1.55;color:#69727d}.highlight-meta{margin-top:8px;font-size:11.5px;color:#a0a6ae;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.highlight-delete{position:absolute;right:2px;top:13px;width:30px;height:30px;border:0;background:transparent;border-radius:7px;color:#9aa0a8;display:grid;place-items:center;cursor:pointer}.highlight-delete:hover{background:#fff1f0;color:#bd3b34}
+
+/* moved reader image appearance under typography */
+#tab-typography .compact-row{min-height:48px}
+
+/* Domain rule scopes. */
+.domain-row-basic{display:block!important;padding:0!important;border-bottom:1px solid rgba(17,24,39,.065)!important;background:#fff!important}
+.domain-row-basic:last-child{border-bottom:0!important}
+.domain-row-main{min-height:48px;display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:7px;padding:0 12px}
+.domain-row-copy{display:flex;align-items:baseline;gap:8px;min-width:0}.domain-row-copy strong{font-size:13.5px;font-weight:630;color:#252a31;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.domain-row-copy span{font-size:11.5px;color:#9aa0a8}
+.domain-scope-row{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px 45px}
+.domain-scope-chip{position:relative}.domain-scope-chip input{position:absolute;opacity:0;pointer-events:none}.domain-scope-chip span{display:inline-flex;align-items:center;height:25px;padding:0 8px;border:1px solid rgba(17,24,39,.08);border-radius:6px;background:#fff;color:#7a828c;font-size:12px;cursor:pointer;transition:.15s ease}.domain-scope-chip:hover span{background:#f7f8f9}.domain-scope-chip.active span{background:#f1f3f5;border-color:#5c6570;color:#242a31;font-weight:620}
+.domain-remove-btn{border:0!important;background:transparent!important;color:#9a5555!important;padding:5px 4px!important;border-radius:5px!important}.domain-remove-btn:hover{background:#fbf3f3!important;color:#a13f3f!important}
+.local-dict-title-line{display:flex!important;align-items:baseline!important;gap:9px!important;flex-direction:row!important}.local-dict-inline-status{font-size:12px!important;color:#858d97!important;margin:0!important}.local-dict-inline-status:empty{display:none!important}.local-dict-head{border-bottom:1px solid #eceef1!important}.local-dict-list{margin:0!important}
+
+/* Typography controls with clear hierarchy and uncramped cards. */
+#tab-typography .form-item{gap:8px!important}
+#tab-typography .item-label,#tab-typography .row-title{font-size:15px!important;line-height:1.35!important;font-weight:680!important;color:#252a31!important;margin-bottom:2px!important}
+#tab-typography .item-desc{font-size:13px!important;font-weight:540!important;color:#8b929c!important}
+#tab-typography .style-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+#tab-typography .style-choice-card{min-height:104px!important;padding:12px 13px!important;border-radius:10px!important;overflow:hidden!important}
+#tab-typography .style-choice-name{font-size:13.5px!important;line-height:1.25!important;white-space:normal!important}
+#tab-typography .style-choice-demo{margin-top:8px!important;min-width:0!important}
+#tab-typography .font-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+#tab-typography .font-choice-card{min-height:74px!important;padding:10px 12px!important}
+#tab-typography .font-choice-card span{font-size:13px!important}
+#tab-typography .font-choice-card b{font-size:15px!important;margin-top:5px!important}
+
+.style-dependent-options{margin-top:10px;border:1px solid #e8eaed;border-radius:9px;background:#fbfcfd;overflow:visible}
+.style-dependent-options:empty{display:none}
+.style-option-line{min-height:46px;display:flex;align-items:center;gap:12px;padding:8px 11px}
+.style-option-line[hidden]{display:none!important}
+.style-option-label{font-size:12.5px;font-weight:650;color:#626b76;white-space:nowrap}
+.style-option-line .style-inline-palette{display:flex;align-items:center;gap:8px;margin:0!important}
+.style-option-line .mini-swatch{width:22px!important;height:22px!important;border-radius:6px!important;box-shadow:none!important;border:1px solid rgba(17,24,39,.08)!important;background:var(--swatch,#fff)!important;cursor:pointer}
+.style-option-line .mini-swatch.active{outline:2px solid #4f5965!important;outline-offset:2px!important}
+.style-option-line .mini-swatch.none{background:linear-gradient(135deg,#fff 46%,#c6cbd1 47%,#c6cbd1 53%,#fff 54%)!important}
+.style-option-line .underline-style-picker{margin:0!important;display:flex;gap:5px;align-items:center}
+.style-option-line .underline-style-picker i{width:27px!important;height:24px!important;border-radius:6px!important;cursor:pointer}
+.style-option-line .underline-style-picker i.active{background:#eceff3!important}
+.style-option-line .jijian-select{margin-left:auto;min-width:118px;max-width:156px}
+.compact-color-select + .jijian-select-trigger,.color-select-wide + .jijian-select-trigger{min-height:34px!important}
+.select-trigger-copy,.select-menu-copy{display:flex;align-items:center;gap:8px;min-width:0}
+.select-color-dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--dot,#111827);box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);flex:0 0 auto}
+.color-select-wide~.jijian-select-trigger,.color-select-wide~.jijian-select-menu{min-width:180px}
+
+/* Native range controls without the raised/shadowy hover treatment. */
+#tab-typography .apple-slider{-webkit-appearance:none!important;appearance:none!important;width:100%!important;height:22px!important;margin:2px 0 0!important;background:transparent!important;outline:none!important}
+#tab-typography .apple-slider::-webkit-slider-runnable-track{height:4px!important;border-radius:999px!important;background:#e3e6ea!important;border:0!important;box-shadow:none!important}
+#tab-typography .apple-slider::-webkit-slider-thumb{-webkit-appearance:none!important;appearance:none!important;width:16px!important;height:16px!important;border-radius:50%!important;background:#3e4650!important;border:2px solid #fff!important;box-shadow:none!important;margin-top:-6px!important;transition:transform .12s ease,background .12s ease!important}
+#tab-typography .apple-slider:hover::-webkit-slider-thumb{background:#272d35!important;transform:scale(1.04)!important;box-shadow:none!important}
+#tab-typography .apple-slider::-moz-range-track{height:4px!important;border-radius:999px!important;background:#e3e6ea!important;border:0!important;box-shadow:none!important}
+#tab-typography .apple-slider::-moz-range-thumb{width:14px!important;height:14px!important;border-radius:50%!important;background:#3e4650!important;border:2px solid #fff!important;box-shadow:none!important}
+
+.preview-card-sticky{border-radius:12px!important;overflow:hidden!important}
+.preview-card-sticky .preview-safari-bar{border-radius:11px 11px 0 0!important}
+
+/* A softer blur: readable shape without an ink-like text shadow. */
+.style-choice-card[data-value="blur-reveal"] .demo-blur{filter:blur(2px)!important;opacity:.48!important;text-shadow:none!important}
+.style-choice-card[data-value="blur-reveal"] .style-choice-demo:hover .demo-blur{filter:none!important;opacity:1!important}
+
+/* Model preset button is text-only and stable. */
+.model-picker-btn svg{display:none!important}
+.model-picker-btn{height:36px!important;border-radius:7px!important;font-size:12.5px!important;font-weight:620!important}
+.test-btn{min-height:36px!important;padding:0 15px!important}
+.engine-connected-summary{color:#267451!important;background:#f3faf6!important;border-color:#dcefe4!important}
+.engine-connected-summary:before{content:"";width:7px;height:7px;border-radius:50%;background:#34a56f;display:inline-block;margin-right:7px;vertical-align:1px}
+
+
+/* ==========================================================================
+   Settings hierarchy and spacing
+   ========================================================================== */
+#tab-typography .item-label,
+#tab-typography .row-title{font-size:15px!important;font-weight:700!important;line-height:1.32!important;margin-bottom:2px!important}
+#tab-typography .form-item>.item-label{display:flex!important;align-items:center!important;justify-content:space-between!important;margin-bottom:9px!important}
+#tab-typography .style-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
+#tab-typography .style-choice-card{min-height:92px!important;padding:11px 12px!important;border-radius:10px!important;overflow:hidden!important}
+#tab-typography .style-choice-name{font-size:13.5px!important;margin-bottom:8px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#tab-typography .style-choice-demo{min-width:0!important}
+#tab-typography .font-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+#tab-typography .font-choice-card{min-height:62px!important;padding:9px 11px!important;overflow:hidden!important}
+#tab-typography .font-choice-card span,#tab-typography .font-choice-card b{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#tab-typography .form-row-2{gap:16px!important}
+#tab-typography .form-row-2 .form-item{min-width:0!important}
+#tab-typography .card-row.compact-row{padding-top:11px!important;padding-bottom:11px!important}
+#tab-typography .preview-card-sticky{border-radius:12px!important;overflow:hidden!important}
+#tab-typography .preview-body{padding:22px!important}
+#tab-typography .apple-slider{-webkit-appearance:none!important;appearance:none!important;height:24px!important;background:transparent!important}
+#tab-typography .apple-slider::-webkit-slider-runnable-track{height:5px!important;border-radius:99px!important;background:linear-gradient(90deg,#cfd5dc,#e6e9ed)!important;box-shadow:none!important}
+#tab-typography .apple-slider::-webkit-slider-thumb{-webkit-appearance:none!important;width:17px!important;height:17px!important;border-radius:50%!important;background:#fff!important;border:1.5px solid #69727e!important;box-shadow:0 1px 3px rgba(15,23,42,.12)!important;margin-top:-6px!important}
+#tab-typography .apple-slider:hover::-webkit-slider-thumb{transform:none!important;background:#fff!important;box-shadow:0 1px 3px rgba(15,23,42,.12)!important}
+#tab-typography .style-dependent-options{margin-top:10px!important}
+#tab-typography .style-option-line{padding:9px 0 1px!important}
+#tab-typography .style-option-label{font-size:13px!important}
+
+/* Interaction hierarchy: no stray divider between enable switch and trigger cards. */
+#tab-interaction .interaction-card{margin-bottom:14px!important}
+#tab-interaction .dict-trigger-panel{padding-bottom:10px!important;border-bottom:0!important}
+#tab-interaction .dict-trigger-head{border-bottom:0!important;padding-bottom:7px!important}
+#tab-interaction .trigger-mode-grid{margin-top:7px!important;gap:8px!important}
+#tab-interaction .trigger-mode-grid button{min-height:70px!important}
+#tab-interaction .trigger-mode-grid button b{font-size:13.5px!important}
+#tab-interaction .trigger-mode-grid button span{font-size:12.5px!important;line-height:1.4!important}
+#tab-interaction .shortcut-flat-row{align-items:flex-start!important}
+#tab-interaction .highlight-style-row{border-top:0!important}
+
+/* Local dictionary list: status belongs on the title line. */
+.local-dict-title-line{display:flex!important;align-items:baseline!important;gap:8px!important}
+.local-dict-inline-status{margin:0!important;font-size:12.5px!important;color:#7a828d!important}
+.local-dict-list{margin-top:8px!important}
+.local-dict-row{min-height:52px!important}
+.local-dict-copy strong{font-size:13.5px!important}
+.local-dict-copy span{font-size:12px!important}
+
+/* API model picker — text button, predictable vertical alignment. */
+.model-input-row{align-items:center!important}
+.model-picker-btn{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:78px!important;padding:0 10px!important;line-height:1!important}
+.model-picker-btn svg{display:none!important}
+.test-btn{min-height:38px!important;padding:0 16px!important;font-size:13px!important}
+.engine-connected-summary{color:#24734f!important;background:#f2faf5!important;border-color:#d9ede0!important}
+.engine-connected-summary::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#34a56f;margin-right:7px}
+
+/* Vocabulary manager: stable layout across list/cards/gallery. */
+.vocab-manager-card{overflow:visible!important}
+.vocab-top-toolbar{align-items:center!important;gap:14px!important}
+.vocab-filter-group{gap:12px!important;min-width:0!important}
+#input-vocab-search{min-width:260px!important}
+.vocab-content-area,.vocab-list-wrap,#vocab-list{min-height:260px!important}
+.vocab-empty-state,.vocab-empty{min-height:220px!important;display:grid!important;place-items:center!important}
+.vocab-grid.cards,.vocab-grid.gallery{align-items:start!important}
+
+
+/* Settings spacing. */
+#tab-typography .item-label,#tab-typography .row-title,#tab-typography .setting-label{font-size:15px!important;line-height:1.35!important;margin-bottom:8px!important}
+#tab-typography .render-style-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}
+#tab-typography .render-style-card{min-height:82px!important;padding:10px!important;overflow:visible!important}
+#tab-typography .render-style-card .style-card-title{font-size:13.5px!important;line-height:1.3!important;margin-bottom:7px!important;white-space:normal!important}
+#tab-typography .translation-font-grid,#tab-typography .font-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;overflow:visible!important}
+#tab-typography .translation-font-card,#tab-typography .font-choice-card{min-height:58px!important;overflow:visible!important}
+#tab-typography input[type="range"]{box-shadow:none!important}
+#tab-interaction .dict-trigger-cards{margin-top:7px!important;border-top:0!important;padding-top:0!important}
+#tab-interaction .dict-trigger-card{min-height:52px!important}
+
+/* Settings controls. */
+#tab-typography .style-dependent-options{
+  margin-top:9px!important;
+  border:1px solid #e6e9ed!important;
+  border-radius:10px!important;
+  background:#fbfcfd!important;
+  padding:2px!important;
+  animation:jijianStyleOptionsIn .16s ease both;
+}
+#tab-typography .style-dependent-options.is-empty{display:none!important}
+@keyframes jijianStyleOptionsIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+#tab-typography .style-option-line{
+  min-height:50px!important;
+  padding:10px 12px!important;
+  gap:14px!important;
+  flex-wrap:wrap!important;
+}
+#tab-typography .style-option-label{font-size:13px!important;min-width:62px!important}
+#tab-typography .style-option-line .underline-style-picker{gap:7px!important}
+#tab-typography .style-option-line .underline-style-picker i{
+  width:31px!important;height:27px!important;border-radius:7px!important;
+}
+#tab-typography .style-option-line .jijian-select{
+  margin-left:auto!important;
+  min-width:126px!important;
+}
+#tab-typography .style-inline-palette{gap:10px!important}
+#tab-typography .style-inline-palette .mini-swatch{width:25px!important;height:25px!important}
+.domain-list-head{align-items:center!important}
+.domain-head-copy{min-width:150px}
+.domain-head-hint{margin-top:3px;font-size:11.5px;color:#9299a2}
+.domain-add-row{align-items:center!important}
+.domain-scope-chip span{
+  background:#fff!important;color:#737c87!important;border-color:rgba(17,24,39,.09)!important;
+}
+.domain-scope-chip:hover span{background:#f7f8f9!important;color:#4d5661!important}
+.domain-scope-chip.active span{
+  background:#eef3f8!important;color:#294b68!important;border-color:#b8cadb!important;font-weight:620!important;
+}
+.highlight-export-actions{display:flex;align-items:center;gap:7px}
+.compact-action{min-height:32px!important;padding:0 10px!important;font-size:12px!important}
+.highlight-delete,.vocab-inline-delete{width:32px!important;height:32px!important}
+.highlight-delete svg,.vocab-inline-delete svg{width:17px!important;height:17px!important}
+.vocab-card-item{overflow:hidden}
+.vocab-card-item::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:#d7dce2;
+}
+.vocab-card-item.lang-en::before{background:#a8c7fa}.vocab-card-item.lang-ja::before{background:#f4b9c0}.vocab-card-item.lang-zh::before{background:#f4c995}.vocab-card-item.lang-ko::before{background:#b7d9ca}.vocab-card-item.lang-fr::before,.vocab-card-item.lang-es::before{background:#d6c0ef}.vocab-card-item.lang-de::before{background:#e8d18d}
+.vocab-lang-dot{display:none!important}
+.vocab-list-box[data-view="list"] .vocab-card-main{
+  display:grid!important;grid-template-columns:minmax(150px,.7fr) minmax(120px,.65fr) minmax(220px,1.7fr)!important;
+  align-items:center!important;gap:16px!important;min-width:0!important;
+}
+.vocab-list-box[data-view="list"] .vocab-card-head{display:block!important}
+.vocab-list-box[data-view="list"] .vocab-phonetic-text{margin:0!important}
+.vocab-list-box[data-view="list"] .vocab-trans-text{margin:0!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vocab-list-box[data-view="cards"] .vocab-card-item,
+.vocab-list-box[data-view="gallery"] .vocab-card-item{cursor:pointer}
+.vocab-list-box[data-view="cards"] .vocab-trans-text{margin-top:7px!important;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.vocab-list-box[data-view="gallery"] .vocab-detail-preview{-webkit-line-clamp:4!important}
+.vocab-detail-modal-backdrop{
+  position:fixed;inset:0;z-index:5000;background:rgba(15,20,27,.18);backdrop-filter:blur(4px);
+  display:grid;place-items:center;padding:28px;animation:jijianModalFade .16s ease both;
+}
+.vocab-detail-modal{
+  width:min(620px,calc(100vw - 56px));max-height:min(70vh,680px);overflow:auto;
+  border:1px solid rgba(17,24,39,.10);border-radius:14px;background:#fff;
+  box-shadow:0 24px 70px rgba(15,23,42,.18);padding:22px 24px;animation:jijianModalPop .19s cubic-bezier(.2,.8,.2,1) both;
+}
+.vocab-detail-modal-head{display:flex;align-items:flex-start;gap:12px}.vocab-detail-modal-word{font-size:24px;font-weight:760;color:#20262d}.vocab-detail-modal-phonetic{margin-top:5px;color:#89919c;font-size:13px}
+.vocab-detail-modal-close{margin-left:auto;width:32px;height:32px;border:0;border-radius:8px;background:#f4f5f7;color:#68717c;display:grid;place-items:center;cursor:pointer}
+.vocab-detail-modal-close:hover{background:#eceff2;color:#222831}
+.vocab-detail-modal-translation{margin-top:18px;font-size:16px;line-height:1.65;color:#343c45}
+.vocab-detail-modal-section{margin-top:16px}.vocab-detail-modal-section b{display:block;margin-bottom:7px;font-size:13px;color:#69727d}.vocab-detail-modal-section p{margin:0 0 8px;font-size:13.5px;line-height:1.65;color:#555e69}
+@keyframes jijianModalFade{from{opacity:0}to{opacity:1}}@keyframes jijianModalPop{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
+.local-dict-health{display:inline-flex;align-items:center;gap:5px;margin-left:8px;font-size:11.5px;color:#7d8590}
+.local-dict-health::before{content:"";width:7px;height:7px;border-radius:50%;background:#aab1ba}
+.local-dict-health.ready{color:#2c7956}.local-dict-health.ready::before{background:#35a56f}
+.local-dict-health.error{color:#a24d45}.local-dict-health.error::before{background:#c76559}
+
+/* ==========================================================================
+   Connected state, blacklist and vocabulary
+   ========================================================================== */
+.engine-connected-summary{min-height:34px!important;padding:5px 0!important;background:transparent!important;border:0!important;color:#555d67!important;gap:8px!important;align-items:center!important}
+.engine-connected-summary::before,.engine-connected-dot{display:none!important;content:none!important}
+.engine-connected-copy{font-size:13px!important;color:#555d67!important}.engine-edit-btn{margin-left:auto!important}
+.model-picker-btn{height:36px!important;min-height:36px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;line-height:1!important;padding-top:0!important;padding-bottom:0!important}
+.domain-default-rules{padding:12px 14px 13px;border-top:1px solid #eceef1;border-bottom:1px solid #eceef1;background:#fbfbfc}
+.domain-default-title{font-size:12px;font-weight:650;color:#5f6873;margin-bottom:8px}.domain-default-chips{display:flex;flex-wrap:wrap;gap:6px}
+.domain-default-chips label,.domain-scope-chip{cursor:pointer}.domain-default-chips input,.domain-scope-chip input{position:absolute;opacity:0;pointer-events:none}
+.domain-default-chips span,.domain-scope-chip span{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 9px;border:1px solid #e0e4e8;border-radius:6px;background:#fff;color:#7a828d;font-size:12px;line-height:1;transition:.14s ease}
+.domain-default-chips label.active span,.domain-scope-chip.active span{border-color:#b8cadb!important;background:#eef3f8!important;color:#294b68!important;font-weight:620!important}
+.domain-row{border-bottom:1px solid #eceef1}.domain-row:last-child{border-bottom:0}.domain-row-line{min-height:50px;display:flex;align-items:center;gap:10px;padding:8px 12px}.domain-row-copy{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}.domain-row-copy strong{font-size:13.5px;color:#272c33;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.domain-row-copy span{font-size:11.5px;color:#989fa8}.domain-config-btn{height:30px;border:0;background:transparent;border-radius:6px;padding:0 8px;color:#59626e;font:inherit;font-size:12px;cursor:pointer}.domain-config-btn:hover,.domain-config-btn.active{background:#f1f3f5;color:#252a31}.domain-remove-icon{width:30px;height:30px;border:0;background:transparent;border-radius:6px;color:#9ca2aa;display:grid;place-items:center;padding:0;cursor:pointer}.domain-remove-icon:hover{background:#fff1f0;color:#b83b35}.domain-remove-icon svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.domain-scope-panel{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:0 12px 12px 46px}.domain-scope-panel[hidden]{display:none!important}.domain-reset-rule{border:0;background:transparent;color:#8a929c;font:inherit;font-size:11.5px;padding:5px 7px;cursor:pointer}.domain-reset-rule:hover{color:#3e4650}
+.local-data-note{margin:4px 0 0!important;max-width:720px;color:#8a929b!important;font-size:12.5px!important;line-height:1.55!important}
+.vocab-list-box[data-view="list"] .vocab-card-main{grid-template-columns:minmax(180px,.85fr) minmax(150px,.7fr) minmax(260px,1.65fr)!important;gap:18px!important}
+.vocab-card-head{display:flex!important;align-items:baseline!important;gap:8px!important}.vocab-card-lang{font-size:11px!important;color:#9aa1aa!important;font-weight:560!important}.vocab-phonetic-text{font-size:12.5px!important;color:#737c87!important;line-height:1.45!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vocab-trans-text{font-size:13.5px!important;color:#3b424b!important;line-height:1.55!important}
+.highlight-quote{white-space:pre-wrap!important}.highlight-translation{white-space:pre-wrap!important}
+.local-dict-test-row{display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:8px 10px;align-items:center;padding:12px 14px;border-top:1px solid #eceef1}.local-dict-test-row .apple-input{min-width:0}.local-dict-test-status{grid-column:1/-1;min-height:18px;color:#7c8590;font-size:12px;line-height:1.45}.local-dict-test-row .test-btn{min-height:34px;white-space:nowrap}
+
+/* Local dictionary permissions and connected state. */
+.local-dict-test-row{grid-template-columns:minmax(220px,1fr) auto auto!important;border-top:0!important;border-bottom:1px solid #eceef1!important;background:#fbfbfc!important}.local-dict-test-status{grid-column:1/-1!important}.local-dict-reauthorize{color:#67717d!important}.local-dict-list{border-top:0!important}
+.engine-connected-summary{min-height:38px!important;padding:6px 10px!important;border:1px solid #e7e9ec!important;border-radius:9px!important;background:#f8f9fa!important;color:#555d67!important}.engine-connected-summary::before{content:"✓"!important;display:inline-grid!important;place-items:center!important;width:16px!important;height:16px!important;border-radius:50%!important;background:transparent!important;color:#2e8a5f!important;font-size:12px!important;font-weight:750!important;margin-right:1px!important}.engine-connected-dot{display:none!important}
+
+/* Vocabulary library list. */
+.vocab-card-item{cursor:pointer!important;transition:background .14s ease,border-color .14s ease!important}
+.vocab-card-item:hover{background:#fbfcfd!important;border-color:rgba(17,24,39,.12)!important}
+.vocab-list-box[data-view="list"] .vocab-card-item{min-height:62px!important;padding-top:10px!important;padding-bottom:10px!important}
+.vocab-list-box[data-view="list"] .vocab-word-text{font-size:14px!important;font-weight:690!important;color:#252b32!important}
+.vocab-list-box[data-view="list"] .vocab-card-lang{margin-left:7px!important}
+.vocab-inline-delete{opacity:.38!important;transition:opacity .14s ease,background .14s ease!important}
+.vocab-card-item:hover .vocab-inline-delete{opacity:1!important}
+
+
+/* Vocabulary library layout. */
+.vocab-card-item::before{display:none!important;content:none!important}
+.vocab-list-box{padding:6px 0 12px!important}
+.vocab-card-item{background:#fff!important;border-color:#e7e9ec!important;box-shadow:none!important}
+.vocab-inline-delete{border:0!important;background:transparent!important;border-radius:7px!important;color:#a0a6ae!important}.vocab-inline-delete:hover{background:#fff1f0!important;color:#ad4942!important}
+/* List: dense three-column library row. */
+.vocab-list-box[data-view="list"] .vocab-card-item{display:grid!important;grid-template-columns:minmax(0,1fr) 32px!important;min-height:68px!important;padding:12px 4px!important;border:0!important;border-bottom:1px solid #eceef1!important;border-radius:0!important;margin:0!important}
+.vocab-list-box[data-view="list"] .vocab-card-main{display:grid!important;grid-template-columns:minmax(180px,.8fr) minmax(150px,.65fr) minmax(260px,1.55fr)!important;grid-template-rows:auto!important;align-items:center!important;gap:18px!important}
+.vocab-list-box[data-view="list"] .vocab-card-head{grid-column:1!important;display:flex!important;align-items:baseline!important}.vocab-list-box[data-view="list"] .vocab-phonetic-text{grid-column:2!important;grid-row:1!important}.vocab-list-box[data-view="list"] .vocab-trans-text{grid-column:3!important;grid-row:1!important;white-space:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important}.vocab-list-box[data-view="list"] .vocab-detail-preview{display:none!important}
+/* Cards: compact review tiles focused on word + short meaning. */
+.vocab-list-box[data-view="cards"]{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(190px,1fr))!important;gap:10px!important}.vocab-list-box[data-view="cards"] .vocab-card-item{min-height:112px!important;padding:15px 40px 14px 15px!important;border:1px solid #e5e8eb!important;border-radius:10px!important}.vocab-list-box[data-view="cards"] .vocab-word-text{font-size:17px!important;font-weight:730!important}.vocab-list-box[data-view="cards"] .vocab-phonetic-text{display:block!important;margin-top:4px!important}.vocab-list-box[data-view="cards"] .vocab-trans-text{display:-webkit-box!important;margin-top:10px!important;-webkit-line-clamp:2!important}.vocab-list-box[data-view="cards"] .vocab-detail-preview{display:none!important}
+/* Gallery: larger study cards that actually expose dictionary detail preview. */
+.vocab-list-box[data-view="gallery"]{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))!important;gap:12px!important}.vocab-list-box[data-view="gallery"] .vocab-card-item{height:auto!important;min-height:184px!important;padding:16px 42px 16px 16px!important;border:1px solid #e4e7eb!important;border-radius:11px!important}.vocab-list-box[data-view="gallery"] .vocab-word-text{font-size:19px!important;font-weight:740!important}.vocab-list-box[data-view="gallery"] .vocab-phonetic-text{display:block!important;margin-top:4px!important}.vocab-list-box[data-view="gallery"] .vocab-trans-text{margin-top:11px!important;font-size:14px!important;-webkit-line-clamp:3!important}.vocab-list-box[data-view="gallery"] .vocab-detail-preview{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:4!important;overflow:hidden!important;margin-top:12px!important;padding-top:11px!important;border-top:1px solid #eef0f2!important;color:#747d87!important;font-size:12.5px!important;line-height:1.58!important}
+.vocab-card-lang{font-size:10.5px!important;color:#9aa1aa!important}.vocab-card-item:hover{background:#fafbfc!important}
+
+/* Local dictionary diagnostics and import. */
+.local-dict-test-card{padding:0!important;overflow:hidden!important;background:#fff!important;margin-bottom:14px!important}
+.local-dict-test-head{padding:15px 17px 9px!important;border:0!important;background:#fff!important}
+.local-dict-test-head .row-info{display:flex!important;flex-direction:column!important;gap:3px!important}
+.local-dict-test-head .row-title{font-size:14px!important;font-weight:680!important;color:#242931!important}
+.local-dict-test-head .row-hint{font-size:12.5px!important;line-height:1.45!important;color:#858d97!important}
+.local-dict-test-card .local-dict-test-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:9px!important;align-items:center!important;padding:6px 17px 10px!important;border:0!important;background:#fff!important}
+.local-dict-test-card .local-dict-test-status{display:block!important;padding:0 17px 14px!important;min-height:18px!important;color:#7c8590!important;font-size:12px!important;line-height:1.5!important;background:#fff!important}
+.local-dict-test-card .local-dict-test-status.success{color:#47705d!important}.local-dict-test-card .local-dict-test-status.warn{color:#8a654d!important}.local-dict-test-card .local-dict-test-status.error{color:#9a514c!important}
+.local-dict-card{background:#fff!important}
+.local-dict-head{border-bottom:0!important;padding-bottom:12px!important}
+.local-dict-import-note{margin:0 17px 10px!important;padding:9px 10px!important;border-radius:7px!important;background:#f7f8f9!important;color:#747d88!important;font-size:12px!important;line-height:1.5!important}
+.local-dict-list{margin-top:0!important;border-top:1px solid #eceef1!important}
+.local-dict-row:first-child{border-top:0!important}
+.local-dict-actions{gap:7px!important}.local-dict-actions .test-btn{white-space:nowrap!important}
+.local-dict-reauthorize{color:#636d78!important;background:#fff!important}
+.local-dict-health.ready::before{background:#5a9075!important}.local-dict-health.error::before{background:#c5796e!important}
+@media (max-width:900px){.local-dict-head{align-items:flex-start!important;flex-direction:column!important}.local-dict-actions{justify-content:flex-start!important}.local-dict-test-card .local-dict-test-row{grid-template-columns:1fr!important}.local-dict-test-card .local-dict-test-row .test-btn{width:max-content!important}}
+
+/* Distinct vocabulary list and gallery views. */
+.vocab-list-box[data-view="list"] .vocab-card-item{min-height:76px!important;padding:13px 40px 13px 6px!important}
+.vocab-list-box[data-view="list"] .vocab-card-main{display:grid!important;grid-template-columns:minmax(210px,.9fr) minmax(280px,1.4fr)!important;grid-template-rows:auto auto!important;column-gap:24px!important;row-gap:3px!important;align-items:start!important}
+.vocab-list-box[data-view="list"] .vocab-card-head{grid-column:1!important;grid-row:1!important;display:flex!important;align-items:baseline!important;gap:8px!important;min-width:0!important}
+.vocab-list-box[data-view="list"] .vocab-phonetic-text{grid-column:1!important;grid-row:2!important;margin:0!important;color:#858d97!important;font-size:12px!important;line-height:1.4!important}
+.vocab-list-box[data-view="list"] .vocab-trans-text{grid-column:2!important;grid-row:1/3!important;margin:0!important;align-self:center!important;font-size:13.5px!important;line-height:1.58!important;color:#424a54!important;-webkit-line-clamp:2!important}
+.vocab-list-box[data-view="cards"] .vocab-card-item{border-radius:8px!important;min-height:120px!important}.vocab-list-box[data-view="cards"] .vocab-card-lang{margin-left:auto!important}.vocab-list-box[data-view="cards"] .vocab-trans-text{font-size:13.5px!important;line-height:1.55!important;color:#424b55!important}
+.vocab-list-box[data-view="gallery"] .vocab-card-item{border-radius:8px!important;min-height:210px!important;background:#fff!important}.vocab-list-box[data-view="gallery"] .vocab-detail-preview{border-top:0!important;padding-top:0!important;margin-top:13px!important;color:#6e7782!important;font-size:12.5px!important;line-height:1.62!important}.vocab-list-box[data-view="gallery"] .vocab-detail-preview::before{content:"词典摘录";display:block;margin-bottom:6px;color:#9aa1aa;font-size:10.5px;font-weight:650!important}
+.vocab-detail-modal{border-radius:10px!important;box-shadow:0 18px 48px rgba(15,23,42,.14)!important}.vocab-detail-modal-section{padding-top:14px!important;border-top:1px solid #edf0f2!important}.vocab-detail-modal-section p{padding-left:0!important}
+.vocab-detail-sense{display:grid!important;grid-template-columns:22px minmax(0,1fr)!important;gap:8px!important;margin:0 0 8px!important}.vocab-detail-sense>span{color:#a0a6ae!important;font-size:11.5px!important;line-height:1.65!important;text-align:right!important}.vocab-detail-sense>p{margin:0!important;font-size:13.5px!important;line-height:1.65!important;color:#505963!important}.vocab-detail-local+ .vocab-detail-local{margin-top:11px!important}.vocab-detail-local strong{display:block!important;margin-bottom:4px!important;color:#808893!important;font-size:11.5px!important}.vocab-detail-local p{margin:0!important;font-size:13px!important;line-height:1.62!important;color:#535c66!important}
+
+/* ==========================================================================
+   Local dictionary source management and blacklist layout
+   ========================================================================== */
+.local-dict-test-card{
+  margin-bottom:14px!important;
+  overflow:visible!important;
+  border:1px solid #e6e9ed!important;
+  border-radius:12px!important;
+  background:#fff!important;
+}
+.local-dict-test-head{padding:15px 17px 7px!important}
+.local-dict-test-card .local-dict-test-row{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto auto!important;
+  gap:8px!important;
+  padding:7px 17px 9px!important;
+  background:transparent!important;
+}
+.local-dict-test-card .local-dict-test-status{
+  display:block!important;
+  padding:0 17px 14px!important;
+  background:transparent!important;
+}
+.local-dict-card{overflow:visible!important;border-radius:12px!important}
+.local-dict-head{padding:15px 17px 11px!important}
+.local-dict-import-note{margin:0 17px 11px!important;background:#f6f8fa!important;border:0!important;border-radius:8px!important}
+.local-dict-list{padding:0 10px 10px!important;border-top:0!important;display:grid!important;gap:7px!important}
+.local-dict-row{
+  min-height:58px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  padding:9px 10px!important;
+  border:1px solid #e7eaee!important;
+  border-radius:9px!important;
+  background:#fff!important;
+}
+.local-dict-row+.local-dict-row{border-top:1px solid #e7eaee!important}
+.local-dict-row-actions{display:flex;align-items:center;gap:5px;margin-left:auto}
+.local-dict-remove-one{width:29px;height:29px;border:0;border-radius:6px;background:transparent;color:#9aa2ab;display:grid;place-items:center;cursor:pointer}
+.local-dict-remove-one:hover{background:#fff1f0;color:#b64943}.local-dict-remove-one svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+.local-dict-remove-folder{color:#8b6461!important}
+
+/* Blacklist becomes a stack of independent cards instead of one clipped box. */
+.blacklist-editor.domain-list-card{
+  max-width:880px!important;
+  overflow:visible!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  padding:0!important;
+}
+.blacklist-add-card,.blacklist-default-card{
+  border:1px solid #e5e8ec!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+.blacklist-add-card{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+  padding:15px 16px!important;
+  margin:0 0 12px!important;
+  overflow:visible!important;
+}
+.blacklist-add-card .domain-head-copy{min-width:180px;flex:0 1 310px}
+.blacklist-add-card .domain-add-row{
+  min-width:0!important;
+  width:min(470px,100%)!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:8px!important;
+  overflow:visible!important;
+}
+.blacklist-add-card .domain-add-row .apple-input{width:100%!important;min-width:0!important;max-width:none!important;margin:0!important;box-sizing:border-box!important}
+.blacklist-default-card{
+  padding:14px 16px!important;
+  margin:0 0 12px!important;
+  border-top:1px solid #e5e8ec!important;
+  border-bottom:1px solid #e5e8ec!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:18px!important;
+}
+.domain-default-copy{min-width:180px;display:flex;flex-direction:column;gap:4px}.domain-default-hint{font-size:12px;color:#8c949e;line-height:1.45}
+.blacklist-default-card .domain-default-chips{justify-content:flex-end!important;gap:7px!important}
+.blacklist-default-card .domain-default-chips label span{border-radius:7px!important}
+.blacklist-domain-list{display:grid!important;gap:9px!important;background:transparent!important}
+.blacklist-domain-list .domain-row{
+  border:1px solid #e4e7eb!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  box-shadow:0 2px 0 #e9ebee!important;
+  overflow:hidden!important;
+  transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease!important;
+}
+.blacklist-domain-list .domain-row:hover{transform:translateY(-1px)!important;box-shadow:0 3px 0 #e4e7ea!important;border-color:#d9dde2!important}
+.blacklist-domain-list .domain-row:last-child{border-bottom:1px solid #e4e7eb!important}
+.blacklist-domain-list .domain-row-line{min-height:58px!important;padding:10px 12px!important;gap:10px!important}
+.blacklist-domain-list .domain-row-icon{display:grid!important;width:32px;height:32px;place-items:center;border-radius:8px;background:#f4f6f8;color:#727c87;flex:0 0 auto}
+.blacklist-domain-list .domain-row-copy strong{font-size:14px!important;font-weight:690!important}
+.blacklist-domain-list .domain-row-copy span{font-size:11.5px!important;color:#929aa4!important}
+.blacklist-domain-list .domain-config-btn{border:1px solid #e4e7eb!important;background:#fff!important;border-radius:7px!important}
+.blacklist-domain-list .domain-config-btn:hover,.blacklist-domain-list .domain-config-btn.active{background:#f3f5f7!important}
+.blacklist-domain-list .domain-scope-panel{border-top:1px solid #eceef1!important;background:#fafbfc!important;padding:10px 12px 12px!important}
+.domain-list-empty{padding:18px!important;border:1px dashed #dfe3e8!important;border-radius:11px!important;background:#fff!important;text-align:center!important;color:#9aa1aa!important}
+
+@media(max-width:900px){
+  .local-dict-test-card .local-dict-test-row{grid-template-columns:1fr auto!important}
+  .local-dict-test-card .local-dict-test-row .local-dict-reauthorize{grid-column:2}
+  .blacklist-add-card,.blacklist-default-card{align-items:stretch!important;flex-direction:column!important}
+  .blacklist-add-card .domain-add-row{width:100%!important}
+  .blacklist-default-card .domain-default-chips{justify-content:flex-start!important}
+}
+
+/* ==========================================================================
+   Vocabulary library layout
+   ========================================================================== */
+.vocab-manager-card{overflow:visible!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
+.vocab-toolbar{
+  display:grid!important;grid-template-columns:minmax(300px,1fr) 150px auto auto!important;
+  align-items:center!important;gap:10px!important;margin-bottom:14px!important;padding:12px!important;
+  border:1px solid #e3e7eb!important;border-radius:11px!important;background:#fff!important;
+  box-shadow:0 2px 0 #e1e5e9!important;
+}
+.vocab-search-field{
+  height:38px!important;display:flex!important;align-items:center!important;gap:8px!important;padding:0 11px!important;
+  border:1px solid #dfe4e8!important;border-radius:8px!important;background:#f8f9fa!important;box-sizing:border-box!important;
+}
+.vocab-search-field:focus-within{background:#fff!important;border-color:#b8c4cf!important;box-shadow:0 0 0 3px rgba(92,126,156,.08)!important}
+.vocab-search-field svg{width:16px;height:16px;fill:none;stroke:#8a939d;stroke-width:1.9;stroke-linecap:round;flex:none}
+.vocab-search-field input{min-width:0;flex:1;height:34px;border:0;outline:0;background:transparent;color:#28313a;font:500 13px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+.vocab-search-field input::placeholder{color:#a0a6ad}
+.vocab-lang-select{height:38px!important;min-height:38px!important;border-color:#dfe4e8!important;background:#f8f9fa!important;border-radius:8px!important}
+.vocab-view-switch{height:38px!important;padding:3px!important;border:1px solid #dfe4e8!important;border-radius:8px!important;background:#f4f6f7!important;box-shadow:none!important;overflow:hidden!important}
+.vocab-view-switch button{width:38px!important;height:30px!important;border-radius:6px!important}
+.vocab-view-switch button.active{background:#fff!important;box-shadow:0 1px 0 #d9dde1!important;color:#2e3740!important}
+.vocab-export{height:38px!important;min-height:38px!important;border-radius:8px!important;white-space:nowrap!important}
+
+.vocab-list-box{
+  max-height:650px!important;overflow:auto!important;padding:2px 2px 12px!important;background:transparent!important;
+}
+.vocab-empty-state{padding:28px 16px!important;border:1px dashed #dce1e5!important;border-radius:10px!important;background:#fafbfc!important;text-align:center!important;color:#88919b!important}
+.vocab-card-item::before,.vocab-lang-dot{display:none!important;content:none!important}
+
+/* List: one readable card per line, fixed semantic columns instead of scattered labels. */
+.vocab-list-box[data-view="list"]{display:flex!important;flex-direction:column!important;gap:9px!important}
+.vocab-list-box[data-view="list"] .vocab-list-row{
+  position:relative!important;display:grid!important;
+  grid-template-columns:minmax(190px,.8fr) minmax(300px,1.7fr) minmax(125px,.55fr) 30px!important;
+  align-items:center!important;gap:18px!important;min-height:82px!important;margin:0!important;padding:13px 12px 13px 15px!important;
+  border:1px solid #e1e5e9!important;border-radius:10px!important;background:#fff!important;
+  box-shadow:0 2px 0 #e0e4e8!important;overflow:visible!important;cursor:pointer!important;
+  transition:transform .13s ease,border-color .13s ease,box-shadow .13s ease,background .13s ease!important;
+}
+.vocab-list-box[data-view="list"] .vocab-list-row:hover{transform:translateY(-1px)!important;border-color:#d4dae0!important;box-shadow:0 3px 0 #dbe0e5!important;background:#fff!important}
+.vocab-list-lexical{min-width:0!important}.vocab-list-wordline{display:flex!important;align-items:baseline!important;gap:8px!important;min-width:0!important}
+.vocab-list-row .vocab-word-text{font-size:16px!important;line-height:1.25!important;font-weight:740!important;color:#242c34!important;letter-spacing:-.015em!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.vocab-list-row .vocab-card-lang{flex:none!important;font-size:10.5px!important;font-weight:620!important;color:#8d959e!important;background:transparent!important;padding:0!important;margin:0!important}
+.vocab-list-row .vocab-phonetic-text{display:block!important;margin-top:5px!important;font-size:12px!important;line-height:1.4!important;color:#7c8690!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.vocab-phonetic-empty{color:#b1b6bc!important;font-style:normal!important}
+.vocab-list-definition{min-width:0!important}.vocab-list-definition-label{display:block!important;margin-bottom:5px!important;font-size:10.5px!important;font-weight:700!important;letter-spacing:.02em!important;color:#9aa1a9!important}
+.vocab-list-definition p{margin:0!important;color:#3e4852!important;font-size:13.5px!important;line-height:1.55!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important}
+.vocab-list-meta{display:flex!important;flex-direction:column!important;gap:4px!important;min-width:0!important;color:#8a939d!important;font-size:10.8px!important;line-height:1.35!important}
+.vocab-list-meta span{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.vocab-list-row .vocab-inline-delete{position:static!important;width:30px!important;height:30px!important;display:grid!important;place-items:center!important;padding:0!important;border-radius:7px!important;opacity:0!important;color:#9ba2aa!important;background:transparent!important;transform:none!important}
+.vocab-list-row:hover .vocab-inline-delete{opacity:.72!important}.vocab-list-row .vocab-inline-delete:hover{opacity:1!important;background:#f8eeee!important;color:#a84c46!important}
+
+/* Gallery: genuine study cards, not the list layout in multiple columns. */
+.vocab-list-box[data-view="gallery"]{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(245px,1fr))!important;gap:12px!important;align-items:stretch!important}
+.vocab-list-box[data-view="gallery"] .vocab-gallery-card{
+  position:relative!important;display:flex!important;flex-direction:column!important;min-height:215px!important;height:auto!important;margin:0!important;
+  padding:17px 16px 14px!important;border:1px solid #dfe4e8!important;border-radius:11px!important;background:#fff!important;
+  box-shadow:0 3px 0 #dce1e5!important;overflow:hidden!important;cursor:pointer!important;
+  transition:transform .14s ease,box-shadow .14s ease,border-color .14s ease!important;
+}
+.vocab-list-box[data-view="gallery"] .vocab-gallery-card:hover{transform:translateY(-2px)!important;box-shadow:0 5px 0 #d7dde2!important;border-color:#d0d7dd!important}
+.vocab-gallery-top{display:flex!important;align-items:flex-start!important;gap:10px!important}.vocab-gallery-word-wrap{min-width:0!important;flex:1!important}
+.vocab-gallery-card .vocab-word-text{display:block!important;font-size:21px!important;line-height:1.2!important;font-weight:760!important;color:#222a32!important;letter-spacing:-.025em!important;overflow-wrap:anywhere!important}
+.vocab-gallery-card .vocab-phonetic-text{display:block!important;margin-top:5px!important;font-size:12px!important;color:#7e8791!important;white-space:normal!important}
+.vocab-gallery-card .vocab-card-lang{flex:none!important;font-size:10.5px!important;font-weight:650!important;color:#727d88!important;padding:4px 7px!important;border:1px solid #e2e6ea!important;border-radius:6px!important;background:#f7f8f9!important}
+.vocab-gallery-meaning{margin-top:15px!important;font-size:14px!important;line-height:1.62!important;color:#3c4650!important;font-weight:560!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:3!important;overflow:hidden!important}
+.vocab-gallery-preview{margin-top:13px!important;padding:9px 10px!important;border-radius:7px!important;background:#f7f8f9!important;min-height:0!important}
+.vocab-gallery-preview>span{display:block!important;margin-bottom:4px!important;font-size:10px!important;font-weight:700!important;color:#9aa1a9!important;letter-spacing:.02em!important}.vocab-gallery-preview p{margin:0!important;color:#69727c!important;font-size:11.5px!important;line-height:1.48!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;overflow:hidden!important}
+.vocab-gallery-footer{margin-top:auto!important;padding-top:13px!important;display:flex!important;justify-content:space-between!important;gap:8px!important;color:#979ea6!important;font-size:10.5px!important;line-height:1.3!important}.vocab-gallery-footer span{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+.vocab-gallery-card .vocab-inline-delete{position:absolute!important;right:8px!important;bottom:8px!important;width:28px!important;height:28px!important;border-radius:7px!important;background:#fff!important;opacity:0!important;color:#9ba2aa!important}.vocab-gallery-card:hover .vocab-inline-delete{opacity:.8!important}.vocab-gallery-card .vocab-inline-delete:hover{opacity:1!important;background:#f8eeee!important;color:#a84c46!important}
+
+/* Detail modal keeps the same hierarchy and removes gratuitous rules. */
+.vocab-detail-modal{border-radius:12px!important;box-shadow:0 22px 60px rgba(15,23,42,.16)!important}
+.vocab-detail-modal-section{margin-top:20px!important;padding-top:0!important;border:0!important}
+.vocab-detail-sense{display:grid!important;grid-template-columns:22px minmax(0,1fr)!important;gap:9px!important;margin-bottom:8px!important}.vocab-detail-sense>span{color:#9ea5ad!important;font-size:11.5px!important;text-align:right!important;line-height:1.6!important}.vocab-detail-sense p{margin:0!important}
+
+@media (max-width:980px){
+  .vocab-toolbar{grid-template-columns:minmax(240px,1fr) 140px auto!important}.vocab-export{grid-column:3!important}
+  .vocab-list-box[data-view="list"] .vocab-list-row{grid-template-columns:minmax(170px,.8fr) minmax(250px,1.5fr) 30px!important}.vocab-list-meta{display:none!important}
+}
+
+
+/* ==========================================================================
+   Settings clipping and source management
+   ========================================================================== */
+/* Cards must never lose their first/top edge when a section enters or scrolls. */
+.content-panel{overflow:visible!important;padding-top:30px!important}
+.tab-view.active{overflow:visible!important;padding-top:2px!important;padding-left:2px!important;padding-right:2px!important;margin-left:-2px!important;margin-right:-2px!important}
+.tab-view.active>.macos-card,.tab-view.active>.layout-grid-2{flex-shrink:0!important}
+.macos-card{background-clip:padding-box!important}
+.local-dict-card,.local-dict-test-card,.vocab-toolbar,.blacklist-add-card,.blacklist-default-card,.blacklist-domain-list .domain-row{transform:translateZ(0)}
+.local-dict-list{padding:4px 10px 12px!important;overflow:visible!important}
+.local-dict-row:first-child{margin-top:1px!important}
+.local-dict-row:last-child{margin-bottom:1px!important}
+.local-dict-card{padding-bottom:1px!important}
+.form-divider{display:none!important}
+/* No decorative rule can protrude beyond a rounded settings card. */
+.interaction-card,.interaction-page-card{overflow:hidden!important}
+.interaction-page-card::before,.interaction-page-card::after{display:none!important;content:none!important}
+#tab-interaction .interaction-page-card>*{border-top:0!important;border-bottom:0!important}
+.local-dict-remove-folder{border-color:#e5e8ec!important;background:#fff!important;color:#7b6260!important}
+.local-dict-remove-folder:hover{background:#fff5f4!important;color:#a24742!important}
+/* Avoid half-pixel card borders disappearing at browser scale. */
+.macos-card{border-width:1px!important;border-color:#e5e8ec!important}
+
+
+/* ==========================================================================
+   Navigation and persistent local-source status
+   ========================================================================== */
+.nav-btn .nav-brand-icon{width:16px!important;height:16px!important;object-fit:cover!important;border-radius:4px!important;filter:grayscale(1) contrast(1.15)!important;opacity:.78!important}
+.nav-btn.active .nav-brand-icon,.nav-btn:hover .nav-brand-icon{opacity:1!important}
+.local-dict-status{min-height:18px!important}
+
+/* Vocabulary gallery and detail view. */
+.vocab-list-box[data-view="gallery"] .vocab-gallery-card{padding:18px 17px 15px!important;min-height:178px!important}
+.vocab-list-box[data-view="gallery"] .vocab-gallery-card .vocab-phonetic-text{display:none!important}
+.vocab-gallery-meaning{margin-top:12px!important}
+.vocab-gallery-preview{background:#f5f6f7!important;border:0!important;box-shadow:none!important}
+.vocab-local-rich-loading,.vocab-local-rich-empty{padding:12px 0;color:#8a929a;font-size:12px}
+.vocab-local-rich{margin-top:9px;padding:12px 13px;border-radius:8px;background:#f7f8f9;color:#313943;overflow:hidden}
+.vocab-local-rich-name{margin-bottom:9px;font-size:11px;font-weight:720;color:#858d95}
+.vocab-local-rich-body{font-size:12.5px;line-height:1.6;max-height:260px;overflow:auto}
+.vocab-local-rich-body h1,.vocab-local-rich-body h2,.vocab-local-rich-body h3,.vocab-local-rich-body h4{margin:12px 0 5px;font-size:13.5px;line-height:1.35;color:#20262c}
+.vocab-local-rich-body p{margin:4px 0}.vocab-local-rich-body ul,.vocab-local-rich-body ol{margin:5px 0;padding-left:18px}.vocab-local-rich-body li{margin:2px 0}.vocab-local-rich-body .partOfSpeechTitle,.vocab-local-rich-body [class*="partOfSpeech"]{font-weight:700;color:#5d6670}.vocab-local-rich-body [class*="example"],.vocab-local-rich-body [class*="sentence"]{color:#67717b}.vocab-local-rich-body .navigation{display:none!important}
+
+/* ==========================================================================
+   Alignment, spacing and OCR-language settings
+   ========================================================================== */
+.row-info{min-width:0;flex:1;gap:3px!important}
+.row-desc{display:block;margin:0;color:var(--label-secondary);font-size:11.5px;line-height:1.48;font-weight:430;max-width:650px}
+.card-row{min-height:42px;gap:22px!important;align-items:center!important}
+.interaction-page-card .card-row{padding-top:6px!important;padding-bottom:6px!important}
+.image-ocr-language-row .apple-select{flex:0 0 190px;width:190px;max-width:42%;height:34px;box-sizing:border-box}
+.image-ocr-language-row.is-disabled{opacity:.46}
+.image-ocr-language-row.is-disabled .apple-select{cursor:default}
+.image-translation-font-row .apple-select{flex:0 0 190px;width:190px;max-width:42%;height:34px;box-sizing:border-box}
+.image-translation-font-row.is-disabled{opacity:.46}
+.image-translation-font-row.is-disabled .apple-select{cursor:default}
+.local-dict-test-card .row-info,.local-dict-card .row-info{gap:3px!important}
+.local-dict-status{margin-top:2px!important;line-height:1.45!important}
+.vocab-toolbar{align-items:center!important}
+.vocab-toolbar>*{min-width:0!important}
+@media (max-width:760px){.image-ocr-language-row{align-items:flex-start!important;flex-direction:column!important;gap:9px!important}.image-ocr-language-row .apple-select{width:100%;max-width:100%;flex-basis:auto}}
+@media (max-width:760px){.image-translation-font-row{align-items:flex-start!important;flex-direction:column!important;gap:9px!important}.image-translation-font-row .apple-select{width:100%;max-width:100%;flex-basis:auto}}
+
+
+/* ==========================================================================
+   Translation colour grid and live preview controls
+   ========================================================================== */
+.translation-color-grid{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;width:100%!important}
+.translation-color-choice{min-width:0!important;height:42px!important;border:1px solid #e0e4e8!important;border-radius:9px!important;background:#fff!important;color:#4b535d!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;padding:0 9px!important;font:560 13px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif!important;cursor:pointer!important;box-shadow:none!important;transition:border-color .14s ease,background .14s ease,box-shadow .14s ease!important}
+.translation-color-choice:hover{background:#f8f9fa!important;border-color:#cfd5db!important}
+.translation-color-choice i{display:block!important;width:15px!important;height:15px!important;flex:0 0 15px!important;border-radius:50%!important;background:var(--choice-color)!important;border:1px solid rgba(15,23,42,.12)!important;box-sizing:border-box!important;transition:box-shadow .14s ease,transform .14s ease!important}
+.translation-color-choice.active{border-color:#8b949e!important;background:#f7f8f9!important;color:#20252b!important;font-weight:650!important;box-shadow:inset 0 0 0 1px rgba(79,89,101,.15)!important}
+.translation-color-choice.active i{transform:scale(.92)!important;box-shadow:0 0 0 2px #fff,0 0 0 4px #59636e!important}
+
+
+/* ==========================================================================
+   Inline highlight choices
+   ========================================================================== */
+#tab-interaction .highlight-style-row{align-items:center!important;gap:18px!important}
+#tab-interaction .highlight-style-row .row-info{align-self:auto!important;flex:0 0 auto!important}
+#tab-interaction .highlight-style-row .micro-choice-grid{margin-left:auto!important;width:min(430px,calc(100% - 100px))!important}
+@media(max-width:760px){
+  #tab-interaction .highlight-style-row{align-items:stretch!important;flex-direction:column!important;gap:10px!important}
+  #tab-interaction .highlight-style-row .micro-choice-grid{margin-left:0!important;width:100%!important}
+}
+
+/* Interaction and spacing safeguards. */
+.view-header{gap:0!important}
+.view-subtitle{margin:7px 0 0!important;font-size:13px!important;line-height:1.55!important;color:#7c848e!important}
+#tab-auto-translate .view-subtitle,#tab-rules .view-subtitle{margin-top:7px!important}
+.macos-card,.local-dict-card,.local-dict-test-card{border-radius:12px!important;background-clip:padding-box!important}
+.tab-view.active>.macos-card:first-of-type{margin-top:1px!important}
+.style-choice-card,.font-choice-card,.translation-color-choice,.micro-choice-card,.trigger-mode-grid button,.vocab-view-switch button,.apple-slider{position:relative!important;z-index:2!important;pointer-events:auto!important}
+.apple-slider{touch-action:none!important}
+.segmented-control,.vocab-view-switch{isolation:isolate!important}
+.settings-segment-indicator{z-index:0!important;background:#fff!important;border:1px solid rgba(15,23,42,.08)!important;box-shadow:0 1px 3px rgba(15,23,42,.10)!important}
+.segmented-control .segment-item,.vocab-view-switch button{z-index:1!important}
+.segmented-control .segment-item.active,.vocab-view-switch button.active{color:#20262d!important;font-weight:680!important}
+.nav-btn .nav-brand-icon{border-radius:0!important;filter:none!important;color:#747d87!important;background:transparent!important}
+.nav-btn.active .nav-brand-icon{color:#343b43!important}
+.project-hero-card{grid-template-columns:74px minmax(0,1fr)!important;padding:24px 26px!important}
+.project-mark{width:68px!important;height:68px!important}
+.project-mark img{width:52px!important;height:52px!important}
+.project-hero-copy .about-name{margin-bottom:11px!important}
+.project-values{margin-top:0!important}
+.support-card{min-height:178px!important;border:0!important;box-shadow:none!important}
+.support-primary{background:linear-gradient(145deg,#fff8f0,#f7ecde)!important}
+.support-project{background:linear-gradient(145deg,#f3f8ff,#e8f0fa)!important}
+.support-primary .support-open-btn{background:#7b5136!important;color:#fff!important}
+.support-project .support-open-btn{background:#335f8d!important;color:#fff!important}
+.support-card .support-kicker{letter-spacing:.04em!important;color:#7c746d!important}
+.support-card p{font-size:13px!important}
+
+/* ==========================================================================
+   Unclipped controls and restrained support surfaces
+   ========================================================================== */
+/* A menu cannot escape an overflow-hidden ancestor regardless of z-index. */
+.macos-card:has(.jijian-select),
+.macos-card.has-open-select,
+.interaction-card,
+.interaction-page-card{overflow:visible!important}
+.macos-card.has-open-select{position:relative!important;z-index:900!important}
+.jijian-select.open{z-index:920!important}
+.jijian-select-menu{z-index:940!important;overscroll-behavior:contain!important}
+.preview-card-sticky{overflow:hidden!important}
+
+/* Restore complete rounded top edges on the two local-dictionary cards. */
+.local-dict-test-card,.local-dict-card{
+  transform:none!important;border:1px solid #e1e5e9!important;border-radius:12px!important;
+  background:#fff!important;background-clip:border-box!important;margin-top:2px!important
+}
+.local-dict-test-card{overflow:visible!important}
+.local-dict-card{overflow:visible!important}
+.local-dict-test-head,.local-dict-head{border-radius:11px 11px 0 0!important}
+
+/* Description text stays legible and is visibly subordinate, not glued to its title. */
+.row-desc,.row-hint{font-size:13px!important;line-height:1.5!important}
+#tab-auto-translate .row-info,#tab-rules .row-info{gap:5px!important}
+
+/* Hidden sections report zero offsets; resync on navigation and keep the selected
+   button visible even before the moving indicator has measured itself. */
+.segmented-control .segment-item.active,.vocab-view-switch button.active{
+  background:#fff!important;box-shadow:0 1px 2px rgba(15,23,42,.08)!important
+}
+.settings-segment-indicator{transition:transform .26s cubic-bezier(.22,.8,.22,1),width .26s cubic-bezier(.22,.8,.22,1)!important}
+
+/* Keep the language selector aligned with the search field instead of letting
+   the global select minimum stretch the toolbar. */
+.vocab-toolbar .jijian-select{width:140px!important;min-width:0!important;max-width:140px!important}
+
+/* Project and support use two clear accents on solid cards. */
+.project-hero-card{background:#fff!important;border:1px solid #dfe4e8!important;box-shadow:0 1px 0 rgba(15,23,42,.03)!important}
+.support-card{background:#fff!important;border:1px solid #dfe4e8!important;box-shadow:0 2px 0 rgba(15,23,42,.04)!important}
+.support-primary{border-top:3px solid #e17265!important}
+.support-project{border-top:3px solid #4f78a8!important}
+.support-primary .support-open-btn{background:#d95f52!important;color:#fff!important}
+.support-project .support-open-btn{background:#416e9f!important;color:#fff!important}
+.support-card .support-kicker{color:#737c86!important}
+
+/* ==========================================================================
+   Project page, compact engines and typography state
+   ========================================================================== */
+.nav-btn .nav-brand-icon{color:#525b65!important}
+.nav-btn.active .nav-brand-icon,.nav-btn:hover .nav-brand-icon{color:#222a32!important}
+
+.engine-compact-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.engine-compact-grid>.macos-card{margin:0!important;min-width:0!important;height:100%!important}
+@media(max-width:920px){.engine-compact-grid{grid-template-columns:1fr}}
+.engine-connected-summary{
+  min-height:40px!important;padding:7px 11px!important;border:1px solid #e2e7e4!important;
+  border-radius:10px!important;background:#f7faf8!important;background-clip:padding-box!important;
+  box-sizing:border-box!important;overflow:hidden!important
+}
+.macos-card.is-connected{border-radius:12px!important;overflow:hidden!important}
+
+.settings-segment-indicator.is-animating{transition:none!important}
+.typography-native-hint{margin:10px 0 0;font-size:13px;line-height:1.5;color:#707985}
+.form-item.is-native-locked .translation-color-grid,
+.form-item.is-native-locked .font-card-grid{opacity:.42;filter:saturate(.45);pointer-events:none!important}
+.form-item.is-native-locked .item-label{color:#7c848e!important}
+.form-item.is-native-locked button{pointer-events:none!important}
+
+.blacklist-default-card{border-top:0!important;border-bottom:1px solid #e6e9ec!important;background:#fff!important}
+.blacklist-add-card{border-top:0!important}
+.domain-default-title{font-size:14px!important;line-height:1.35!important;font-weight:680!important;color:#252c34!important;margin-bottom:5px!important}
+
+.project-hero-card{grid-template-columns:74px minmax(0,1fr)!important;align-items:start!important;padding:25px 27px!important}
+.project-hero-copy .about-name{margin:1px 0 7px!important}
+.project-intro{max-width:760px;margin:0 0 14px;color:#616a74;font-size:13.5px;line-height:1.72}
+.project-values{margin:0 0 9px!important}
+.support-strips{display:grid;gap:10px;margin-bottom:14px}
+.support-strip{
+  appearance:none;width:100%;min-height:70px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;
+  align-items:center;gap:13px;padding:12px 15px;border:1px solid #dfe4e8;border-radius:12px;
+  background:#fff;color:#303841;text-align:left;cursor:pointer;box-shadow:0 1px 0 rgba(15,23,42,.03);
+  transition:transform .14s ease,border-color .14s ease,background .14s ease
+}
+.support-strip.support-primary,.support-strip.support-project{
+  border:1px solid #dfe4e8!important;background:#fff!important;box-shadow:0 1px 0 rgba(15,23,42,.03)!important
+}
+.support-strip:hover{transform:translateY(-1px);border-color:#cbd3da;background:#fafbfb}
+.support-strip-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;background:#eef5f1;color:#2f6b50;font:700 13px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+.support-project .support-strip-icon{background:#eff3f7;color:#415d75;font-size:17px}
+.support-strip>span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:5px}
+.support-strip strong{font-size:14px;line-height:1.25;font-weight:690;color:#29313a}
+.support-strip small{font-size:12.5px;line-height:1.4;color:#7a838d}
+.support-strip b{justify-self:end;font-size:12px;font-weight:650;color:#54616c;padding:7px 9px;border-radius:7px;background:#f1f4f5}
+.support-primary b{background:#e7f2ec;color:#2f6b50}
+@media(max-width:700px){.support-strip{grid-template-columns:36px minmax(0,1fr)}.support-strip b{display:none}.project-hero-card{grid-template-columns:1fr!important}}
+
+/* ==========================================================================
+   Project and appreciation page
+   ========================================================================== */
+#tab-about .project-hero-card{
+  display:block!important;min-height:0!important;padding:28px 30px!important;
+  border:1px solid #d9dde1!important;border-radius:10px!important;background:#fff!important;
+  box-shadow:none!important;overflow:hidden!important
+}
+#tab-about .project-hero-card::before,#tab-about .project-hero-card::after{display:none!important;content:none!important}
+#tab-about .project-hero-copy{max-width:850px}
+#tab-about .project-eyebrow{display:none!important}
+#tab-about .project-hero-copy .about-name{
+  margin:0 0 12px!important;color:#202429!important;font-size:27px!important;line-height:1.12!important;
+  font-weight:730!important;letter-spacing:-.035em!important
+}
+#tab-about .project-intro{
+  max-width:780px;margin:0 0 18px!important;color:#5d646c!important;font-size:13.5px!important;line-height:1.72!important
+}
+#tab-about .project-meta-row{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:9px;min-width:0}
+#tab-about .project-values{display:flex;flex-wrap:wrap;gap:7px;margin:0!important}
+#tab-about .project-values span{
+  padding:5px 9px!important;border:1px solid #dfe2e5!important;border-radius:999px!important;
+  background:transparent!important;color:#42484f!important;font-size:11px!important;line-height:1!important;font-weight:660!important
+}
+#tab-about .about-ver{flex:none;margin:0 0 0 3px!important;color:#898f96!important;font-size:11px!important;font-weight:580!important}
+
+.support-links-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 0}
+.support-link-row{
+  appearance:none;min-width:0;min-height:66px;padding:0 15px;border:0;border-radius:8px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;cursor:pointer;
+  box-shadow:none;transition:transform .15s cubic-bezier(.2,.75,.25,1),filter .15s ease
+}
+.support-link-row:hover{transform:translateY(-1px);filter:brightness(.985)}
+.support-action-donate{background:#202429;color:#fff}
+.support-action-github{background:#f2d34f;color:#242319}
+.support-link-copy{min-width:0;display:block}
+.support-link-copy strong{font-size:13.5px;line-height:1.25;font-weight:700;color:inherit}
+.support-link-copy small{display:none!important}
+.support-link-go{
+  flex:none;min-width:46px;min-height:29px;padding:0 10px;border-radius:7px;
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:720;white-space:nowrap
+}
+.support-action-donate .support-link-go{background:#fff;color:#202429}
+.support-action-github .support-link-go{background:#202429;color:#fff}
+.support-link-go svg{display:none!important}
+@media(max-width:760px){
+  #tab-about .project-hero-card{padding:23px 22px!important}
+  #tab-about .project-meta-row{align-items:center;flex-direction:row;gap:9px}
+  .support-links-panel{grid-template-columns:1fr}
+}
+
+/* Replacement mode exposes only Reference and Clean. Reference is read-only;
+   Clean keeps every typography control available. */
+#typography-metrics-form.is-native-locked{opacity:.42;pointer-events:none!important}
+#typography-metrics-form.is-native-locked .apple-slider{pointer-events:none!important}
+#tab-typography .style-card-grid:has(.style-choice-card[data-value="highlight"][hidden]){
+  grid-template-columns:repeat(2,minmax(0,1fr))!important
+}
+
+/* AI lookup preferences only occupy space when AI lookup is the active engine. */
+.dictionary-ai-preferences[hidden]{display:none!important}
+.dictionary-ai-preferences{
+  margin:2px 0 3px!important;border:1px solid #e4e7eb!important;border-radius:10px!important;
+  background:#f8f9fa!important;overflow:visible!important
+}
+.dictionary-ai-preferences-head{
+  min-height:42px;padding:9px 12px;border-bottom:1px solid #e7e9ec;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;box-sizing:border-box
+}
+.dictionary-ai-preferences-head>span{font-size:13.5px;font-weight:700;color:#303741}
+.dictionary-ai-preferences-head>small{font-size:12px;color:#9299a2}
+.dictionary-ai-preferences .card-row{margin:0;padding:8px 12px!important;min-height:44px!important}
+.dictionary-ai-preferences .card-row+.card-row{border-top:1px solid rgba(17,24,39,.065)}
+.dictionary-ai-preferences .jijian-select{width:164px;min-width:164px;max-width:164px}
+.dictionary-ai-preferences .row-desc{max-width:520px}
+.jijian-select-trigger:disabled{cursor:not-allowed!important;background:#f3f4f5!important;color:#999fa7!important;border-color:#e4e6e9!important}
+@media (max-width:760px){
+  .dictionary-ai-preferences .card-row{align-items:flex-start!important;flex-direction:column!important;gap:8px!important}
+  .dictionary-ai-preferences .jijian-select{width:100%;min-width:0;max-width:none}
+  .dictionary-ai-preferences-head{align-items:flex-start;flex-direction:column;gap:2px}
+}

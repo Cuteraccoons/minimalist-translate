@@ -1,0 +1,224 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Jijian OCR Sandbox</title><script src="vendor/tesseract/tesseract.min.js"></script></head><body>
+<script>
+(() => {
+  const LOCAL_WORKER = new URL('vendor/tesseract/worker.min.js', location.href).href;
+  const LOCAL_CORE = new URL('vendor/tesseract/tesseract-core-lstm.wasm.js', location.href).href;
+  const TESSDATA_GITHUB = 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best_int';
+  let workerState = { key:'', promise:null };
+  let currentRecognizeProgress = null;
+
+  function post(type, payload={}) { parent.postMessage({source:'jijian-ocr-sandbox', type, ...payload}, '*'); }
+  async function ensureLib() {
+    if (!self.Tesseract) throw new Error('本地 OCR 运行组件加载失败');
+    return self.Tesseract;
+  }
+  function normalizeLangs(input) {
+    const list = Array.isArray(input) ? input : String(input || 'eng').split('+');
+    const safe = list.map(x=>String(x||'').trim()).filter(x=>/^[a-z_]+$/i.test(x));
+    return safe.length ? [...new Set(safe)] : ['eng'];
+  }
+  function langKey(langs) { return [...langs].sort().join('+'); }
+
+  function calculateOcrScale(w, h) {
+    const pixels = Math.max(1, w * h);
+    const shortest = Math.max(1, Math.min(w, h));
+    const longest = Math.max(w, h);
+    let scale = 1;
+
+    // Preserve character size on long screenshots. The old longest-edge cap
+    // could turn an 800×10000 screenshot into ~208×2600 and destroy OCR detail.
+    if (shortest < 620 && longest < 7000) scale = Math.min(2.15, 720 / shortest);
+
+    // Cap by total pixels rather than a single edge. This keeps strip images
+    // legible while preventing ordinary giant photos from consuming too much RAM.
+    const targetPixels = 12_000_000;
+    if (pixels * scale * scale > targetPixels) scale *= Math.sqrt(targetPixels / (pixels * scale * scale));
+    if (longest * scale > 14_000) scale *= 14_000 / (longest * scale);
+    return Math.max(.32, Math.min(2.15, scale));
+  }
+
+  function imageToDataUrl(img, sourceRect, destSize) {
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(destSize.width));
+    canvas.height=Math.max(1,Math.round(destSize.height));
+    const ctx=canvas.getContext('2d',{alpha:false});
+    if(!ctx) return '';
+    ctx.imageSmoothingEnabled=true;
+    ctx.imageSmoothingQuality='high';
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img,sourceRect.x,sourceRect.y,sourceRect.width,sourceRect.height,0,0,canvas.width,canvas.height);
+    return canvas.toDataURL('image/png');
+  }
+
+  async function prepareImageForOcr(dataUrl) {
+    return await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const originalWidth=Math.max(1,img.naturalWidth||img.width||1);
+          const originalHeight=Math.max(1,img.naturalHeight||img.height||1);
+          const scale=calculateOcrScale(originalWidth,originalHeight);
+          const processedWidth=Math.max(1,Math.round(originalWidth*scale));
+          const processedHeight=Math.max(1,Math.round(originalHeight*scale));
+          const vertical=processedHeight>processedWidth;
+          const longest=Math.max(processedWidth,processedHeight);
+          const shortest=Math.min(processedWidth,processedHeight);
+          const extreme=(longest/Math.max(1,shortest))>=4.2 && longest>4200;
+          const segments=[];
+
+          if(!extreme){
+            if(Math.abs(scale-1)<.035){
+              segments.push({dataUrl,offsetX:0,offsetY:0,width:processedWidth,height:processedHeight});
+            }else{
+              const rendered=imageToDataUrl(img,{x:0,y:0,width:originalWidth,height:originalHeight},{width:processedWidth,height:processedHeight});
+              segments.push({dataUrl:rendered||dataUrl,offsetX:0,offsetY:0,width:processedWidth,height:processedHeight});
+            }
+          }else{
+            // Long screenshots / banners are recognized in overlapping tiles so
+            // Tesseract never has to shrink the full strip to a tiny short edge.
+            const tileLength=3000;
+            const overlap=180;
+            const total=vertical?processedHeight:processedWidth;
+            for(let start=0;start<total;start+=tileLength-overlap){
+              const end=Math.min(total,start+tileLength);
+              const len=end-start;
+              const px=vertical?0:start, py=vertical?start:0;
+              const pw=vertical?processedWidth:len, ph=vertical?len:processedHeight;
+              const sx=px/scale, sy=py/scale, sw=pw/scale, sh=ph/scale;
+              const rendered=imageToDataUrl(img,{x:sx,y:sy,width:sw,height:sh},{width:pw,height:ph});
+              if(rendered) segments.push({dataUrl:rendered,offsetX:px,offsetY:py,width:pw,height:ph});
+              if(end>=total) break;
+            }
+          }
+          resolve({dataUrl,segments,originalWidth,originalHeight,processedWidth,processedHeight,scale});
+        } catch (_) {
+          resolve({dataUrl,segments:[{dataUrl,offsetX:0,offsetY:0,width:img.naturalWidth||1,height:img.naturalHeight||1}],originalWidth:img.naturalWidth||1,originalHeight:img.naturalHeight||1,processedWidth:img.naturalWidth||1,processedHeight:img.naturalHeight||1,scale:1});
+        }
+      };
+      img.onerror = () => resolve({dataUrl,segments:[{dataUrl,offsetX:0,offsetY:0,width:0,height:0}],originalWidth:0,originalHeight:0,processedWidth:0,processedHeight:0,scale:1});
+      img.src = dataUrl;
+    });
+  }
+
+  function makeWorkerOptions(langPath) {
+    const opts={
+      workerPath:LOCAL_WORKER,
+      corePath:LOCAL_CORE,
+      cacheMethod:'write',
+      logger:m=>{
+        let progress=Number(m.progress||0);
+        if(String(m.status||'').toLowerCase().includes('recognizing') && currentRecognizeProgress?.total){
+          progress=(currentRecognizeProgress.index+Math.max(0,Math.min(1,progress)))/currentRecognizeProgress.total;
+        }
+        post('progress',{status:m.status||'',progress,id:self.__jijianActiveOcrId||''});
+      },
+      errorHandler:err=>post('progress',{status:'ocr runtime warning',progress:0,id:self.__jijianActiveOcrId||'',detail:err?.message||String(err)})
+    };
+    if(langPath) opts.langPath=langPath;
+    return opts;
+  }
+
+  async function makeWorker(langs) {
+    const T=await ensureLib();
+    const single=langs.length===1?langs[0]:'';
+    const attempts=[
+      {langPath:null,label:'Project Naptha'},
+      ...(single?[{langPath:`https://unpkg.com/@tesseract.js-data/${single}/4.0.0_best_int`,label:'unpkg'}]:[]),
+      {langPath:TESSDATA_GITHUB,label:'GitHub'}
+    ];
+    let lastErr=null;
+    for(let i=0;i<attempts.length;i++){
+      const attempt=attempts[i];
+      post('progress',{status:`loading language source ${i+1}/${attempts.length}`,progress:0,id:self.__jijianActiveOcrId||'',detail:attempt.label});
+      try{
+        return await T.createWorker(langs,1,makeWorkerOptions(attempt.langPath));
+      }catch(err){
+        lastErr=err;
+      }
+    }
+    throw new Error(`OCR 模型或运行组件下载失败：${lastErr?.message||'网络不可用'}`);
+  }
+
+  function tsvToLines(tsv) {
+    const rows=String(tsv||'').split(/\r?\n/); if(rows.length<2) return [];
+    const groups=new Map();
+    for(let i=1;i<rows.length;i++){
+      if(!rows[i]) continue;
+      const cols=rows[i].split('\t'); if(cols.length<12) continue;
+      const level=Number(cols[0]), text=cols.slice(11).join('\t').trim();
+      if(level!==5||!text) continue;
+      const left=Number(cols[6])||0, top=Number(cols[7])||0, width=Number(cols[8])||0, height=Number(cols[9])||0, confidence=Number(cols[10]);
+      const key=`${cols[1]}:${cols[2]}:${cols[3]}:${cols[4]}`;
+      const item=groups.get(key)||{text:[],x0:left,y0:top,x1:left+width,y1:top+height,confidence:[]};
+      item.text.push(text); item.x0=Math.min(item.x0,left); item.y0=Math.min(item.y0,top); item.x1=Math.max(item.x1,left+width); item.y1=Math.max(item.y1,top+height);
+      if(Number.isFinite(confidence)&&confidence>=0)item.confidence.push(confidence); groups.set(key,item);
+    }
+    return [...groups.values()].map(item=>({text:item.text.join(' ').replace(/\s+/g,' ').trim(),bbox:{x0:item.x0,y0:item.y0,x1:item.x1,y1:item.y1},confidence:item.confidence.length?item.confidence.reduce((a,b)=>a+b,0)/item.confidence.length:0})).filter(item=>item.text&&item.bbox.x1>item.bbox.x0&&item.bbox.y1>item.bbox.y0);
+  }
+
+  function normalizeLineKey(text){return String(text||'').toLowerCase().replace(/[\s\p{P}\p{S}]+/gu,'').slice(0,80);}
+  function dedupeLines(lines){
+    const sorted=[...lines].sort((a,b)=>(a.bbox?.y0||0)-(b.bbox?.y0||0)||(a.bbox?.x0||0)-(b.bbox?.x0||0));
+    const out=[];
+    for(const line of sorted){
+      const key=normalizeLineKey(line.text); if(!key) continue;
+      const cy=((line.bbox.y0+line.bbox.y1)/2), cx=((line.bbox.x0+line.bbox.x1)/2);
+      const dup=out.find(prev=>{
+        if(normalizeLineKey(prev.text)!==key)return false;
+        const py=(prev.bbox.y0+prev.bbox.y1)/2, px=(prev.bbox.x0+prev.bbox.x1)/2;
+        const h=Math.max(8,line.bbox.y1-line.bbox.y0,prev.bbox.y1-prev.bbox.y0);
+        return Math.abs(cy-py)<h*.9&&Math.abs(cx-px)<Math.max(20,(line.bbox.x1-line.bbox.x0)*.35);
+      });
+      if(!dup)out.push(line); else if((line.confidence||0)>(dup.confidence||0))Object.assign(dup,line);
+    }
+    return out;
+  }
+
+  async function getWorker(rawLangs) {
+    const langs=normalizeLangs(rawLangs),key=langKey(langs); if(workerState.key===key&&workerState.promise)return workerState.promise;
+    const previous=workerState.promise;
+    const next=(async()=>{if(previous){try{const old=await previous;await old?.terminate?.();}catch(_){}}return await makeWorker(langs);})();
+    workerState={key,promise:next}; try{return await next;}catch(err){if(workerState.promise===next)workerState={key:'',promise:null};throw err;}
+  }
+
+  window.addEventListener('message',async event=>{
+    const msg=event?.data; if(!msg||msg.source!=='jijian-translate')return;
+    if(msg.type==='ping'){post('ready');return;} if(msg.type!=='recognize'||!msg.id)return;
+    self.__jijianActiveOcrId=msg.id;
+    try{
+      const langs=normalizeLangs(msg.langs||msg.lang||'eng');
+      const worker=await getWorker(langs);
+      post('progress',{id:msg.id,status:'preparing image',progress:.03});
+      const prepared=await prepareImageForOcr(msg.dataUrl);
+      const allLines=[], texts=[], confidences=[];
+      const segments=prepared.segments?.length?prepared.segments:[{dataUrl:prepared.dataUrl,offsetX:0,offsetY:0}];
+      for(let i=0;i<segments.length;i++){
+        const seg=segments[i]; currentRecognizeProgress={index:i,total:segments.length};
+        post('progress',{id:msg.id,status:segments.length>1?`recognizing segment ${i+1}/${segments.length}`:'recognizing text',progress:i/segments.length});
+        const out=await worker.recognize(seg.dataUrl,{rotateAuto:true},{text:true,tsv:true});
+        const scale=Math.max(.0001,prepared.scale||1);
+        const mapped=tsvToLines(out?.data?.tsv||'').map(line=>({
+          ...line,
+          bbox:{
+            x0:(line.bbox.x0+(seg.offsetX||0))/scale,
+            y0:(line.bbox.y0+(seg.offsetY||0))/scale,
+            x1:(line.bbox.x1+(seg.offsetX||0))/scale,
+            y1:(line.bbox.y1+(seg.offsetY||0))/scale
+          }
+        }));
+        allLines.push(...mapped);
+        if(String(out?.data?.text||'').trim())texts.push(String(out.data.text).trim());
+        if(Number.isFinite(Number(out?.data?.confidence)))confidences.push(Number(out.data.confidence));
+      }
+      currentRecognizeProgress=null;
+      const lines=dedupeLines(allLines);
+      const text=lines.length?lines.map(x=>x.text).join('\n'):texts.join('\n');
+      post('result',{id:msg.id,text,confidence:confidences.length?confidences.reduce((a,b)=>a+b,0)/confidences.length:0,langKey:langKey(langs),imageWidth:prepared.originalWidth||0,imageHeight:prepared.originalHeight||0,processedWidth:prepared.processedWidth||0,processedHeight:prepared.processedHeight||0,lines});
+    }catch(e){post('error',{id:msg.id,error:e?.message||String(e)});}
+    finally{currentRecognizeProgress=null;self.__jijianActiveOcrId='';}
+  });
+  post('ready');
+})();
+</script>
+</body></html>

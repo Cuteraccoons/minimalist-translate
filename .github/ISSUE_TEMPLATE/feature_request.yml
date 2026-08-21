@@ -1,0 +1,30 @@
+name: 功能建议
+description: 描述使用场景、当前阻碍与期望行为
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景
+      description: 你在什么网页、阅读或查词流程中遇到了问题？
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: 当前做法与限制
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 建议方案
+      description: 可以描述交互、设置项或期望结果，不要求给出技术实现。
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 可接受的替代方式

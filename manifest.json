@@ -1,0 +1,99 @@
+{
+  "manifest_version": 3,
+  "name": "极简翻译 | 双语网页翻译与沉浸阅读",
+  "short_name": "极简翻译",
+  "version": "1.0.0",
+  "description": "极简、清晰的双语网页翻译与沉浸阅读。支持词典查词、可配置 AI 查词、精确高亮与多语言本地 OCR 图片翻译。",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "contextMenus"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "极简翻译 · 网页翻译与沉浸阅读",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "floating.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*",
+        "floating.css",
+        "ocr-sandbox.html",
+        "vendor/tesseract/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "commands": {
+    "toggle_page_translation": {
+      "suggested_key": {
+        "default": "Alt+T",
+        "mac": "Alt+T"
+      },
+      "description": "切换当前网页翻译"
+    },
+    "toggle_sidebar_mode": {
+      "suggested_key": {
+        "default": "Alt+B",
+        "mac": "Alt+B"
+      },
+      "description": "展开/收起侧边栏双语对照"
+    },
+    "toggle_selection_translation": {
+      "suggested_key": {
+        "default": "Alt+S",
+        "mac": "Alt+S"
+      },
+      "description": "开启/关闭划词翻译"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png",
+    "512": "icons/icon512.png"
+  },
+  "sandbox": {
+    "pages": [
+      "ocr-sandbox.html"
+    ]
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
+    "sandbox": "sandbox allow-scripts; script-src 'self' 'unsafe-inline' 'unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://unpkg.com https://raw.githubusercontent.com https://tessdata.projectnaptha.com; img-src data: blob:; child-src blob:;"
+  }
+}

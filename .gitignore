@@ -1,0 +1,15 @@
+.DS_Store
+.playwright-cli/
+*.zip
+*.crx
+*.pem
+
+# Local dictionaries and private test material must never enter the repository.
+*.mdx
+*.mdd
+local-test-data/
+
+# Local release history and writing drafts are retained outside the public release.
+CHANGELOG-v*.md
+PROJECT-COPY-BRIEF.md
+PUBLISHING-COPY.md

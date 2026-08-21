@@ -1,0 +1,14 @@
+Tesseract OCR attribution
+=========================
+
+Jijian Translate can load Tesseract.js 7, tesseract.js-core and Tesseract language data on demand for in-browser OCR.
+
+Tesseract.js and tesseract.js-core are open-source projects distributed under the Apache License 2.0.
+Tesseract OCR / traineddata files are maintained by the Tesseract OCR project and are distributed under their respective open-source terms.
+
+The OCR runtime and language model files are not embedded in this extension ZIP in v13.2.0; they are fetched on first use from the pinned runtime/model locations configured by the extension and may then be cached by the browser.
+
+Project references:
+- https://github.com/naptha/tesseract.js
+- https://github.com/naptha/tesseract.js-core
+- https://github.com/tesseract-ocr/tessdata_best
