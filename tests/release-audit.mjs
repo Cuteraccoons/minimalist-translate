@@ -84,7 +84,7 @@ for (const forbiddenPattern of [
 }
 const appendActionsCount = (content.match(/transNode\.appendChild\(actions\)/g) || []).length;
 if (appendActionsCount !== 1) fail(`translation action bar append count expected 1, got ${appendActionsCount}`);
-if (!read('floating.css').includes('.raccoon-tablist-overflow')) fail('missing translated tab overflow safeguard');
+if (!content.includes("rememberInPlaceRecord(recordId, origEl, nodes, 'ui-replace'") || content.includes("line.className = 'raccoon-ui-translation-line'")) fail('compact navigation must replace its label instead of adding a bilingual row');
 if (!read('floating.css').includes('ruby.raccoon-replaced-ruby')) fail('missing ruby replacement safeguard');
 if (!process.exitCode) pass('DOM-preserving translation safeguards');
 
@@ -123,6 +123,21 @@ if (!content.includes('function makeDictionaryCardDraggable') || !content.includ
 if (!content.includes('function clampDictionaryCardToViewport')) fail('dictionary viewport clamping missing');
 const popupJs = read('popup.js');
 const backgroundJs = read('background.js');
+const privacyCopy = read('PRIVACY.md');
+for (const key of [
+  'deepseekApiKey', 'deeplAuthKey', 'openaiApiKey', 'claudeApiKey',
+  'geminiApiKey', 'customApiKey', 'customBaseUrl', 'openaiCustomPrompt'
+]) {
+  const localOnlyList = backgroundJs.match(/const LOCAL_ONLY_SETTING_KEYS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || '';
+  if (!localOnlyList.includes(`"${key}"`)) fail(`private setting is not local-only: ${key}`);
+}
+if (!backgroundJs.includes('settingsForContentScript') || !backgroundJs.includes('LOCAL_ONLY_SETTING_KEYS.forEach(key => delete safe[key])')) fail('content-script settings are not sanitized');
+if (!backgroundJs.includes('chrome.storage.local.setAccessLevel?.({ accessLevel:"TRUSTED_CONTEXTS" })') || !backgroundJs.includes('chrome.storage.sync.setAccessLevel?.({ accessLevel:"TRUSTED_CONTEXTS" })')) fail('extension storage remains directly exposed to content scripts');
+if (content.includes('chrome.storage.')) fail('content script directly accesses extension storage');
+if (!content.includes('currentSettings.aiDictionaryAvailable === true')) fail('sanitized AI availability flag missing');
+if (backgroundJs.includes('chrome.storage.sync.set(request.settings)')) fail('settings update still writes secrets to Chrome Sync');
+if (!privacyCopy.includes('不通过 Chrome Sync 同步') || !privacyCopy.includes('当前设备')) fail('privacy copy does not disclose local-only credentials and sync boundaries');
+if (!process.exitCode) pass('local-only credentials / content-script privacy boundary');
 if (!popupJs.includes('GET_COLLECTION_COUNTS') || !popupJs.includes('ensurePopupVocabularyLoaded') || !popupJs.includes('ensurePopupHighlightsLoaded')) fail('popup lazy collection loading missing');
 if (!backgroundJs.includes('if (action === "GET_COLLECTION_COUNTS")') || !backgroundJs.includes('collectionCountsCache')) fail('collection count endpoint/cache missing');
 if (!read('popup.html').includes('list-row popup-highlight-style-row')) fail('popup highlight choices are not inline');
@@ -137,7 +152,7 @@ if (!read('floating.css').includes('[data-render-style="blur-reveal"] .raccoon-a
 if (!backgroundJs.includes('enableParagraphActions: true') || !content.includes('raccoon-paragraph-actions-disabled')) fail('paragraph action toolbar preference missing');
 if (content.includes('speechSynthesis.cancel()') || content.includes('speechSynthesis.onvoiceschanged =')) fail('speech synthesis can interrupt other page audio');
 if (/\bWebSocket\b/.test(content) || /\bWebSocket\b/.test(backgroundJs)) fail('unexpected WebSocket integration present');
-if (content.includes('TextDetector') || !content.includes('jijianImageOcrReadyV1')) fail('image OCR must use the verified local model path');
+if (content.includes('TextDetector') || !backgroundJs.includes('jijianImageOcrReadyV1') || !content.includes('GET_IMAGE_OCR_READY_MAP')) fail('image OCR must use the verified local model path');
 if (!content.includes('TRANSLATE_BATCH_IDS')) fail('structured image-line translation mapping missing');
 if (!content.includes('dataset?.canonicalSrc') || !backgroundJs.includes('credentials: "include"')) fail('authenticated GitHub image fallback missing');
 for (const direction of ['n','e','s','w','nw','ne','se','sw']) {
@@ -170,6 +185,8 @@ if (!read('floating.css').includes('.raccoon-input-selection-trigger{width:182px
 if (!read('floating.css').includes('button.active,.input-replace-language-grid button.active:hover')) fail('input replacement selected language can be overridden by hover styling');
 if (!content.includes('dict-ai-live-preview') || !content.includes('renderDictionaryAiMarkdown(question)') || !content.includes('orderedListNext')) fail('two-way Markdown rendering or continuous ordered lists missing');
 if (!read('floating.css').includes('.dict-ai-send svg{width:17px')) fail('AI send icon size regression');
+if (!content.includes('class="trigger-highlight-icon"') || !read('floating.css').includes('width:10px!important;height:10px!important')) fail('selection highlight icon hierarchy regression');
+if (!content.includes('class="trigger-logo-icon trigger-translate-brand-icon" viewBox="0 0 128 128"') || !read('floating.css').includes('fill:#fff!important')) fail('selection translation mark still exposes the blue app-icon background');
 if (!popupJs.includes('function closePopupMenus') || !read('options.js').includes('model-input-row.model-menu-open')) fail('single-open menu coordination missing');
 if (!popupJs.includes('radial-gradient(circle at center') || !read('popup.html').includes('color-wheel-dot')) fail('follow-page colour icon is not a colour wheel');
 if (!popupJs.includes('wrap.classList.toggle("is-standard"') || !read('popup.css').includes('.popup-select.is-standard')) fail('dictionary engine selector does not adapt width by option length');

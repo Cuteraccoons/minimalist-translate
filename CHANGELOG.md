@@ -11,5 +11,5 @@
 - 图片 OCR 使用扩展随附的 Tesseract.js 在本机运行，按视觉行回写译图并保留原图片位置。
 - 支持 Google Translate，以及需用户自行配置的 DeepL、DeepSeek、OpenAI、Claude、Gemini、Ollama 和兼容 API。
 - 提供网页黑名单、自动翻译、输入框选区替换翻译及可关闭的段落操作栏。
-- 设置、生词、高亮、翻译缓存与本地词典连接信息保存在浏览器本地。
+- API Key 与私有服务配置仅保存在当前设备；普通偏好可通过 Chrome Sync 同步，生词、高亮、缓存与本地词典连接保存在本机。
 - 项目基于 Apache License 2.0 开源。

@@ -1,5 +1,7 @@
 .DS_Store
 .playwright-cli/
+output/playwright/
+assets/store/drafts/
 *.zip
 *.crx
 *.pem

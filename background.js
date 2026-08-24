@@ -132,6 +132,82 @@ const DEFAULT_SETTINGS = {
   excludeDomainDefaultRule: { floating:true, hover:true, selection:true, image:true, auto:true }
 };
 
+// Credentials and private provider endpoints stay on this device. Non-sensitive
+// preferences may continue to use Chrome Sync across the user's browsers.
+const LOCAL_ONLY_SETTING_KEYS = Object.freeze([
+  "deepseekApiKey", "deepseekBaseUrl", "deepseekModel",
+  "deeplAuthKey", "deeplApiType",
+  "openaiApiKey", "openaiBaseUrl", "openaiModel", "openaiCustomPrompt",
+  "claudeApiKey", "claudeBaseUrl", "claudeModel",
+  "geminiApiKey", "geminiModel",
+  "ollamaBaseUrl", "ollamaModel",
+  "customApiKey", "customBaseUrl", "customModel",
+  "verifiedEngines"
+]);
+const LOCAL_ONLY_SETTING_KEY_SET = new Set(LOCAL_ONLY_SETTING_KEYS);
+
+chrome.storage.local.setAccessLevel?.({ accessLevel:"TRUSTED_CONTEXTS" })?.catch(() => {});
+chrome.storage.sync.setAccessLevel?.({ accessLevel:"TRUSTED_CONTEXTS" })?.catch(() => {});
+
+function partitionSettingsByStorage(settings = {}) {
+  const synced = {};
+  const local = {};
+  Object.entries(settings || {}).forEach(([key, value]) => {
+    (LOCAL_ONLY_SETTING_KEY_SET.has(key) ? local : synced)[key] = value;
+  });
+  return { synced, local };
+}
+
+async function loadStoredSettings({ migrate = true } = {}) {
+  const [syncedRaw, localRaw] = await Promise.all([
+    chrome.storage.sync.get(null).catch(() => ({})),
+    chrome.storage.local.get(LOCAL_ONLY_SETTING_KEYS).catch(() => ({}))
+  ]);
+  const synced = Object.assign({}, syncedRaw || {});
+  const local = Object.assign({}, localRaw || {});
+  const legacyLocal = {};
+  const legacyKeys = [];
+
+  LOCAL_ONLY_SETTING_KEYS.forEach((key) => {
+    if (!Object.prototype.hasOwnProperty.call(synced, key)) return;
+    legacyKeys.push(key);
+    if (!Object.prototype.hasOwnProperty.call(local, key)) {
+      legacyLocal[key] = synced[key];
+      local[key] = synced[key];
+    }
+    delete synced[key];
+  });
+
+  if (migrate && legacyKeys.length) {
+    if (Object.keys(legacyLocal).length) await chrome.storage.local.set(legacyLocal);
+    await chrome.storage.sync.remove(legacyKeys);
+  }
+
+  return Object.assign({}, DEFAULT_SETTINGS, synced, local);
+}
+
+async function saveSettingsByStorage(settings = {}) {
+  const { synced, local } = partitionSettingsByStorage(settings);
+  const writes = [];
+  if (Object.keys(synced).length) writes.push(chrome.storage.sync.set(synced));
+  if (Object.keys(local).length) {
+    writes.push(chrome.storage.local.set(local));
+    writes.push(chrome.storage.sync.remove(Object.keys(local)));
+  }
+  await Promise.all(writes);
+}
+
+function settingsForContentScript(settings = {}) {
+  const safe = Object.assign({}, settings, {
+    aiDictionaryAvailable: !!(
+      settings.deepseekApiKey || settings.openaiApiKey || settings.claudeApiKey ||
+      settings.geminiApiKey || (settings.customBaseUrl && settings.customApiKey)
+    )
+  });
+  LOCAL_ONLY_SETTING_KEYS.forEach(key => delete safe[key]);
+  return safe;
+}
+
 // Two-tier memory and local cache with a 10,000-entry limit.
 const memoryCache = new Map();
 const MAX_MEMORY_CACHE = 10000;
@@ -188,7 +264,7 @@ function schedulePersistCache() {
 
 // Initialize defaults and migrate stored settings.
 chrome.runtime.onInstalled.addListener(async () => {
-  const current = await chrome.storage.sync.get(null).catch(() => ({}));
+  const current = await loadStoredSettings();
   const updated = Object.assign({}, DEFAULT_SETTINGS, current, { version: EXTENSION_VERSION });
   // Migrate legacy defaults without replacing explicit model choices.
   if (!current.deepseekModel || current.deepseekModel === "deepseek-chat" || current.deepseekModel === "deepseek-reasoner") updated.deepseekModel = "deepseek-v4-flash";
@@ -212,7 +288,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     updated.excludeDomainRules = { ...(updated.excludeDomainRules || {}), ...Object.fromEntries(SEARCH_ENGINE_BLACKLIST_DOMAINS.map(domain => [domain, { ...SEARCH_ENGINE_BLACKLIST_RULE }])) };
     updated.searchEngineBlacklistSeeded = true;
   }
-  await chrome.storage.sync.set(updated).catch(() => {});
+  await saveSettingsByStorage(updated).catch(() => {});
   createContextMenus();
 });
 
@@ -1269,7 +1345,7 @@ async function lookupAIDeepDictionary(word, settings, langHint = "auto", context
   const contextText = (context || "").trim();
   const languageName = langHint === "ja" ? "Japanese" : (langHint === "en" ? "English" : "the detected language");
   const contextSection = contextText ? `\nSurrounding context from the webpage:\n---\n${contextText.slice(0, 1200)}\n---\n` : "";
-  const s = Object.assign({}, DEFAULT_SETTINGS, settings || await chrome.storage.sync.get(null).catch(() => ({})));
+  const s = Object.assign({}, DEFAULT_SETTINGS, settings || await loadStoredSettings());
 
   const basePrompt = mode === "ask_context"
     ? `You are a concise language-reading assistant for a Chinese-speaking learner.
@@ -1536,8 +1612,7 @@ async function translateText(text, sl = "auto", tl = "zh-CN", settings = null) {
   await persistentCacheReady;
 
   if (!settings) {
-    const s = await chrome.storage.sync.get(null).catch(() => ({}));
-    settings = Object.assign({}, DEFAULT_SETTINGS, s);
+    settings = await loadStoredSettings();
   }
 
   const engine = settings.translationEngine || "google";
@@ -1766,8 +1841,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
   if (!items || !items.length) return [];
   await persistentCacheReady;
 
-  const s = await chrome.storage.sync.get(null).catch(() => ({}));
-  const settings = Object.assign({}, DEFAULT_SETTINGS, s);
+  const settings = await loadStoredSettings();
   if (engineOverride) settings.translationEngine = engineOverride;
   const engine = settings.translationEngine || "google";
 
@@ -1858,7 +1932,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
 
 
 async function listProviderModels(engine, suppliedSettings = null) {
-  const s = Object.assign({}, DEFAULT_SETTINGS, suppliedSettings || await chrome.storage.sync.get(null).catch(() => ({})));
+  const s = Object.assign({}, DEFAULT_SETTINGS, suppliedSettings || await loadStoredSettings());
   const cleanBase = (value, fallback) => String(value || fallback || "").replace(/\/+$/, "");
   const normalize = (items) => Array.from(new Set((items || []).filter(Boolean).map(String))).sort((a, b) => a.localeCompare(b));
 
@@ -2242,35 +2316,67 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  if (action === "GET_SETTINGS") {
-    chrome.storage.sync.get(null).then(settings => {
-      const merged = Object.assign({}, DEFAULT_SETTINGS, settings);
-      if (!settings.searchEngineBlacklistSeeded) {
-        merged.excludeDomainList = Array.from(new Set([...(Array.isArray(settings.excludeDomainList) ? settings.excludeDomainList : DEFAULT_SETTINGS.excludeDomainList), ...SEARCH_ENGINE_BLACKLIST_DOMAINS]));
-        merged.excludeDomainRules = { ...(settings.excludeDomainRules || {}), ...Object.fromEntries(SEARCH_ENGINE_BLACKLIST_DOMAINS.map(domain => [domain, { ...SEARCH_ENGINE_BLACKLIST_RULE }])) };
-        merged.searchEngineBlacklistSeeded = true;
-        chrome.storage.sync.set({ excludeDomainList: merged.excludeDomainList, excludeDomainRules: merged.excludeDomainRules, searchEngineBlacklistSeeded: true }).catch(() => {});
+  if (action === "GET_IMAGE_OCR_READY_MAP") {
+    (async () => {
+      try {
+        const stored = await chrome.storage.local.get("jijianImageOcrReadyV1");
+        sendResponse({ success:true, readyMap:stored?.jijianImageOcrReadyV1 || {} });
+      } catch (err) {
+        sendResponse({ success:false, error:err.message, readyMap:{} });
       }
-      sendResponse({ success: true, settings: merged });
-    }).catch(() => {
-      sendResponse({ success: true, settings: DEFAULT_SETTINGS });
-    });
+    })();
+    return true;
+  }
+
+  if (action === "SET_IMAGE_OCR_READY_MAP") {
+    (async () => {
+      try {
+        await chrome.storage.local.set({ jijianImageOcrReadyV1:request.readyMap && typeof request.readyMap === "object" ? request.readyMap : {} });
+        sendResponse({ success:true });
+      } catch (err) {
+        sendResponse({ success:false, error:err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (action === "GET_SETTINGS") {
+    (async () => {
+      try {
+        const merged = await loadStoredSettings();
+        if (!merged.searchEngineBlacklistSeeded) {
+          merged.excludeDomainList = Array.from(new Set([...(Array.isArray(merged.excludeDomainList) ? merged.excludeDomainList : DEFAULT_SETTINGS.excludeDomainList), ...SEARCH_ENGINE_BLACKLIST_DOMAINS]));
+          merged.excludeDomainRules = { ...(merged.excludeDomainRules || {}), ...Object.fromEntries(SEARCH_ENGINE_BLACKLIST_DOMAINS.map(domain => [domain, { ...SEARCH_ENGINE_BLACKLIST_RULE }])) };
+          merged.searchEngineBlacklistSeeded = true;
+          await saveSettingsByStorage({ excludeDomainList: merged.excludeDomainList, excludeDomainRules: merged.excludeDomainRules, searchEngineBlacklistSeeded: true });
+        }
+        sendResponse({ success: true, settings: sender.tab ? settingsForContentScript(merged) : merged });
+      } catch (_) {
+        sendResponse({ success: true, settings: sender.tab ? settingsForContentScript(DEFAULT_SETTINGS) : DEFAULT_SETTINGS });
+      }
+    })();
     return true;
   }
 
   if (action === "UPDATE_SETTINGS") {
-    chrome.storage.sync.set(request.settings).then(async () => {
-      const tabs = await chrome.tabs.query({}).catch(() => []);
-      for (const tab of tabs) {
-        if (tab.id) {
-          chrome.tabs.sendMessage(tab.id, {
-            action: "SETTINGS_UPDATED",
-            settings: request.settings
-          }).catch(() => {});
+    (async () => {
+      try {
+        await saveSettingsByStorage(request.settings || {});
+        const contentSettings = settingsForContentScript(await loadStoredSettings({ migrate:false }));
+        const tabs = await chrome.tabs.query({}).catch(() => []);
+        for (const tab of tabs) {
+          if (tab.id) {
+            chrome.tabs.sendMessage(tab.id, {
+              action: "SETTINGS_UPDATED",
+              settings: contentSettings
+            }).catch(() => {});
+          }
         }
+        sendResponse({ success: true });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
       }
-      sendResponse({ success: true });
-    }).catch(err => sendResponse({ success: false, error: err.message }));
+    })();
     return true;
   }
 

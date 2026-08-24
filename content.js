@@ -982,8 +982,8 @@
 
     queryScopedElements(container, TRANSLATABLE_BLOCK_SELECTOR).forEach(el => append(el, false));
 
-    // Bilingual mode translates navigation/tab labels in place. They remain a
-    // single interactive component and are deliberately excluded from prose.
+    // Bilingual mode keeps prose bilingual, but compact navigation controls use
+    // a single translated label so tabs and breadcrumbs retain their geometry.
     if (currentSettings.displayMode === 'bilingual') {
       collectUiTranslationUnits(container).forEach(unit => candidates.push(unit));
     }
@@ -1233,17 +1233,19 @@
     const nodes = collectInPlaceLabelTextNodes(origEl);
     if (!nodes.length) return false;
     const recordId = id || origEl.getAttribute('data-raccoon-id') || `ui_${++blockCounter}`;
-    const previousLine = origEl.querySelector(':scope > .raccoon-ui-translation-line');
-    previousLine?.remove();
-    const line = document.createElement('span');
-    line.className = 'raccoon-ui-translation-line';
-    line.textContent = String(translatedText || '').trim();
-    line.__raccoonSourceElement = origEl;
-    origEl.appendChild(line);
-    inPlaceTranslationRecords.set(recordId, { id:recordId, element:origEl, nodes:[], kind:'ui-bilingual', translatedText, addedNode:line });
-    origEl.classList.add('raccoon-ui-translated', 'raccoon-ui-bilingual');
+    const cleanTranslation = String(translatedText || '').replace(/\s+/g, ' ').trim();
+    if (!cleanTranslation) return false;
+    rememberInPlaceRecord(recordId, origEl, nodes, 'ui-replace', cleanTranslation);
+    nodes.forEach((node, index) => {
+      const original = inPlaceOriginalTextByNode.get(node) || node.nodeValue || '';
+      const leading = original.match(/^\s*/)?.[0] || '';
+      const trailing = original.match(/\s*$/)?.[0] || '';
+      node.nodeValue = index === 0
+        ? `${leading}${cleanTranslation}${nodes.length === 1 ? trailing : ''}`
+        : (index === nodes.length - 1 ? trailing : '');
+    });
+    origEl.classList.add('raccoon-ui-translated', 'raccoon-ui-replaced');
     origEl.setAttribute('data-raccoon-translated', 'true');
-    adaptTranslatedUiLayout(origEl);
     return true;
   }
 
@@ -1254,7 +1256,7 @@
       });
       try { record.addedNode?.remove?.(); } catch (_) {}
       try {
-        record.element?.classList?.remove('raccoon-ui-translated', 'raccoon-ui-bilingual', 'raccoon-ui-expand', 'raccoon-ui-expand-y', 'raccoon-dom-preserved-translation', 'raccoon-replaced-text');
+        record.element?.classList?.remove('raccoon-ui-translated', 'raccoon-ui-bilingual', 'raccoon-ui-replaced', 'raccoon-ui-expand', 'raccoon-ui-expand-y', 'raccoon-dom-preserved-translation', 'raccoon-replaced-text');
         record.element?.removeAttribute?.('data-render-style');
         if (record.kind === 'replace-text' && record.element?.dataset) delete record.element.dataset.raccoonBaseFontSize;
         if (record.kind === 'replace-text' && record.element?.dataset) delete record.element.dataset.raccoonSourceColor;
@@ -3328,9 +3330,30 @@
     });
   }
 
+  function getImageOcrReadyMap() {
+    return new Promise(resolve => {
+      try {
+        chrome.runtime.sendMessage({ action:"GET_IMAGE_OCR_READY_MAP" }, response => {
+          if (chrome.runtime.lastError || !response?.success || typeof response.readyMap !== "object") resolve({});
+          else resolve(response.readyMap);
+        });
+      } catch (_) { resolve({}); }
+    });
+  }
+
+  function setImageOcrReadyMap(readyMap) {
+    return new Promise(resolve => {
+      try {
+        chrome.runtime.sendMessage({ action:"SET_IMAGE_OCR_READY_MAP", readyMap }, response => {
+          if (chrome.runtime.lastError) resolve(false);
+          else resolve(response?.success === true);
+        });
+      } catch (_) { resolve(false); }
+    });
+  }
+
   async function ensureImageOcrConsent(overlay, status, result, meta) {
-    const stored = await new Promise(resolve => chrome.storage.local.get("jijianImageOcrReadyV1", resolve));
-    const readyMap = stored?.jijianImageOcrReadyV1 && typeof stored.jijianImageOcrReadyV1 === "object" ? stored.jijianImageOcrReadyV1 : {};
+    const readyMap = await getImageOcrReadyMap();
     if (readyMap[meta.key]) return { allowed:true, cached:true };
 
     const prompt = overlay.querySelector(".image-ocr-model-prompt");
@@ -3361,10 +3384,9 @@
 
   async function markImageOcrModelReady(meta) {
     if (!meta?.key) return;
-    const stored = await new Promise(resolve => chrome.storage.local.get("jijianImageOcrReadyV1", resolve));
-    const readyMap = stored?.jijianImageOcrReadyV1 && typeof stored.jijianImageOcrReadyV1 === "object" ? { ...stored.jijianImageOcrReadyV1 } : {};
+    const readyMap = { ...(await getImageOcrReadyMap()) };
     readyMap[meta.key] = true;
-    await new Promise(resolve => chrome.storage.local.set({ jijianImageOcrReadyV1: readyMap }, resolve));
+    await setImageOcrReadyMap(readyMap);
   }
 
   function positionImageOverlay(overlay, img) {
@@ -4280,7 +4302,7 @@
     const left = Math.max(12, Math.min(clickX - toolbarWidth / 2, window.innerWidth - toolbarWidth - 12));
     selectionRoot.innerHTML = `
       <div class="raccoon-selection-trigger raccoon-input-selection-trigger" style="top:${top}px!important;left:${left}px!important">
-        <button type="button" class="selection-tool-btn" data-action="translate" title="翻译选中文字"><img class="trigger-logo-icon trigger-translate-brand-icon" src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true"><span>翻译</span></button>
+        <button type="button" class="selection-tool-btn" data-action="translate" title="翻译选中文字"><svg class="trigger-logo-icon trigger-translate-brand-icon" viewBox="0 0 128 128" aria-hidden="true"><circle cx="44" cy="21" r="9"/><path d="M18 31h52v12H55l-9 11-14-12-9 9 15 13-19 19 10 9 17-18 13 18 10-9-15-18 18-22H18z"/><path fill-rule="evenodd" d="M87 49c3 0 5 2 7 6l23 57h-14l-5-13H76l-5 13H57l24-57c1-4 3-6 6-6Zm0 21-7 18h14Z"/></svg><span>翻译</span></button>
         <button type="button" class="selection-tool-btn" data-action="replace-translate" title="翻译并替换选中文字"><svg class="trigger-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-9a5 5 0 0 0-5 5v1"/><path d="m17 4 3 3-3 3"/><path d="M4 17h9a5 5 0 0 0 5-5v-1"/><path d="m7 20-3-3 3-3"/></svg><span>替换翻译</span></button>
       </div>`;
     const toolbar = selectionRoot.querySelector(".raccoon-input-selection-trigger");
@@ -4439,11 +4461,11 @@
     const primaryLabel = allowDictionary ? "查词" : "翻译";
     const primaryIcon = allowDictionary
       ? `<svg class="trigger-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/><path d="M8.5 9.2h5M8.5 12.5h3.8"/></svg>`
-      : `<img class="trigger-logo-icon trigger-translate-brand-icon" src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true">`;
+      : `<svg class="trigger-logo-icon trigger-translate-brand-icon" viewBox="0 0 128 128" aria-hidden="true"><circle cx="44" cy="21" r="9"/><path d="M18 31h52v12H55l-9 11-14-12-9 9 15 13-19 19 10 9 17-18 13 18 10-9-15-18 18-22H18z"/><path fill-rule="evenodd" d="M87 49c3 0 5 2 7 6l23 57h-14l-5-13H76l-5 13H57l24-57c1-4 3-6 6-6Zm0 21-7 18h14Z"/></svg>`;
     selectionRoot.innerHTML = `
       <div class="raccoon-selection-trigger" style="top: ${top}px !important; left: ${left}px !important;">
         <button type="button" class="selection-tool-btn" data-action="${primaryAction}" title="${primaryLabel}">${primaryIcon}<span>${primaryLabel}</span></button>
-        <button type="button" class="selection-tool-btn ${isHighlighted ? 'danger-lite' : ''}" data-action="${isHighlighted ? 'remove-highlight' : 'highlight'}" title="${isHighlighted ? '删除高亮' : '高亮并收藏'}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">${isHighlighted ? '<path d="m5 15 8-8 6 6-7 7H7l-2-2a2.1 2.1 0 0 1 0-3Z"/><path d="m11 20 8-8"/>' : '<path d="m9 11-6 6v3h3l6-6"/><path d="m22 7-3-3a2 2 0 0 0-2.83 0L13 7l5 5 3.17-3.17a2 2 0 0 0 0-2.83z"/>'}</svg><span>${isHighlighted ? '删除高亮' : '高亮'}</span></button>
+        <button type="button" class="selection-tool-btn ${isHighlighted ? 'danger-lite' : ''}" data-action="${isHighlighted ? 'remove-highlight' : 'highlight'}" title="${isHighlighted ? '删除高亮' : '高亮并收藏'}"><svg class="trigger-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">${isHighlighted ? '<path d="m5 15 8-8 6 6-7 7H7l-2-2a2.1 2.1 0 0 1 0-3Z"/><path d="m11 20 8-8"/>' : '<path d="m9 11-6 6v3h3l6-6"/><path d="m22 7-3-3a2 2 0 0 0-2.83 0L13 7l5 5 3.17-3.17a2 2 0 0 0 0-2.83z"/>'}</svg><span>${isHighlighted ? '删除高亮' : '高亮'}</span></button>
       </div>`;
 
     const toolbar = selectionRoot.querySelector(".raccoon-selection-trigger");
@@ -4554,11 +4576,7 @@
 
   function hasConfiguredAiDictionary() {
     if (currentSettings.enableDictionaryAi === false) return false;
-    return !!(
-      currentSettings.deepseekApiKey || currentSettings.openaiApiKey ||
-      currentSettings.claudeApiKey || currentSettings.geminiApiKey ||
-      (currentSettings.customBaseUrl && currentSettings.customApiKey)
-    );
+    return currentSettings.aiDictionaryAvailable === true;
   }
 
   function sendDictionaryRuntimeMessage(payload, callback) {

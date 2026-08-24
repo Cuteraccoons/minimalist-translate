@@ -3388,9 +3388,8 @@ mark.minimal-text-highlight{
 /* ==========================================================================
    DOM-preserving translation
    ========================================================================== */
-/* UI chrome (tabs / toolbar labels) is translated in place. Keep the host's
-   typography and interaction styling; only relax width when the translated
-   label genuinely overflows. */
+/* Compact UI chrome uses one translated label instead of adding a second row.
+   The host keeps control of sizing, spacing, selected states and interaction. */
 .raccoon-ui-translated{
   text-rendering:inherit!important;
 }
@@ -3875,6 +3874,14 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
 .raccoon-input-selection-trigger{width:182px!important}
 .raccoon-input-selection-trigger .selection-tool-btn:first-child{flex:0 0 68px!important;min-width:68px!important}
 .raccoon-input-selection-trigger .selection-tool-btn:last-child{flex:1 1 auto!important;min-width:106px!important}
+.raccoon-selection-trigger .trigger-translate-brand-icon{
+  width:20px!important;height:20px!important;flex:0 0 20px!important;
+  display:block!important;overflow:visible!important;fill:#fff!important;color:#fff!important
+}
+.raccoon-selection-trigger .trigger-highlight-icon{
+  width:10px!important;height:10px!important;flex:0 0 10px!important;
+  fill:none!important;stroke:currentColor!important;stroke-linecap:round!important;stroke-linejoin:round!important
+}
 .raccoon-input-replace-card{
   position:fixed!important;z-index:2147483647!important;box-sizing:border-box!important;padding:12px!important;pointer-events:auto!important;
   border:1px solid #e0e3e7!important;border-radius:13px!important;background:#fff!important;

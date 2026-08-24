@@ -51,7 +51,8 @@ Chrome cannot load the ZIP file directly. When updating a local installation, re
 
 ## Data boundaries
 
-- Settings, vocabulary, highlights, translation cache, and local dictionary connections stay in browser storage.
+- API keys, custom service endpoints, and model configuration stay on the current device; ordinary interface and reading preferences may sync through Chrome Sync.
+- Vocabulary, highlights, translation cache, and local dictionary connections stay on the current device.
 - Local MDX / MDD files are not uploaded.
 - OCR runs locally; recognized text is sent to the selected translation service only when translation is requested.
 - Online translation, dictionary, and optional AI requests are governed by the selected provider's policy.
