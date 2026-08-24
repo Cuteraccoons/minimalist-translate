@@ -103,6 +103,7 @@
 
   let isPageTranslated = false;
   let isTranslating = false;
+  let translationRunGeneration = 0;
   let isSidebarOpen = false;
   let isReaderOpen = false;
   let blockCounter = 0;
@@ -489,7 +490,22 @@
   }
 
   function parsedCssColor(value) {
-    const numbers = String(value || "").match(/[\d.]+/g)?.map(Number) || [];
+    const normalized = String(value || "").trim();
+    const hex = normalized.match(/^#([\da-f]{3,8})$/i)?.[1];
+    if (hex) {
+      const expanded = hex.length === 3 || hex.length === 4
+        ? hex.split("").map(char => char + char).join("")
+        : hex;
+      if (expanded.length === 6 || expanded.length === 8) {
+        return {
+          r:parseInt(expanded.slice(0, 2), 16),
+          g:parseInt(expanded.slice(2, 4), 16),
+          b:parseInt(expanded.slice(4, 6), 16),
+          a:expanded.length === 8 ? parseInt(expanded.slice(6, 8), 16) / 255 : 1
+        };
+      }
+    }
+    const numbers = normalized.match(/[\d.]+/g)?.map(Number) || [];
     if (numbers.length < 3) return null;
     return { r:numbers[0], g:numbers[1], b:numbers[2], a:numbers.length > 3 ? numbers[3] : 1 };
   }
@@ -505,15 +521,45 @@
 
   function sourceSurfaceLuminance(origEl, sourceStyle) {
     const sourceLuminance = cssColorLuminance(parsedCssColor(sourceStyle?.color));
+    let composite = { r:0, g:0, b:0, a:0 };
+    const placeBehind = (background) => {
+      const frontAlpha = Math.max(0, Math.min(1, composite.a || 0));
+      const backAlpha = Math.max(0, Math.min(1, background.a ?? 1));
+      const outAlpha = frontAlpha + backAlpha * (1 - frontAlpha);
+      if (outAlpha <= 0) return;
+      composite = {
+        r:(composite.r * frontAlpha + background.r * backAlpha * (1 - frontAlpha)) / outAlpha,
+        g:(composite.g * frontAlpha + background.g * backAlpha * (1 - frontAlpha)) / outAlpha,
+        b:(composite.b * frontAlpha + background.b * backAlpha * (1 - frontAlpha)) / outAlpha,
+        a:outAlpha
+      };
+    };
     let node = origEl;
     for (let depth = 0; node && depth < 7; depth++, node = node.parentElement) {
       try {
-        const bg = parsedCssColor(getComputedStyle(node).backgroundColor);
-        if (bg && bg.a > .2) return cssColorLuminance(bg);
+        const style = getComputedStyle(node);
+        const bg = parsedCssColor(style.backgroundColor);
+        if (bg && bg.a > 0) {
+          placeBehind(bg);
+          if (composite.a >= .96) return cssColorLuminance(composite);
+        }
+        // CSS gradients and background images frequently sit on a transparent
+        // background colour. In that case the site's own text colour is the
+        // safest available signal for whether the rendered surface is dark.
+        if (style.backgroundImage && style.backgroundImage !== "none") {
+          placeBehind(sourceLuminance != null && sourceLuminance > .55
+            ? { r:0, g:0, b:0, a:1 }
+            : { r:255, g:255, b:255, a:1 });
+          return cssColorLuminance(composite);
+        }
       } catch (_) {}
     }
     // Transparent and gradient surfaces do not expose a useful background
     // colour. The host text colour is still a reliable last-resort hint.
+    if (composite.a > 0) {
+      placeBehind({ r:255, g:255, b:255, a:1 });
+      return cssColorLuminance(composite);
+    }
     if (sourceLuminance != null && sourceLuminance > .72) return 0;
     return 1;
   }
@@ -537,7 +583,28 @@
         ? String(preferredColor || cs.color || "").trim()
         : (surface < .42 ? "#f5f7fa" : "#111827");
       transNode.style.setProperty("--raccoon-local-text-color", readable || (surface < .42 ? "#f5f7fa" : "#111827"));
+      transNode.dataset.raccoonSurface = surface < .42 ? "dark" : "light";
     } catch (_) {}
+  }
+
+  function refreshRenderedTranslationContrast(origEl, transNode, renderStyle = currentSettings.renderStyle, preferredOverride = "") {
+    if (!origEl || !transNode) return;
+    requestAnimationFrame(() => {
+      if (!transNode.isConnected || !origEl.isConnected) return;
+      try {
+        const sourceStyle = getComputedStyle(origEl);
+        const preferredColor = preferredOverride || (renderStyle === "native"
+          ? (transNode.dataset.raccoonSourceColor || sourceStyle.color)
+          : getComputedStyle(document.documentElement).getPropertyValue("--raccoon-text-color"));
+        const contrastSourceStyle = transNode.classList.contains("raccoon-replaced-text") && transNode.dataset.raccoonSourceColor
+          ? { color:transNode.dataset.raccoonSourceColor }
+          : sourceStyle;
+        // Recalculate from the translation's final DOM position. Before it is
+        // inserted, a sibling card/gradient can make the source surface differ
+        // from the surface that the translated line actually lands on.
+        applyAdaptiveTranslationColor(transNode, transNode, preferredColor, contrastSourceStyle);
+      } catch (_) {}
+    });
   }
 
   function applySourceTypographyScale(origEl, transNode) {
@@ -610,15 +677,15 @@
   }
 
   async function startPageTranslation(engineOverride = null) {
+    const runId = ++translationRunGeneration;
+    const runMode = currentSettings.displayMode;
     setTabTranslationSession(true);
     isTranslating = true;
     updateFloatingPillStatus("loading", "翻译中...");
-    chrome.runtime.sendMessage({ action: "SET_BADGE", status: "translating" }, () => {
-      if (chrome.runtime.lastError) {}
-    });
+    setTranslationBadgeSafely("translating");
 
     const collectedBlocks = collectTranslatableBlocks();
-    const blocks = currentSettings.displayMode === "sidebar"
+    const blocks = runMode === "sidebar"
       ? collectedBlocks
       : prioritizeTranslationBlocks(collectedBlocks);
     // Freeze exact host-page source text before any translation node is inserted.
@@ -636,7 +703,7 @@
       return;
     }
 
-    if (currentSettings.displayMode === "sidebar") {
+    if (runMode === "sidebar") {
       openSidebar();
     }
 
@@ -649,27 +716,36 @@
     }
 
     const activeEngine = engineOverride || currentSettings.translationEngine || "google";
-    const CONCURRENCY = activeEngine === "google" ? 5 : 3;
+    // Google batches are translated as independent units in the service worker
+    // to preserve exact paragraph mapping. Two outer workers keep at most twelve
+    // requests in flight instead of creating a thirty-request burst.
+    const CONCURRENCY = activeEngine === "google" ? 2 : 3;
     let nextChunkIdx = 0;
 
     async function pipelineWorker() {
-      while (nextChunkIdx < chunks.length) {
+      while (runId === translationRunGeneration && nextChunkIdx < chunks.length) {
         const chunk = chunks[nextChunkIdx++];
         if (!chunk) break;
 
         try {
           const res = await sendBatchWithIds(chunk, engineOverride);
+          if (runId !== translationRunGeneration) return;
           if (res && res.success && Array.isArray(res.data)) {
             res.data.forEach(item => {
               const meta = blockById.get(item.id);
               const blockEl = meta?.element || document.querySelector(`[data-raccoon-id="${item.id}"]`);
               if (blockEl && item.text) {
+                const liveElement = meta?.kind === 'replace-text' ? meta.textNode?.parentElement : blockEl;
+                if (!liveElement || !isVisibleTranslationElement(liveElement)) {
+                  blockEl.removeAttribute?.('data-raccoon-id');
+                  return;
+                }
                 const origText = sourceTextById.get(item.id) || getHostOriginalText(blockEl);
                 if (meta?.kind !== 'replace-text' && meta?.kind !== 'ui-inplace') {
                   paragraphMap.set(item.id, { origText: origText, transText: item.text, el: blockEl });
                 }
 
-                if (currentSettings.displayMode === "sidebar") {
+                if (runMode === "sidebar") {
                   renderSidebarItem(item.id, blockEl, origText, item.text);
                 } else {
                   renderTranslationNode(blockEl, item.text, meta || { id:item.id, kind:'content-block', element:blockEl });
@@ -691,15 +767,15 @@
     }
     await Promise.all(workers);
 
+    if (runId !== translationRunGeneration) return;
+
     isTranslating = false;
     isPageTranslated = true;
-    updateFloatingPillStatus("done", currentSettings.displayMode === "replace" ? "已替换" : "已翻译");
-    chrome.runtime.sendMessage({ action: "SET_BADGE", status: "active" }, () => {
-      if (chrome.runtime.lastError) {}
-    });
+    updateFloatingPillStatus("done", runMode === "replace" ? "已替换" : "已翻译");
+    setTranslationBadgeSafely("active");
 
     startMutationObserver();
-    if (currentSettings.displayMode === "sidebar") {
+    if (runMode === "sidebar") {
       initSidebarScrollSync();
     }
   }
@@ -734,6 +810,15 @@
         resolve({ success: false, error: err?.message || String(err) });
       }
     });
+  }
+
+  function setTranslationBadgeSafely(status) {
+    try {
+      if (!chrome?.runtime?.id) return;
+      chrome.runtime.sendMessage({ action: "SET_BADGE", status }, () => {
+        if (chrome.runtime.lastError) {}
+      });
+    } catch (_) {}
   }
 
   const INTERACTIVE_UI_SELECTOR = [
@@ -823,6 +908,31 @@
     return 'unknown';
   }
 
+  function canUseExpandableUiBilingual(el, translatedText = '') {
+    if (!el) return false;
+    try {
+      const style = getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 148 || rect.height < 18) return false;
+      if (['hidden', 'clip'].includes(style.overflowX) || ['hidden', 'clip'].includes(style.overflowY)) return false;
+      if (style.textOverflow === 'ellipsis') return false;
+      const maxHeight = parseFloat(style.maxHeight || '');
+      if (Number.isFinite(maxHeight) && maxHeight > 0 && maxHeight < rect.height + 24) return false;
+      if (el.hasAttribute('height') || el.style.height || el.style.maxHeight) return false;
+
+      const usableWidth = rect.width - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
+      if (usableWidth < 120) return false;
+      const source = String(extractOriginalTextFromLiveDom(el) || '').trim();
+      const longestToken = [...source.split(/\s+/), ...String(translatedText || '').split(/\s+/)]
+        .reduce((longest, token) => token.length > longest.length ? token : longest, '');
+      const fontSize = parseFloat(style.fontSize || '') || 14;
+      if (longestToken.length * fontSize * .58 > usableWidth * .92) return false;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function shouldUseCompactUiReplacement(el, translatedText = '') {
     const control = el?.closest?.("a,button,summary,[role='tab'],[role='menuitem'],[role='option'],[role='button']") || el;
     if (!control) return true;
@@ -832,7 +942,7 @@
 
     const peerLayout = getPeerNavigationLayout(control);
     if (peerLayout === 'horizontal') return true;
-    if (peerLayout === 'vertical') return false;
+    if (peerLayout === 'vertical') return !canUseExpandableUiBilingual(control, translatedText);
 
     try {
       const style = getComputedStyle(control);
@@ -943,10 +1053,17 @@
     if (!el) return false;
     if (el.tagName === 'OPTION') return true;
     try {
+      if (el.hidden || el.closest?.('[hidden], [inert], [aria-hidden="true"]')) return false;
+      const hint = `${el.id || ''} ${typeof el.className === 'string' ? el.className : ''}`;
+      if (/(^|[-_\s])(sr-only|screen-reader|screenreader|visually-hidden|a11y-hidden)([-_\s]|$)/i.test(hint)) return false;
       const cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden') return false;
       if (parseFloat(cs.opacity || '1') === 0) return false;
-      return el.getClientRects().length > 0;
+      const rect = el.getBoundingClientRect();
+      if (!el.getClientRects().length || rect.width <= 0 || rect.height <= 0) return false;
+      if (rect.width <= 2 && rect.height <= 2 && (cs.position === 'absolute' || cs.position === 'fixed')) return false;
+      if (cs.clipPath === 'inset(50%)' || /^rect\(0(px)?[,\s]+0(px)?[,\s]+0(px)?[,\s]+0(px)?\)$/i.test(cs.clip || '')) return false;
+      return true;
     } catch (_) { return true; }
   }
 
@@ -1018,6 +1135,7 @@
       if (el.hasAttribute("data-raccoon-id") || el.hasAttribute("data-raccoon-translated")) return;
       if (isExtensionOwnedElement(el)) return;
       if (IGNORE_TAGS.has(el.tagName) || el.closest("[translate='no'], .notranslate, [contenteditable='true']")) return;
+      if (el.tagName === 'LI' && el.querySelector(':scope > ul, :scope > ol')) return;
       const hasDeeperBlock = el.querySelector("p, h1, h2, h3, h4, h5, h6, blockquote, dd");
       if (hasDeeperBlock) return;
       const rawText = getHostOriginalText(el);
@@ -1228,6 +1346,56 @@
     return record;
   }
 
+  function rememberInlineStyles(record, names) {
+    if (!record?.element || !Array.isArray(names)) return;
+    record.inlineStyles = names.map(name => ({
+      name,
+      value: record.element.style.getPropertyValue(name),
+      priority: record.element.style.getPropertyPriority(name)
+    }));
+  }
+
+  function restoreRememberedInlineStyles(record) {
+    if (!record?.element || !Array.isArray(record.inlineStyles)) return;
+    record.inlineStyles.forEach(({name, value, priority}) => {
+      if (value) record.element.style.setProperty(name, value, priority || '');
+      else record.element.style.removeProperty(name);
+    });
+  }
+
+  function positionExpandableUiTranslation(record, line) {
+    const element = record?.element;
+    if (!element || !line) return;
+    try {
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      const paddingLeft = Math.max(0, parseFloat(style.paddingLeft) || 0);
+      const paddingRight = Math.max(0, parseFloat(style.paddingRight) || 0);
+      const paddingBottom = Math.max(0, parseFloat(style.paddingBottom) || 0);
+      let lineLeft = paddingLeft;
+      const leadingVisual = Array.from(element.querySelectorAll(':scope > svg, :scope > img, :scope > picture, :scope > [aria-hidden="true"]'))
+        .map(node => node.getBoundingClientRect())
+        .find(iconRect => iconRect.width > 0 && iconRect.right <= rect.left + Math.min(rect.width * .46, 92));
+      if (leadingVisual) lineLeft = Math.max(lineLeft, leadingVisual.right - rect.left + 7);
+
+      rememberInlineStyles(record, ['position', 'padding-bottom', 'min-height']);
+      if (style.position === 'static') element.style.setProperty('position', 'relative', 'important');
+      line.style.setProperty('left', `${Math.round(lineLeft)}px`, 'important');
+      line.style.setProperty('right', `${Math.round(paddingRight)}px`, 'important');
+      line.style.setProperty('bottom', `${Math.round(paddingBottom)}px`, 'important');
+      line.style.setProperty('visibility', 'hidden', 'important');
+      element.appendChild(line);
+
+      const measuredLineHeight = Math.max(16, Math.ceil(line.scrollHeight || (parseFloat(style.fontSize) || 14) * 1.35));
+      const extraHeight = Math.min(46, measuredLineHeight + 4);
+      element.style.setProperty('padding-bottom', `${Math.ceil(paddingBottom + extraHeight)}px`, 'important');
+      element.style.setProperty('min-height', `${Math.ceil(rect.height + extraHeight)}px`, 'important');
+      line.style.removeProperty('visibility');
+    } catch (_) {
+      element.appendChild(line);
+    }
+  }
+
   function setCompactUiLabel(record, showOriginal) {
     const saved = record?.nodes || [];
     if (!saved.length) return;
@@ -1268,6 +1436,7 @@
   function applyReplaceTextUnit(unit, translatedText) {
     const node = unit?.textNode;
     if (!node || !node.parentNode) return false;
+    if (!isVisibleTranslationElement(node.parentElement)) return false;
     const raw = unit.rawText ?? node.nodeValue ?? '';
     if (!inPlaceOriginalTextByNode.has(node)) inPlaceOriginalTextByNode.set(node, raw);
     const original = inPlaceOriginalTextByNode.get(node) || raw;
@@ -1282,6 +1451,7 @@
       const ratio = (parseInt(currentSettings.fontSizeRatio, 10) || 100) / 100;
       parent.dataset.raccoonBaseFontSize = String(baseSize);
       parent.dataset.raccoonSourceColor = sourceStyle.color || "";
+      parent.style.setProperty("--raccoon-source-text-decoration", sourceStyle.textDecorationLine || "none");
       parent.style.setProperty("--raccoon-replace-base-size", `${baseSize}px`);
       parent.style.setProperty("--raccoon-replace-font-size", `${Math.round(baseSize * ratio * 100) / 100}px`);
       parent.setAttribute("data-render-style", activePageRenderStyle());
@@ -1290,6 +1460,7 @@
         : getComputedStyle(document.documentElement).getPropertyValue("--raccoon-text-color");
       applyAdaptiveTranslationColor(parent, parent, preferredColor, sourceStyle);
       parent.classList.add('raccoon-dom-preserved-translation','raccoon-replaced-text');
+      refreshRenderedTranslationContrast(parent, parent, activePageRenderStyle(), activePageRenderStyle() === "native" ? parent.dataset.raccoonSourceColor : "");
       // Furigana belongs to the original Japanese glyphs. Once the ruby base is
       // replaced, keeping <rt>/<rp> above the translated label is misleading.
       parent.closest?.('ruby')?.classList?.add('raccoon-replaced-ruby');
@@ -1323,7 +1494,7 @@
   }
 
   function renderUiTranslationInPlace(origEl, translatedText, id = '') {
-    if (!origEl) return false;
+    if (!origEl || !isVisibleTranslationElement(origEl)) return false;
     const nodes = collectInPlaceLabelTextNodes(origEl);
     if (!nodes.length) return false;
     const recordId = id || origEl.getAttribute('data-raccoon-id') || `ui_${++blockCounter}`;
@@ -1342,11 +1513,8 @@
       line.setAttribute('aria-hidden', 'true');
       const record = rememberInPlaceRecord(recordId, origEl, nodes, 'ui-bilingual', cleanTranslation);
       record.addedNode = line;
-      origEl.appendChild(line);
       origEl.classList.add('raccoon-ui-translated', 'raccoon-ui-bilingual');
-      try {
-        if (getComputedStyle(origEl).display.includes('flex')) origEl.classList.add('raccoon-ui-bilingual-flex');
-      } catch (_) {}
+      positionExpandableUiTranslation(record, line);
       origEl.setAttribute('data-raccoon-ui-mode', 'bilingual');
     }
     origEl.setAttribute('data-raccoon-translated', 'true');
@@ -1360,6 +1528,7 @@
         try { if (node?.isConnected) node.nodeValue = original; } catch (_) {}
       });
       try { record.addedNode?.remove?.(); } catch (_) {}
+      try { restoreRememberedInlineStyles(record); } catch (_) {}
       try {
         record.element?.classList?.remove('raccoon-ui-translated', 'raccoon-ui-bilingual', 'raccoon-ui-bilingual-flex', 'raccoon-ui-compact', 'raccoon-ui-replaced', 'raccoon-ui-expand', 'raccoon-ui-expand-y', 'raccoon-dom-preserved-translation', 'raccoon-replaced-text');
         record.element?.removeAttribute?.('data-render-style');
@@ -1372,6 +1541,7 @@
         record.element?.style?.removeProperty('--raccoon-replace-base-size');
         record.element?.style?.removeProperty('--raccoon-replace-font-size');
         record.element?.style?.removeProperty('--raccoon-local-text-color');
+        record.element?.style?.removeProperty('--raccoon-source-text-decoration');
       } catch (_) {}
     });
     document.querySelectorAll('.raccoon-tablist-overflow').forEach(el => el.classList.remove('raccoon-tablist-overflow'));
@@ -1382,7 +1552,7 @@
   }
 
   function renderTranslationNode(origEl, translatedText, meta = null) {
-    if (!origEl || !origEl.parentNode) return;
+    if (!origEl || !origEl.parentNode || !isVisibleTranslationElement(origEl)) return;
 
     if (meta?.kind === 'replace-text') {
       applyReplaceTextUnit(meta, translatedText);
@@ -1400,6 +1570,10 @@
     const origRawText = getHostOriginalText(origEl);
     const isNavOrTab = false;
     let attachShortLabel = origEl.tagName === "A" && origRawText.length <= 80;
+    // A figcaption can be rendered as table-caption (Wikipedia does this).
+    // Inserting a sibling DIV into that formatting context reorders geometry and
+    // visually overlaps the caption; keep its translation inside the caption.
+    if (origEl.tagName === "FIGCAPTION") attachShortLabel = true;
     if (!attachShortLabel && origRawText.length <= 80 && /^(P|DIV|SPAN)$/.test(origEl.tagName || "")) {
       try { attachShortLabel = getComputedStyle(origEl.parentElement).display.includes("grid"); } catch (_) {}
     }
@@ -1409,6 +1583,8 @@
     const transNode = document.createElement(isInline ? "span" : "div");
     transNode.className = isInline ? "raccoon-translated-inline" : "raccoon-translated-block";
     transNode.__raccoonSourceElement = origEl;
+    const sourceId = meta?.id || origEl.getAttribute("data-raccoon-id") || "";
+    if (sourceId) transNode.setAttribute("data-raccoon-source-id", sourceId);
     if (attachShortLabel) transNode.classList.add("raccoon-attached-translation");
     transNode.setAttribute("data-render-style", currentSettings.renderStyle || "classic");
 
@@ -1494,12 +1670,16 @@
         const hostStyle = getComputedStyle(origEl);
         const hostBottom = Math.max(0, parseFloat(hostStyle.marginBottom) || 0);
         const preferredGap = Math.max(5, Math.min(8, parseFloat(currentSettings.paragraphSpacing) || 6));
-        const offset = Math.max(-24, Math.min(8, preferredGap - hostBottom));
+        // A negative margin can collapse through host paragraphs and visibly
+        // overlap the selectable source line. Keep the pair close with a small,
+        // always-positive gap and leave the website's own margins untouched.
+        const offset = preferredGap;
         const after = Math.min(28, Math.max(10, hostBottom || 16));
         transNode.style.setProperty("--raccoon-proximity-offset", `${offset}px`);
         transNode.style.setProperty("--raccoon-proximity-after", `${after}px`);
       } catch (_) {}
     }
+    refreshRenderedTranslationContrast(origEl, transNode);
   }
 
   function reRenderAllTranslatedBlocks() {
@@ -1629,6 +1809,7 @@
   let sidebarOrderMap = new Map();
   let sidebarReaderMode = false;
   let sidebarShowExtraContent = false;
+  let sidebarPreviousDisplayMode = null;
   let originalBodyMarginRight = null;
   let originalBodyMarginLeft = null;
   let originalBodyTransition = null;
@@ -1684,7 +1865,7 @@
 
   function toggleSidebar() {
     if (isSidebarOpen) {
-      closeSidebar();
+      requestSidebarClose();
       return;
     }
 
@@ -1696,6 +1877,7 @@
     }
 
     if (!isPageTranslated) {
+      sidebarPreviousDisplayMode = currentSettings.displayMode === 'sidebar' ? 'bilingual' : currentSettings.displayMode;
       currentSettings.displayMode = "sidebar";
       startPageTranslation();
     } else {
@@ -1770,7 +1952,7 @@
       sidebarListEl.addEventListener("keydown", markSidebarUserScroll, { passive: true });
     }
 
-    root.querySelector("#sidebar-btn-close").addEventListener("click", closeSidebar);
+    root.querySelector("#sidebar-btn-close").addEventListener("click", requestSidebarClose);
     root.querySelector("#sidebar-more-content")?.addEventListener("click", (e) => {
       sidebarShowExtraContent = true;
       e.currentTarget.remove();
@@ -2106,6 +2288,21 @@
       sidebarNavigationTimer = null;
     }
     isSidebarOpen = false;
+    if (currentSettings.displayMode === 'sidebar') {
+      currentSettings.displayMode = sidebarPreviousDisplayMode || 'bilingual';
+    }
+    sidebarPreviousDisplayMode = null;
+  }
+
+  function requestSidebarClose() {
+    // A sidebar opened from an untranslated page owns a temporary translation
+    // run. Closing it must cancel that run as well as restoring the previous
+    // display mode; otherwise the next bilingual click can reopen the sidebar.
+    if (currentSettings.displayMode === 'sidebar' && sidebarPreviousDisplayMode) {
+      restoreOriginalPage();
+      return;
+    }
+    closeSidebar();
   }
 
   /**
@@ -2387,6 +2584,7 @@
     const savedLineHeight = currentSettings.readerLineHeight || "1.82";
     const savedParagraphSpacing = currentSettings.readerParagraphSpacing || "28";
     const savedWritingMode = currentSettings.readerWritingMode === "vertical" ? "vertical" : "horizontal";
+    const savedRenderStyle = currentSettings.renderStyle || "classic";
     const effectiveWritingMode = savedWritingMode;
     const isOutlineCollapsed = !!currentSettings.readerOutlineCollapsed;
 
@@ -2398,6 +2596,7 @@
     root.setAttribute("data-reader-view", isPageTranslated ? "bilingual" : "orig");
     root.setAttribute("data-writing-mode", effectiveWritingMode);
     root.setAttribute("data-reader-lang", inferDictionaryLanguageHint(title));
+    root.setAttribute("data-reader-render-style", savedRenderStyle);
     root.classList.toggle("reader-progress-hidden", currentSettings.readerProgressVisible === false);
     root.classList.toggle("reader-meta-hidden", currentSettings.readerMetaVisible === false);
     root.classList.toggle("reader-divider-hidden", currentSettings.readerDividerVisible === false);
@@ -2463,7 +2662,7 @@
                 return `
                   <div class="reader-paragraph-pair" id="head_${idx}" data-para-id="r_${idx}" data-heading="${isHeading ? 'true' : 'false'}">
                     <${contentTag} class="reader-orig-p ${isHeading ? 'reader-structural-heading' : ''}">${readerInlineHtml(node) || escapeHtml(getHostOriginalText(node))}</${contentTag}>
-                    <${contentTag} class="reader-trans-p ${isHeading ? 'reader-structural-heading' : ''}">正在同步精排译文...</${contentTag}>
+                    <${contentTag} class="reader-trans-p ${isHeading ? 'reader-structural-heading' : ''}" data-render-style="${escapeHtml(savedRenderStyle)}">正在同步精排译文...</${contentTag}>
                     ${!isHeading ? `<button type="button" class="reader-inline-translate-btn" data-reader-translate-one title="翻译这一段" aria-label="翻译这一段"><img src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true"></button>` : ""}
                   </div>
                 `;
@@ -2598,6 +2797,11 @@
     document.documentElement.appendChild(root);
     readerRoot = root;
     isReaderOpen = true;
+    root.addEventListener("click", (event) => {
+      const target = event.target?.closest?.('.reader-trans-p[data-render-style="click-reveal"]');
+      if (!target) return;
+      target.classList.toggle('raccoon-revealed');
+    });
 
     const settingsDrawer = root.querySelector("#reader-settings-drawer");
     const drawerBackdrop = root.querySelector("#reader-drawer-backdrop");
@@ -3877,6 +4081,7 @@
   }
 
   function restoreOriginalPage({ preserveTranslationSession = false } = {}) {
+    translationRunGeneration++;
     restoreInPlaceTranslations();
     document.querySelectorAll(".raccoon-translated-block, .raccoon-translated-inline").forEach(el => el.remove());
     document.querySelectorAll("[data-raccoon-orig-html]").forEach(el => {
@@ -3926,9 +4131,7 @@
     translatedBlocksCount = 0;
 
     updateFloatingPillStatus("idle", currentSettings.displayMode === "replace" ? "替换翻译" : "双语翻译");
-    chrome.runtime.sendMessage({ action: "SET_BADGE", status: "off" }, () => {
-      if (chrome.runtime.lastError) {}
-    });
+    setTranslationBadgeSafely("off");
   }
 
   async function translateIncrementalBlocks(newBlocks) {
@@ -3943,6 +4146,11 @@
           const meta = blockById.get(item.id);
           const el = meta?.element || document.querySelector(`[data-raccoon-id="${item.id}"]`);
           if (el && item.text) {
+            const liveElement = meta?.kind === 'replace-text' ? meta.textNode?.parentElement : el;
+            if (!liveElement || !isVisibleTranslationElement(liveElement)) {
+              el.removeAttribute?.('data-raccoon-id');
+              return;
+            }
             const origText = sourceTextById.get(item.id) || getHostOriginalText(el);
             if (meta?.kind !== 'replace-text' && meta?.kind !== 'ui-inplace') {
               paragraphMap.set(item.id, { origText, transText: item.text, el });
@@ -4088,14 +4296,31 @@
    * 智能外文检测悬浮胶囊
    */
   let floatingPillRoot = null;
+  let floatingPillDetectionTimer = null;
+  let floatingPillDetectionAttempts = 0;
+
+  function scheduleFloatingPillDetectionRetry() {
+    if (floatingPillDetectionTimer || floatingPillDetectionAttempts >= 3 || !currentSettings.enableFloatingBall) return;
+    const delay = [700, 1500, 2800][floatingPillDetectionAttempts] || 2800;
+    floatingPillDetectionAttempts++;
+    floatingPillDetectionTimer = setTimeout(() => {
+      floatingPillDetectionTimer = null;
+      if (!floatingPillRoot && !floatingPillSessionHidden && !isCurrentHostExcluded("floating")) initFloatingPillSmart();
+    }, delay);
+  }
 
   function initFloatingPillSmart() {
     if (document.getElementById("raccoon-floating-ball-root")) return;
     if (!currentSettings.enableFloatingBall) return;
 
     if (!isForeignLanguagePage()) {
+      scheduleFloatingPillDetectionRetry();
       return;
     }
+
+    clearTimeout(floatingPillDetectionTimer);
+    floatingPillDetectionTimer = null;
+    floatingPillDetectionAttempts = 0;
 
     const root = document.createElement("div");
     root.id = "raccoon-floating-ball-root";

@@ -220,6 +220,11 @@ function settingsForSender(settings, sender) {
 // Two-tier memory and local cache with a 10,000-entry limit.
 const memoryCache = new Map();
 const MAX_MEMORY_CACHE = 10000;
+const TRANSLATION_CACHE_NAMESPACE = "trans:v2";
+
+function translationCacheKey(engine, sl, tl, text) {
+  return `${TRANSLATION_CACHE_NAMESPACE}::${engine}::${sl}->${tl}::${String(text || "").trim()}`;
+}
 
 const persistentCacheReady = chrome.storage.local.get("persistentTranslationCache").then((res) => {
   if (res && res.persistentTranslationCache && typeof res.persistentTranslationCache === "object") {
@@ -230,10 +235,15 @@ const persistentCacheReady = chrome.storage.local.get("persistentTranslationCach
 }).catch(() => {});
 
 function getCache(key) {
-  return memoryCache.get(key);
+  if (!memoryCache.has(key)) return undefined;
+  const value = memoryCache.get(key);
+  memoryCache.delete(key);
+  memoryCache.set(key, value);
+  return value;
 }
 
 function setCache(key, val) {
+  if (memoryCache.has(key)) memoryCache.delete(key);
   if (memoryCache.size >= MAX_MEMORY_CACHE) {
     const first = memoryCache.keys().next().value;
     memoryCache.delete(first);
@@ -261,12 +271,7 @@ let saveCacheTimer = null;
 function schedulePersistCache() {
   clearTimeout(saveCacheTimer);
   saveCacheTimer = setTimeout(() => {
-    const obj = {};
-    let count = 0;
-    for (const [k, v] of memoryCache.entries()) {
-      if (++count > 3000) break;
-      obj[k] = v;
-    }
+    const obj = Object.fromEntries(Array.from(memoryCache.entries()).slice(-3000));
     chrome.storage.local.set({ persistentTranslationCache: obj }).catch(() => {});
   }, 2000);
 }
@@ -1625,7 +1630,7 @@ async function translateText(text, sl = "auto", tl = "zh-CN", settings = null) {
   }
 
   const engine = settings.translationEngine || "google";
-  const cacheKey = `trans::${engine}::${sl}->${tl}::${text.trim()}`;
+  const cacheKey = translationCacheKey(engine, sl, tl, text);
   const cached = getCache(cacheKey);
   if (cached) {
     const normalizedText = normalizeTranslationPunctuation(cached.text, tl);
@@ -1858,7 +1863,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
   const uncachedList = [];
 
   items.forEach((item, index) => {
-    const key = `trans::${engine}::${sl}->${tl}::${item.text.trim()}`;
+    const key = translationCacheKey(engine, sl, tl, item.text);
     const cached = getCache(key);
     if (cached) {
       results[index] = { id: item.id, text: normalizeTranslationPunctuation(cached.text, tl), detectedLang: cached.detectedLang };
@@ -1869,7 +1874,10 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
 
   if (uncachedList.length === 0) return results;
 
-  const BUNDLE_SIZE = 12;
+  // Google's public endpoint has no structured response contract for our
+  // paragraph markers. Translating it one unit at a time prevents a dropped or
+  // duplicated marker from assigning one paragraph's translation to another.
+  const BUNDLE_SIZE = engine === "google" ? 1 : 8;
   const bundles = [];
   for (let i = 0; i < uncachedList.length; i += BUNDLE_SIZE) {
     bundles.push(uncachedList.slice(i, i + BUNDLE_SIZE));
@@ -1882,6 +1890,18 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
     while (currBundle < bundles.length) {
       const bundle = bundles[currBundle++];
       if (!bundle) break;
+
+      if (bundle.length === 1) {
+        const target = bundle[0];
+        try {
+          const singleRes = await translateText(target.text, sl, tl, settings);
+          results[target.index] = { id: target.id, text: singleRes.text, detectedLang: singleRes.detectedLang };
+          setCache(translationCacheKey(engine, sl, tl, target.text), singleRes);
+        } catch (error) {
+          results[target.index] = { id: target.id, text: target.text, error:error?.message || String(error) };
+        }
+        continue;
+      }
 
       const taggedTexts = bundle.map((item, idx) => `⟦${idx}⟧ ${item.text}`).join("\n\n");
 
@@ -1898,7 +1918,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
           if (idx >= 0 && idx < bundle.length && content) {
             const target = bundle[idx];
             const rObj = { id: target.id, text: content, detectedLang: transRes.detectedLang };
-            setCache(`trans::${engine}::${sl}->${tl}::${target.text.trim()}`, { text: content, detectedLang: transRes.detectedLang });
+            setCache(translationCacheKey(engine, sl, tl, target.text), { text: content, detectedLang: transRes.detectedLang });
             results[target.index] = rObj;
             matchCount++;
           }
@@ -1910,7 +1930,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
             if (!results[target.index]) {
               const singleRes = await translateText(target.text, sl, tl, settings);
               results[target.index] = { id: target.id, text: singleRes.text, detectedLang: singleRes.detectedLang };
-              setCache(`trans::${engine}::${sl}->${tl}::${target.text.trim()}`, singleRes);
+              setCache(translationCacheKey(engine, sl, tl, target.text), singleRes);
             }
           }
         }
@@ -1920,7 +1940,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
           try {
             const singleRes = await translateText(target.text, sl, tl, settings);
             results[target.index] = { id: target.id, text: singleRes.text, detectedLang: singleRes.detectedLang };
-            setCache(`trans::${engine}::${sl}->${tl}::${target.text.trim()}`, singleRes);
+            setCache(translationCacheKey(engine, sl, tl, target.text), singleRes);
           } catch (e2) {
             results[target.index] = { id: target.id, text: target.text, error: e2.message };
           }

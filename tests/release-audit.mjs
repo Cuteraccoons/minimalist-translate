@@ -87,6 +87,16 @@ if (appendActionsCount !== 1) fail(`translation action bar append count expected
 if (!content.includes('function shouldUseCompactUiReplacement') || !content.includes("origEl.setAttribute('data-raccoon-ui-mode', 'compact')")) fail('adaptive compact navigation safeguard missing');
 if (!content.includes("line.className = 'raccoon-ui-translation-line'") || !content.includes("origEl.setAttribute('data-raccoon-ui-mode', 'bilingual')")) fail('expandable bilingual navigation path missing');
 if (!content.includes("element.addEventListener('mouseenter', showOriginal") || !content.includes('record.interactionController?.abort?.()')) fail('compact navigation preview lifecycle missing');
+if (!content.includes('function positionExpandableUiTranslation') || !content.includes('function setTranslationBadgeSafely')) fail('navigation geometry or badge safety missing');
+if (!content.includes("sidebarPreviousDisplayMode || 'bilingual'") || !content.includes('function requestSidebarClose()')) fail('temporary sidebar mode restoration missing');
+if (!content.includes('translationRunGeneration') || !content.includes('runId !== translationRunGeneration')) fail('stale async translation run cancellation missing');
+if (!read('background.js').includes('const TRANSLATION_CACHE_NAMESPACE = "trans:v2"') || !read('background.js').includes('const BUNDLE_SIZE = engine === "google" ? 1 : 8')) fail('paragraph-safe translation cache/mapping missing');
+if (!content.includes('function refreshRenderedTranslationContrast') || !content.includes('applyAdaptiveTranslationColor(transNode, transNode')) fail('post-insertion contrast recalculation missing');
+if (!content.includes('refreshRenderedTranslationContrast(parent, parent, activePageRenderStyle()')) fail('replacement post-style contrast recalculation missing');
+if (!content.includes('normalized.match(/^#([\\da-f]{3,8})$/i)')) fail('hex translation colour parsing missing');
+if (!content.includes('const placeBehind = (background) =>')) fail('translucent surface compositing missing');
+if (!content.includes('const offset = preferredGap') || content.includes('preferredGap - hostBottom')) fail('bilingual spacing can still collapse into a negative overlap');
+if (!read('floating.css').includes('clear:none!important')) fail('float-safe bilingual layout missing');
 if (!read('floating.css').includes('ruby.raccoon-replaced-ruby')) fail('missing ruby replacement safeguard');
 if (!process.exitCode) pass('DOM-preserving translation safeguards');
 
@@ -151,6 +161,7 @@ if (!backgroundJs.includes('replaceRenderStyle: "clean"')) fail('replacement cle
 if (!content.includes("parent.classList.add('raccoon-dom-preserved-translation','raccoon-replaced-text')")) fail('replacement typography class is not applied');
 if (!read('floating.css').includes('.raccoon-replaced-text[data-render-style="native"]') || !read('floating.css').includes('font-style:normal!important')) fail('replacement reference style may inherit italics');
 if (!content.includes('function applyAdaptiveTranslationColor') || !read('floating.css').includes('var(--raccoon-local-text-color,var(--raccoon-text-color,inherit))')) fail('translation styles do not share adaptive surface contrast');
+if (!content.includes('style.backgroundImage && style.backgroundImage !== "none"') || !content.includes('dataset.raccoonSurface')) fail('gradient/dark surface diagnostics missing');
 if (!read('floating.css').includes(':not([data-render-style="hover-reveal"])') || !read('floating.css').includes('20%,transparent)')) fail('hover reveal is indistinguishable from clean text');
 if (!read('floating.css').includes('[data-render-style="blur-reveal"] .raccoon-action-btn:hover')) fail('concealment action toolbar contrast safeguard missing');
 if (!backgroundJs.includes('enableParagraphActions: true') || !content.includes('raccoon-paragraph-actions-disabled')) fail('paragraph action toolbar preference missing');
