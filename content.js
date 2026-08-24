@@ -796,6 +796,61 @@
     return false;
   }
 
+  function getPeerNavigationLayout(el) {
+    const control = el?.closest?.("a,button,[role='tab'],[role='menuitem'],[role='option']") || el;
+    if (!control) return 'unknown';
+    const selector = "a,button,[role='tab'],[role='menuitem'],[role='option']";
+    let group = control.parentElement;
+    for (let depth = 0; group && depth < 3; depth++, group = group.parentElement) {
+      const controls = Array.from(group.querySelectorAll?.(selector) || [])
+        .filter(item => item === control || (item.closest(selector) === item && isVisibleTranslationElement(item)))
+        .slice(0, 12);
+      if (controls.length < 2) continue;
+      try {
+        const style = getComputedStyle(group);
+        if (style.display.includes('flex')) {
+          return style.flexDirection.startsWith('column') ? 'vertical' : 'horizontal';
+        }
+        const rects = controls.map(item => item.getBoundingClientRect()).filter(rect => rect.width > 0 && rect.height > 0);
+        if (rects.length < 2) continue;
+        const sameRow = rects.filter(rect => Math.abs(rect.top - rects[0].top) < Math.max(10, rects[0].height * .55)).length;
+        const sameColumn = rects.filter(rect => Math.abs(rect.left - rects[0].left) < Math.max(12, rects[0].width * .18)).length;
+        const threshold = Math.min(3, rects.length);
+        if (sameRow >= threshold) return 'horizontal';
+        if (sameColumn >= threshold) return 'vertical';
+      } catch (_) {}
+    }
+    return 'unknown';
+  }
+
+  function shouldUseCompactUiReplacement(el, translatedText = '') {
+    const control = el?.closest?.("a,button,summary,[role='tab'],[role='menuitem'],[role='option'],[role='button']") || el;
+    if (!control) return true;
+    if (control.matches?.("button,summary,[role='tab'],[role='menuitem'],[role='option'],[role='button'],[aria-haspopup],[aria-controls]")) return true;
+    if (control.closest?.("header,[role='tablist'],[role='toolbar'],[role='menu'],.tab-bar,.tabs,.tablist,.toolbar,.breadcrumb")) return true;
+    if (hasStickyOrFixedContext(control)) return true;
+
+    const peerLayout = getPeerNavigationLayout(control);
+    if (peerLayout === 'horizontal') return true;
+    if (peerLayout === 'vertical') return false;
+
+    try {
+      const style = getComputedStyle(control);
+      const rect = control.getBoundingClientRect();
+      const clipped = ['hidden', 'clip'].includes(style.overflowX) || ['hidden', 'clip'].includes(style.overflowY) || style.textOverflow === 'ellipsis';
+      const nowrap = style.whiteSpace === 'nowrap';
+      const labelLength = Math.max(
+        String(extractOriginalTextFromLiveDom(control) || '').trim().length,
+        String(translatedText || '').trim().length
+      );
+      if (clipped || (nowrap && rect.width > 0 && rect.width < Math.min(240, labelLength * 12 + 28))) return true;
+    } catch (_) {}
+
+    // An uncertain navigation layout gets the stable single-line treatment.
+    // Only clearly vertical, expandable groups receive a second bilingual row.
+    return true;
+  }
+
   function isUiChromeElement(el) {
     if (!el || isExtensionOwnedElement(el)) return false;
     if (el.matches?.(INTERACTIVE_UI_SELECTOR)) return true;
@@ -1167,8 +1222,47 @@
       if (!inPlaceOriginalTextByNode.has(node)) inPlaceOriginalTextByNode.set(node, node.nodeValue || '');
       return { node, original: inPlaceOriginalTextByNode.get(node) };
     });
-    inPlaceTranslationRecords.set(id, { id, element, nodes: saved, kind, translatedText });
+    const record = { id, element, nodes: saved, kind, translatedText };
+    inPlaceTranslationRecords.set(id, record);
     nodes.forEach(node => inPlaceTranslatedNodes.add(node));
+    return record;
+  }
+
+  function setCompactUiLabel(record, showOriginal) {
+    const saved = record?.nodes || [];
+    if (!saved.length) return;
+    if (showOriginal) {
+      saved.forEach(({node, original}) => {
+        try { if (node?.isConnected) node.nodeValue = original; } catch (_) {}
+      });
+      record.element?.setAttribute?.('data-raccoon-ui-showing', 'original');
+      return;
+    }
+    saved.forEach(({node, original}, index) => {
+      if (!node?.isConnected) return;
+      const leading = original.match(/^\s*/)?.[0] || '';
+      const trailing = original.match(/\s*$/)?.[0] || '';
+      node.nodeValue = index === 0
+        ? `${leading}${record.translatedText}${saved.length === 1 ? trailing : ''}`
+        : (index === saved.length - 1 ? trailing : '');
+    });
+    record.element?.setAttribute?.('data-raccoon-ui-showing', 'translation');
+  }
+
+  function bindCompactUiOriginalPreview(record) {
+    const element = record?.element;
+    if (!element) return;
+    const controller = new AbortController();
+    record.interactionController = controller;
+    const showOriginal = () => setCompactUiLabel(record, true);
+    const restoreTranslation = () => {
+      if (element.matches?.(':hover') || element.contains?.(document.activeElement)) return;
+      setCompactUiLabel(record, false);
+    };
+    element.addEventListener('mouseenter', showOriginal, { signal: controller.signal });
+    element.addEventListener('mouseleave', restoreTranslation, { signal: controller.signal });
+    element.addEventListener('focusin', showOriginal, { signal: controller.signal });
+    element.addEventListener('focusout', () => requestAnimationFrame(restoreTranslation), { signal: controller.signal });
   }
 
   function applyReplaceTextUnit(unit, translatedText) {
@@ -1235,29 +1329,42 @@
     const recordId = id || origEl.getAttribute('data-raccoon-id') || `ui_${++blockCounter}`;
     const cleanTranslation = String(translatedText || '').replace(/\s+/g, ' ').trim();
     if (!cleanTranslation) return false;
-    rememberInPlaceRecord(recordId, origEl, nodes, 'ui-replace', cleanTranslation);
-    nodes.forEach((node, index) => {
-      const original = inPlaceOriginalTextByNode.get(node) || node.nodeValue || '';
-      const leading = original.match(/^\s*/)?.[0] || '';
-      const trailing = original.match(/\s*$/)?.[0] || '';
-      node.nodeValue = index === 0
-        ? `${leading}${cleanTranslation}${nodes.length === 1 ? trailing : ''}`
-        : (index === nodes.length - 1 ? trailing : '');
-    });
-    origEl.classList.add('raccoon-ui-translated', 'raccoon-ui-replaced');
+    if (shouldUseCompactUiReplacement(origEl, cleanTranslation)) {
+      const record = rememberInPlaceRecord(recordId, origEl, nodes, 'ui-compact', cleanTranslation);
+      setCompactUiLabel(record, false);
+      bindCompactUiOriginalPreview(record);
+      origEl.classList.add('raccoon-ui-translated', 'raccoon-ui-compact');
+      origEl.setAttribute('data-raccoon-ui-mode', 'compact');
+    } else {
+      const line = document.createElement('span');
+      line.className = 'raccoon-ui-translation-line';
+      line.textContent = cleanTranslation;
+      line.setAttribute('aria-hidden', 'true');
+      const record = rememberInPlaceRecord(recordId, origEl, nodes, 'ui-bilingual', cleanTranslation);
+      record.addedNode = line;
+      origEl.appendChild(line);
+      origEl.classList.add('raccoon-ui-translated', 'raccoon-ui-bilingual');
+      try {
+        if (getComputedStyle(origEl).display.includes('flex')) origEl.classList.add('raccoon-ui-bilingual-flex');
+      } catch (_) {}
+      origEl.setAttribute('data-raccoon-ui-mode', 'bilingual');
+    }
     origEl.setAttribute('data-raccoon-translated', 'true');
     return true;
   }
 
   function restoreInPlaceTranslations() {
     inPlaceTranslationRecords.forEach(record => {
+      try { record.interactionController?.abort?.(); } catch (_) {}
       (record.nodes || []).forEach(({node, original}) => {
         try { if (node?.isConnected) node.nodeValue = original; } catch (_) {}
       });
       try { record.addedNode?.remove?.(); } catch (_) {}
       try {
-        record.element?.classList?.remove('raccoon-ui-translated', 'raccoon-ui-bilingual', 'raccoon-ui-replaced', 'raccoon-ui-expand', 'raccoon-ui-expand-y', 'raccoon-dom-preserved-translation', 'raccoon-replaced-text');
+        record.element?.classList?.remove('raccoon-ui-translated', 'raccoon-ui-bilingual', 'raccoon-ui-bilingual-flex', 'raccoon-ui-compact', 'raccoon-ui-replaced', 'raccoon-ui-expand', 'raccoon-ui-expand-y', 'raccoon-dom-preserved-translation', 'raccoon-replaced-text');
         record.element?.removeAttribute?.('data-render-style');
+        record.element?.removeAttribute?.('data-raccoon-ui-mode');
+        record.element?.removeAttribute?.('data-raccoon-ui-showing');
         if (record.kind === 'replace-text' && record.element?.dataset) delete record.element.dataset.raccoonBaseFontSize;
         if (record.kind === 'replace-text' && record.element?.dataset) delete record.element.dataset.raccoonSourceColor;
         record.element?.style?.removeProperty('--raccoon-ui-min-width');

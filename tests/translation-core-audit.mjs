@@ -27,8 +27,10 @@ if (/origEl\.(?:innerText|innerHTML|textContent)\s*=\s*translatedText/.test(cont
 if (!content.includes("meta?.kind === 'replace-text'")) fail('replace-text render branch missing');
 if (!content.includes("meta?.kind === 'ui-inplace'")) fail('UI in-place render branch missing');
 if (!content.includes("rt, rp")) fail('ruby annotations are not excluded from replacement translation');
-if (!content.includes("rememberInPlaceRecord(recordId, origEl, nodes, 'ui-replace'") || !content.includes("origEl.classList.add('raccoon-ui-translated', 'raccoon-ui-replaced')")) fail('compact UI replacement safeguard missing');
-if (content.includes("line.className = 'raccoon-ui-translation-line'")) fail('compact UI still appends a second bilingual row');
+if (!content.includes('function shouldUseCompactUiReplacement') || !content.includes("origEl.setAttribute('data-raccoon-ui-mode', 'compact')")) fail('adaptive compact UI safeguard missing');
+if (!content.includes("line.className = 'raccoon-ui-translation-line'") || !content.includes("origEl.setAttribute('data-raccoon-ui-mode', 'bilingual')")) fail('expandable bilingual navigation path missing');
+if (!content.includes("element.addEventListener('mouseenter', showOriginal") || !content.includes("element.addEventListener('focusin', showOriginal")) fail('compact UI original-text preview missing');
+if (!content.includes('record.interactionController?.abort?.()')) fail('compact UI interaction cleanup missing');
 if (/\[data-raccoon-translated=[^\]]+\]\s*\{[^}]*margin-bottom/i.test(css)) fail('host translated nodes still receive forced margin-bottom');
 if (!css.includes('white-space:nowrap!important')) fail('translated tab height safeguard missing');
 if ((content.match(/transNode\.appendChild\(actions\)/g) || []).length !== 1) fail('action toolbar should be appended exactly once');

@@ -84,7 +84,9 @@ for (const forbiddenPattern of [
 }
 const appendActionsCount = (content.match(/transNode\.appendChild\(actions\)/g) || []).length;
 if (appendActionsCount !== 1) fail(`translation action bar append count expected 1, got ${appendActionsCount}`);
-if (!content.includes("rememberInPlaceRecord(recordId, origEl, nodes, 'ui-replace'") || content.includes("line.className = 'raccoon-ui-translation-line'")) fail('compact navigation must replace its label instead of adding a bilingual row');
+if (!content.includes('function shouldUseCompactUiReplacement') || !content.includes("origEl.setAttribute('data-raccoon-ui-mode', 'compact')")) fail('adaptive compact navigation safeguard missing');
+if (!content.includes("line.className = 'raccoon-ui-translation-line'") || !content.includes("origEl.setAttribute('data-raccoon-ui-mode', 'bilingual')")) fail('expandable bilingual navigation path missing');
+if (!content.includes("element.addEventListener('mouseenter', showOriginal") || !content.includes('record.interactionController?.abort?.()')) fail('compact navigation preview lifecycle missing');
 if (!read('floating.css').includes('ruby.raccoon-replaced-ruby')) fail('missing ruby replacement safeguard');
 if (!process.exitCode) pass('DOM-preserving translation safeguards');
 

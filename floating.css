@@ -3388,9 +3388,12 @@ mark.minimal-text-highlight{
 /* ==========================================================================
    DOM-preserving translation
    ========================================================================== */
-/* Compact UI chrome uses one translated label instead of adding a second row.
-   The host keeps control of sizing, spacing, selected states and interaction. */
+/* UI chrome adapts to the host layout. Compact horizontal controls use one
+   translated label; roomy vertical navigation can grow into two lines. */
 .raccoon-ui-translated{
+  text-rendering:inherit!important;
+}
+.raccoon-ui-compact{
   text-rendering:inherit!important;
 }
 .raccoon-ui-translated.raccoon-ui-expand{
@@ -3650,8 +3653,9 @@ h6 + .raccoon-translated-block{font-size:var(--raccoon-block-font-size,var(--rac
   min-width:0!important;max-width:100%!important;line-height:1.38!important;pointer-events:none!important
 }
 .raccoon-ui-bilingual{min-block-size:var(--raccoon-ui-min-height,auto)!important}
+.raccoon-ui-bilingual-flex{flex-wrap:wrap!important}
 .raccoon-ui-translation-line{
-  display:block!important;width:100%!important;min-width:0!important;margin:5px 0 0!important;padding:0!important;
+  display:block!important;width:100%!important;min-width:0!important;flex:0 0 100%!important;margin:4px 0 0!important;padding:0!important;
   color:inherit!important;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif!important;
   font-size:max(11px,.76em)!important;font-weight:500!important;line-height:1.3!important;
   letter-spacing:0!important;text-transform:none!important;opacity:.72!important;white-space:normal!important;
