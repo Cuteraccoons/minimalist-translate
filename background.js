@@ -136,7 +136,7 @@ const DEFAULT_SETTINGS = {
 const memoryCache = new Map();
 const MAX_MEMORY_CACHE = 10000;
 
-chrome.storage.local.get("persistentTranslationCache").then((res) => {
+const persistentCacheReady = chrome.storage.local.get("persistentTranslationCache").then((res) => {
   if (res && res.persistentTranslationCache && typeof res.persistentTranslationCache === "object") {
     Object.entries(res.persistentTranslationCache).forEach(([k, v]) => {
       memoryCache.set(k, v);
@@ -1507,11 +1507,33 @@ Avoid redundant headings, long introductions, invented context, and invented dic
   }
 }
 
+function normalizeTranslationPunctuation(value, targetLang = "") {
+  const text = String(value ?? "");
+  const normalizedTarget = String(targetLang || "").trim().toLowerCase().replace(/_/g, "-");
+  if (!/^zh(?:-|$)/.test(normalizedTarget)) return text;
+
+  return text
+    // 中文行文使用双破折号；保留负数、数值区间、URL 与单词内部连字符。
+    .replace(/[ \t]*[—–―][ \t]*/g, "——")
+    .replace(/(\S)[ \t]+-[ \t]+(\S)/g, "$1——$2")
+    .replace(/([\u3400-\u9fff])[ \t]*-[ \t]*([\u3400-\u9fff])/g, "$1——$2")
+    .replace(/(?:——){2,}/g, "——")
+    .replace(/\.{3,}/g, "……")
+    .replace(/([\u3400-\u9fff])[ \t]*,[ \t]*(?=[\u3400-\u9fff]|$)/g, "$1，")
+    .replace(/([\u3400-\u9fff])[ \t]*;[ \t]*(?=[\u3400-\u9fff]|$)/g, "$1；")
+    .replace(/([\u3400-\u9fff])[ \t]*:[ \t]*(?=[\u3400-\u9fff]|$)/g, "$1：")
+    .replace(/([\u3400-\u9fff])[ \t]*\?+/g, "$1？")
+    .replace(/([\u3400-\u9fff])[ \t]*!+/g, "$1！")
+    .replace(/([\u3400-\u9fff])\.(?=\s|$|[”’"）】])/g, "$1。")
+    .replace(/[ \t]+([，。；：！？])/g, "$1");
+}
+
 /**
  * 翻译调度核心
  */
 async function translateText(text, sl = "auto", tl = "zh-CN", settings = null) {
   if (!text || !text.trim()) return { text: "", detectedLang: sl };
+  await persistentCacheReady;
 
   if (!settings) {
     const s = await chrome.storage.sync.get(null).catch(() => ({}));
@@ -1521,7 +1543,16 @@ async function translateText(text, sl = "auto", tl = "zh-CN", settings = null) {
   const engine = settings.translationEngine || "google";
   const cacheKey = `trans::${engine}::${sl}->${tl}::${text.trim()}`;
   const cached = getCache(cacheKey);
-  if (cached) return cached;
+  if (cached) {
+    const normalizedText = normalizeTranslationPunctuation(cached.text, tl);
+    if (normalizedText !== cached.text) {
+      const normalizedCached = Object.assign({}, cached, { text: normalizedText });
+      setCache(cacheKey, normalizedCached);
+      schedulePersistCache();
+      return normalizedCached;
+    }
+    return cached;
+  }
 
   let res = null;
 
@@ -1554,6 +1585,7 @@ async function translateText(text, sl = "auto", tl = "zh-CN", settings = null) {
   }
 
   if (res && res.text) {
+    res = Object.assign({}, res, { text: normalizeTranslationPunctuation(res.text, tl) });
     setCache(cacheKey, res);
     schedulePersistCache();
   }
@@ -1732,6 +1764,7 @@ async function translateWithCustomOpenAI(text, sl, tl, settings) {
  */
 async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOverride = null) {
   if (!items || !items.length) return [];
+  await persistentCacheReady;
 
   const s = await chrome.storage.sync.get(null).catch(() => ({}));
   const settings = Object.assign({}, DEFAULT_SETTINGS, s);
@@ -1745,7 +1778,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
     const key = `trans::${engine}::${sl}->${tl}::${item.text.trim()}`;
     const cached = getCache(key);
     if (cached) {
-      results[index] = { id: item.id, text: cached.text, detectedLang: cached.detectedLang };
+      results[index] = { id: item.id, text: normalizeTranslationPunctuation(cached.text, tl), detectedLang: cached.detectedLang };
     } else {
       uncachedList.push({ index, id: item.id, text: item.text });
     }
@@ -1778,7 +1811,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
 
         while ((match = pattern.exec(rawText)) !== null) {
           const idx = parseInt(match[1], 10);
-          const content = match[2].trim();
+          const content = normalizeTranslationPunctuation(match[2].trim(), tl);
           if (idx >= 0 && idx < bundle.length && content) {
             const target = bundle[idx];
             const rObj = { id: target.id, text: content, detectedLang: transRes.detectedLang };

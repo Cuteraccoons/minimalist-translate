@@ -4,6 +4,20 @@
   if (window.__RACCOON_TRANSLATE_INITIALIZED__) return;
   window.__RACCOON_TRANSLATE_INITIALIZED__ = true;
 
+  // Resolve extension assets once. Existing page scripts can keep using these
+  // URLs after the extension is reloaded instead of calling an invalidated runtime.
+  const extensionAssetUrls = (() => {
+    try {
+      return {
+        icon128: chrome.runtime.getURL("icons/icon128.png"),
+        icon32: chrome.runtime.getURL("icons/icon32.png"),
+        ocrSandbox: chrome.runtime.getURL("ocr-sandbox.html")
+      };
+    } catch (_) {
+      return { icon128:"", icon32:"", ocrSandbox:"" };
+    }
+  })();
+
   // Preload the available speech voices before the first playback.
   if (typeof window !== "undefined" && window.speechSynthesis) {
     try {
@@ -17,6 +31,7 @@
   let currentSettings = {
     targetLang: "zh-CN",
     sourceLang: "auto",
+    translationEngine: "google",
     displayMode: "bilingual", // "bilingual" | "replace" | "sidebar"
     sidebarWidth: "400",
     sidebarSyncScroll: true,
@@ -94,6 +109,8 @@
   let totalBlocks = 0;
   let translatedBlocksCount = 0;
   let mutationObserver = null;
+  let mutationRefreshTimer = null;
+  const pendingMutationTranslationRoots = new Set();
   let interactionRefreshHandler = null;
   let interactionRefreshTimer = null;
   let routeWatchTimer = null;
@@ -567,6 +584,31 @@
     }
   }
 
+  function prioritizeTranslationBlocks(blocks) {
+    if (!Array.isArray(blocks) || blocks.length < 2) return blocks || [];
+    const viewportHeight = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 800);
+    const rectCache = new WeakMap();
+    const ranked = blocks.map((block, index) => {
+      const el = block?.element;
+      if (!el?.getBoundingClientRect) return { block, index, band:3, distance:index };
+      let rect = rectCache.get(el);
+      if (!rect) {
+        try { rect = el.getBoundingClientRect(); } catch (_) { rect = { top:Infinity, bottom:Infinity }; }
+        rectCache.set(el, rect);
+      }
+      const nearViewport = rect.bottom >= -120 && rect.top <= viewportHeight + 240;
+      const belowViewport = rect.top > viewportHeight + 240;
+      return {
+        block,
+        index,
+        band:nearViewport ? 0 : (belowViewport ? 1 : 2),
+        distance:nearViewport ? Math.abs(rect.top) : (belowViewport ? rect.top - viewportHeight : Math.abs(rect.bottom))
+      };
+    });
+    ranked.sort((a, b) => a.band - b.band || a.distance - b.distance || a.index - b.index);
+    return ranked.map(item => item.block);
+  }
+
   async function startPageTranslation(engineOverride = null) {
     setTabTranslationSession(true);
     isTranslating = true;
@@ -575,7 +617,10 @@
       if (chrome.runtime.lastError) {}
     });
 
-    const blocks = collectTranslatableBlocks();
+    const collectedBlocks = collectTranslatableBlocks();
+    const blocks = currentSettings.displayMode === "sidebar"
+      ? collectedBlocks
+      : prioritizeTranslationBlocks(collectedBlocks);
     // Freeze exact host-page source text before any translation node is inserted.
     // Concurrent chunks can otherwise observe DOM already modified by an earlier
     // chunk, especially inside lists and inline-heavy article layouts.
@@ -597,13 +642,14 @@
 
     updateFloatingPillStatus("loading", `0/${totalBlocks}`);
 
-    const CHUNK_SIZE = 8;
+    const CHUNK_SIZE = 12;
     const chunks = [];
     for (let i = 0; i < blocks.length; i += CHUNK_SIZE) {
       chunks.push(blocks.slice(i, i + CHUNK_SIZE).map(b => ({ id: b.id, text: b.text })));
     }
 
-    const CONCURRENCY = 4;
+    const activeEngine = engineOverride || currentSettings.translationEngine || "google";
+    const CONCURRENCY = activeEngine === "google" ? 5 : 3;
     let nextChunkIdx = 0;
 
     async function pipelineWorker() {
@@ -706,6 +752,15 @@
     '#raccoon-hover-trigger-root', '#raccoon-selection-bubble-root', '#raccoon-floating-ball-root',
     '#raccoon-sidebar-root', '#raccoon-reader-root', '[data-reader-translate-one]'
   ].join(',');
+
+  const TRANSLATABLE_BLOCK_SELECTOR = "p, h1, h2, h3, h4, h5, h6, li, blockquote, dt, dd, figcaption, td, th, [role='article']";
+
+  function queryScopedElements(container, selector) {
+    const result = [];
+    if (container?.nodeType === Node.ELEMENT_NODE && container.matches?.(selector)) result.push(container);
+    container?.querySelectorAll?.(selector).forEach(el => result.push(el));
+    return result;
+  }
 
   function isExtensionOwnedElement(el) {
     return !!el?.closest?.(TRANSLATION_EXTENSION_SELECTOR);
@@ -880,7 +935,7 @@
       '.tab-bar a','.tabs a','.tablist a','a'
     ].join(',');
 
-    container.querySelectorAll(selector).forEach(el => {
+    queryScopedElements(container, selector).forEach(el => {
       if (!el || seen.has(el) || el.hasAttribute('data-raccoon-translated') || !isUiChromeElement(el) || isIgnoredTranslationNode(el) || !isVisibleTranslationElement(el)) return;
       // Avoid nested duplicate labels such as <button role=tab><span>...</span>.
       const owner = el.parentElement?.closest?.(selector);
@@ -918,15 +973,14 @@
       candidates.push({ id, kind: 'content-block', element: el, text: rawText });
     };
 
-    if (currentSettings.displayMode === "sidebar") {
+    if (currentSettings.displayMode === "sidebar" && container === document.body) {
       try {
         const readerContainer = findBestReaderContainer();
         collectReaderContentNodes(readerContainer).filter(node => node.tagName !== "IMG").forEach(node => append(node, true));
       } catch (_) {}
     }
 
-    const selector = "p, h1, h2, h3, h4, h5, h6, li, blockquote, dt, dd, figcaption, td, th, [role='article']";
-    container.querySelectorAll(selector).forEach(el => append(el, false));
+    queryScopedElements(container, TRANSLATABLE_BLOCK_SELECTOR).forEach(el => append(el, false));
 
     // Bilingual mode translates navigation/tab labels in place. They remain a
     // single interactive component and are deliberately excluded from prose.
@@ -1950,6 +2004,8 @@
    */
   let readerRoot = null;
   let readerKeydownHandler = null;
+  let readerContainerCache = { url:"", element:null };
+  let readerImageInfoCache = new WeakMap();
 
   function toggleReaderMode() {
     if (isReaderOpen) {
@@ -1975,6 +2031,13 @@
   }
 
   function findBestReaderContainer() {
+    if (readerContainerCache.url === location.href && readerContainerCache.element?.isConnected) {
+      return readerContainerCache.element;
+    }
+    const remember = (element) => {
+      readerContainerCache = { url:location.href, element:element || document.body };
+      return readerContainerCache.element;
+    };
     const host = window.location.hostname.toLowerCase();
     const siteSelectors = [
       [/(medium\.com|substack\.com)/, "article, .story-model, .postArticle-content"],
@@ -1988,11 +2051,24 @@
     for (const [pattern, selector] of siteSelectors) {
       if (pattern.test(host)) {
         const hit = document.querySelector(selector);
-        if (hit && (hit.innerText || "").trim().length > 180) return hit;
+        if (hit && (hit.innerText || "").trim().length > 180) return remember(hit);
       }
     }
 
     const preferred = Array.from(document.querySelectorAll("article, main, [role='main'], .post-content, .article-body, .entry-content, .story-body, .markdown-body"));
+    let bestPreferred = null;
+    let bestPreferredScore = -Infinity;
+    preferred.forEach(el => {
+      const score = scoreReaderCandidate(el);
+      if (score > bestPreferredScore) {
+        bestPreferred = el;
+        bestPreferredScore = score;
+      }
+    });
+    if (bestPreferred && bestPreferredScore >= 1200 && bestPreferred.querySelectorAll("p, blockquote").length >= 3) {
+      return remember(bestPreferred);
+    }
+
     // 不再对页面上的每一个 div 做深度评分；只保留含正文直系段落或正文语义命名的候选，避免长网页卡顿。
     const broad = Array.from(document.querySelectorAll("section, div")).filter(el => {
       const semanticName = `${el.id || ""} ${typeof el.className === "string" ? el.className : ""}`;
@@ -2011,7 +2087,7 @@
         bestScore = score;
       }
     });
-    return best || document.body;
+    return remember(best || document.body);
   }
 
   function detectReaderWritingMode(container) {
@@ -2024,6 +2100,62 @@
       } catch (_) {}
     }
     return "horizontal";
+  }
+
+  function getReaderImageInfo(node) {
+    const cached = readerImageInfoCache.get(node);
+    if (cached) return cached;
+    const candidates = [];
+    const addCandidate = (value) => {
+      const raw = String(value || "").trim();
+      if (!raw || /^data:image\/gif;base64,R0lGODlhAQABA/i.test(raw)) return;
+      try {
+        const resolved = /^(?:data:|blob:)/i.test(raw) ? raw : new URL(raw, location.href).href;
+        if (!candidates.includes(resolved)) candidates.push(resolved);
+      } catch (_) {}
+    };
+    [
+      node.getAttribute("data-original"),
+      node.getAttribute("data-src"),
+      node.getAttribute("data-lazy-src"),
+      node.getAttribute("data-url"),
+      node.getAttribute("src"),
+      node.currentSrc,
+      node.src
+    ].forEach(addCandidate);
+    const srcset = String(node.getAttribute("srcset") || node.getAttribute("data-srcset") || "");
+    if (srcset && !srcset.startsWith("data:")) {
+      srcset.split(",").forEach(item => addCandidate(item.trim().split(/\s+/)[0]));
+    }
+    node.closest("picture")?.querySelectorAll("source").forEach(source => {
+      const pictureSrcset = String(source.getAttribute("srcset") || source.getAttribute("data-srcset") || "");
+      if (pictureSrcset && !pictureSrcset.startsWith("data:")) {
+        pictureSrcset.split(",").forEach(item => addCandidate(item.trim().split(/\s+/)[0]));
+      }
+    });
+
+    const animatedSource = candidates.find(src => /\.gif(?:$|[?#])/i.test(src) || /^data:image\/gif/i.test(src));
+    const src = animatedSource || candidates[0] || "";
+    const width = Number(node.naturalWidth) || Number(node.getAttribute("width")) || 0;
+    const height = Number(node.naturalHeight) || Number(node.getAttribute("height")) || 0;
+    const ratio = width > 0 && height > 0 ? width / height : 0;
+    const compact = width > 0 && height > 0 && width <= 680 && height <= 760;
+    const portrait = ratio > 0 && ratio <= .86;
+    const wide = !compact && (ratio >= 1.55 || width >= 1000);
+    const classes = [
+      animatedSource ? "reader-img-animated" : "",
+      wide ? "reader-img-wide" : "",
+      compact || portrait ? "reader-img-inline" : ""
+    ].filter(Boolean).join(" ");
+    const info = {
+      src,
+      width,
+      height,
+      classes,
+      alt: String(node.getAttribute("alt") || "文章配图").trim() || "文章配图"
+    };
+    readerImageInfoCache.set(node, info);
+    return info;
   }
 
   function collectReaderContentNodes(container) {
@@ -2044,7 +2176,7 @@
       if (noiseContainerRe.test(noiseHint)) continue;
 
       if (node.tagName === "IMG") {
-        const src = node.currentSrc || node.src || "";
+        const src = getReaderImageInfo(node).src;
         const hint = `${src} ${node.alt || ""} ${node.className || ""}`.toLowerCase();
         if (!src || /icon|avatar|logo|emoji|sprite|tracking|pixel/.test(hint)) continue;
         const w = Number(node.getAttribute("width")) || node.naturalWidth || 0;
@@ -2123,6 +2255,7 @@
   async function openReaderMode() {
     if (document.getElementById("raccoon-reader-root")) return;
 
+    readerImageInfoCache = new WeakMap();
     const bestContainer = findBestReaderContainer();
     const title = document.querySelector('meta[property="og:title"]')?.content || document.querySelector("h1")?.innerText || document.title || "阅读文章";
     const detectedWritingMode = detectReaderWritingMode(bestContainer);
@@ -2210,7 +2343,11 @@
             <div class="reader-content" id="reader-content">
               ${contentNodes.map((node, idx) => {
                 if (node.tagName === "IMG") {
-                  return `<div class="reader-img-wrap"><img src="${node.src}" alt="文章配图" title="点击或双击放大查看" /></div>`;
+                  const media = getReaderImageInfo(node);
+                  const naturalWidth = media.width ? Math.min(media.width, 1800) : 960;
+                  const inlineSide = idx % 2 === 0 ? "reader-img-inline-right" : "reader-img-inline-left";
+                  const loading = media.classes.includes("reader-img-animated") ? "eager" : "lazy";
+                  return `<div class="reader-img-wrap ${media.classes} ${media.classes.includes("reader-img-inline") ? inlineSide : ""}" style="--reader-image-natural-width:${naturalWidth}px"><img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt)}" loading="${loading}" decoding="async" title="点击或双击放大查看" /></div>`;
                 }
                 const isHeading = /^H[1-4]$/.test(node.tagName);
                 const contentTag = isHeading ? node.tagName.toLowerCase() : "p";
@@ -2218,7 +2355,7 @@
                   <div class="reader-paragraph-pair" id="head_${idx}" data-para-id="r_${idx}" data-heading="${isHeading ? 'true' : 'false'}">
                     <${contentTag} class="reader-orig-p ${isHeading ? 'reader-structural-heading' : ''}">${readerInlineHtml(node) || escapeHtml(getHostOriginalText(node))}</${contentTag}>
                     <${contentTag} class="reader-trans-p ${isHeading ? 'reader-structural-heading' : ''}">正在同步精排译文...</${contentTag}>
-                    ${!isHeading ? `<button type="button" class="reader-inline-translate-btn" data-reader-translate-one title="翻译这一段" aria-label="翻译这一段"><img src="${chrome.runtime.getURL("icons/icon128.png")}" alt="" aria-hidden="true"></button>` : ""}
+                    ${!isHeading ? `<button type="button" class="reader-inline-translate-btn" data-reader-translate-one title="翻译这一段" aria-label="翻译这一段"><img src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true"></button>` : ""}
                   </div>
                 `;
               }).join("")}
@@ -2905,7 +3042,7 @@
       imageTranslateTrigger.type = "button";
       imageTranslateTrigger.title = "翻译图片文字";
       imageTranslateTrigger.setAttribute("aria-label", "翻译图片文字");
-      imageTranslateTrigger.innerHTML = `<img src="${chrome.runtime.getURL("icons/icon128.png")}" alt="" width="24" height="24">`;
+      imageTranslateTrigger.innerHTML = `<img src="${extensionAssetUrls.icon128}" alt="" width="24" height="24">`;
       setImageTranslateTriggerVisible(false);
       document.documentElement.appendChild(imageTranslateTrigger);
       imageTranslateTrigger.addEventListener("pointerenter", () => clearTimeout(imageTranslateHideTimer));
@@ -3140,7 +3277,7 @@
     if (jijianOcrSandboxFrame?.isConnected) return jijianOcrSandboxFrame;
     const frame = document.createElement("iframe");
     frame.id = "jijian-ocr-sandbox-frame";
-    frame.src = chrome.runtime.getURL("ocr-sandbox.html");
+    frame.src = extensionAssetUrls.ocrSandbox;
     frame.setAttribute("aria-hidden", "true");
     frame.tabIndex = -1;
     Object.assign(frame.style, { position:"fixed", width:"1px", height:"1px", left:"-9999px", top:"-9999px", opacity:"0", pointerEvents:"none", border:"0" });
@@ -3580,7 +3717,7 @@
       minus:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-4-4"/></svg>',
       save:'<svg viewBox="0 0 24 24"><path d="M5 4h12l2 2v14H5z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg>',
       copy:'<svg viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>',
-      translate:`<img class="lightbox-brand-icon" src="${chrome.runtime.getURL("icons/icon128.png")}" alt="" aria-hidden="true">`,
+      translate:`<img class="lightbox-brand-icon" src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true">`,
       close:'<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg>'
     }[name] || '');
     box.innerHTML = `
@@ -3641,6 +3778,9 @@
       mutationObserver.disconnect();
       mutationObserver = null;
     }
+    clearTimeout(mutationRefreshTimer);
+    mutationRefreshTimer = null;
+    pendingMutationTranslationRoots.clear();
     if (interactionRefreshHandler) {
       document.removeEventListener('click', interactionRefreshHandler, true);
       interactionRefreshHandler = null;
@@ -3699,6 +3839,38 @@
     }, delay);
   }
 
+  function mutationTranslationScope(node) {
+    const el = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    if (!el?.isConnected || isExtensionOwnedElement(el)) return null;
+    const scopedSelector = `${TRANSLATABLE_BLOCK_SELECTOR}, ${INTERACTIVE_UI_SELECTOR}`;
+    if (el.matches?.(scopedSelector) || el.querySelector?.(scopedSelector)) return el;
+    return el.closest?.(scopedSelector) || el.parentElement || null;
+  }
+
+  function compactMutationTranslationRoots(roots) {
+    const connected = Array.from(new Set(roots)).filter(root => root?.isConnected && !isExtensionOwnedElement(root));
+    if (connected.includes(document.body)) return [document.body];
+    return connected.filter(root => !connected.some(other => other !== root && other.contains?.(root)));
+  }
+
+  function scheduleMutationTranslationRefresh() {
+    clearTimeout(mutationRefreshTimer);
+    mutationRefreshTimer = setTimeout(() => {
+      mutationRefreshTimer = null;
+      if (!isPageTranslated || isTranslating) {
+        pendingMutationTranslationRoots.clear();
+        return;
+      }
+      const roots = compactMutationTranslationRoots(pendingMutationTranslationRoots);
+      pendingMutationTranslationRoots.clear();
+      const units = [];
+      roots.forEach(root => units.push(...collectTranslatableBlocks(root)));
+      if (!units.length) return;
+      const ordered = currentSettings.displayMode === "sidebar" ? units : prioritizeTranslationBlocks(units);
+      translateIncrementalBlocks(ordered);
+    }, 180);
+  }
+
   function scheduleRouteTranslationRefresh() {
     if (!isPageTranslated) return;
     scheduleVisibleTranslationRefresh(120);
@@ -3707,14 +3879,21 @@
 
   function startMutationObserver() {
     if (mutationObserver) return;
-    let timer = null;
 
     mutationObserver = new MutationObserver((mutations) => {
       if (!isPageTranslated || isTranslating) return;
-      const hasNewNodes = mutations.some(m => m.addedNodes && m.addedNodes.length > 0);
-      if (!hasNewNodes) return;
-      clearTimeout(timer);
-      timer = setTimeout(() => scheduleVisibleTranslationRefresh(0), 500);
+      mutations.forEach(mutation => {
+        mutation.addedNodes?.forEach(node => {
+          const scope = mutationTranslationScope(node);
+          if (scope) pendingMutationTranslationRoots.add(scope);
+        });
+      });
+      if (!pendingMutationTranslationRoots.size) return;
+      if (pendingMutationTranslationRoots.size > 60) {
+        pendingMutationTranslationRoots.clear();
+        pendingMutationTranslationRoots.add(document.body);
+      }
+      scheduleMutationTranslationRefresh();
     });
 
     mutationObserver.observe(document.body, { childList: true, subtree: true });
@@ -3738,7 +3917,7 @@
           lastObservedTranslationUrl = location.href;
           scheduleRouteTranslationRefresh();
         }
-      }, 400);
+      }, 700);
     }
   }
 
@@ -4101,7 +4280,7 @@
     const left = Math.max(12, Math.min(clickX - toolbarWidth / 2, window.innerWidth - toolbarWidth - 12));
     selectionRoot.innerHTML = `
       <div class="raccoon-selection-trigger raccoon-input-selection-trigger" style="top:${top}px!important;left:${left}px!important">
-        <button type="button" class="selection-tool-btn" data-action="translate" title="翻译选中文字"><img class="trigger-logo-icon trigger-translate-brand-icon" src="${chrome.runtime.getURL("icons/icon128.png")}" alt="" aria-hidden="true"><span>翻译</span></button>
+        <button type="button" class="selection-tool-btn" data-action="translate" title="翻译选中文字"><img class="trigger-logo-icon trigger-translate-brand-icon" src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true"><span>翻译</span></button>
         <button type="button" class="selection-tool-btn" data-action="replace-translate" title="翻译并替换选中文字"><svg class="trigger-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-9a5 5 0 0 0-5 5v1"/><path d="m17 4 3 3-3 3"/><path d="M4 17h9a5 5 0 0 0 5-5v-1"/><path d="m7 20-3-3 3-3"/></svg><span>替换翻译</span></button>
       </div>`;
     const toolbar = selectionRoot.querySelector(".raccoon-input-selection-trigger");
@@ -4260,7 +4439,7 @@
     const primaryLabel = allowDictionary ? "查词" : "翻译";
     const primaryIcon = allowDictionary
       ? `<svg class="trigger-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/><path d="M8.5 9.2h5M8.5 12.5h3.8"/></svg>`
-      : `<img class="trigger-logo-icon trigger-translate-brand-icon" src="${chrome.runtime.getURL("icons/icon128.png")}" alt="" aria-hidden="true">`;
+      : `<img class="trigger-logo-icon trigger-translate-brand-icon" src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true">`;
     selectionRoot.innerHTML = `
       <div class="raccoon-selection-trigger" style="top: ${top}px !important; left: ${left}px !important;">
         <button type="button" class="selection-tool-btn" data-action="${primaryAction}" title="${primaryLabel}">${primaryIcon}<span>${primaryLabel}</span></button>
@@ -4722,6 +4901,13 @@
         titleEl.textContent = text;
         titleEl.title = text;
         cardEl?.classList.add("dict-passage-card");
+        const syncPassageTitleFade = () => {
+          const hasOverflow = titleEl.scrollHeight > titleEl.clientHeight + 1;
+          const atBottom = titleEl.scrollTop + titleEl.clientHeight >= titleEl.scrollHeight - 2;
+          titleEl.classList.toggle("is-fade-clipped", hasOverflow && !atBottom);
+        };
+        titleEl.addEventListener("scroll", syncPassageTitleFade, { passive:true });
+        requestAnimationFrame(syncPassageTitleFade);
       }
       if (loadingEl) loadingEl.textContent = "正在翻译选中文本…";
       if (starBtn) starBtn.style.display = "none";
@@ -5613,7 +5799,7 @@
     button.className = "mdict-back-to-top";
     button.title = "回到词典顶部";
     button.setAttribute("aria-label", "回到词典顶部");
-    const iconUrl = (() => { try { return chrome.runtime.getURL("icons/icon32.png"); } catch (_) { return ""; } })();
+    const iconUrl = extensionAssetUrls.icon32;
     button.innerHTML = iconUrl ? `<img src="${iconUrl}" alt="">` : `<span aria-hidden="true">↑</span>`;
     shadow.appendChild(button);
 
