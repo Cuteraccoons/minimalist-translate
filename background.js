@@ -208,6 +208,15 @@ function settingsForContentScript(settings = {}) {
   return safe;
 }
 
+function isTrustedExtensionSender(sender) {
+  const senderUrl = String(sender?.url || sender?.origin || "");
+  return senderUrl.startsWith(chrome.runtime.getURL(""));
+}
+
+function settingsForSender(settings, sender) {
+  return isTrustedExtensionSender(sender) ? settings : settingsForContentScript(settings);
+}
+
 // Two-tier memory and local cache with a 10,000-entry limit.
 const memoryCache = new Map();
 const MAX_MEMORY_CACHE = 10000;
@@ -2350,9 +2359,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           merged.searchEngineBlacklistSeeded = true;
           await saveSettingsByStorage({ excludeDomainList: merged.excludeDomainList, excludeDomainRules: merged.excludeDomainRules, searchEngineBlacklistSeeded: true });
         }
-        sendResponse({ success: true, settings: sender.tab ? settingsForContentScript(merged) : merged });
+        sendResponse({ success: true, settings: settingsForSender(merged, sender) });
       } catch (_) {
-        sendResponse({ success: true, settings: sender.tab ? settingsForContentScript(DEFAULT_SETTINGS) : DEFAULT_SETTINGS });
+        sendResponse({ success: true, settings: settingsForSender(DEFAULT_SETTINGS, sender) });
       }
     })();
     return true;

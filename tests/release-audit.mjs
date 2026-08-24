@@ -132,6 +132,8 @@ for (const key of [
   if (!localOnlyList.includes(`"${key}"`)) fail(`private setting is not local-only: ${key}`);
 }
 if (!backgroundJs.includes('settingsForContentScript') || !backgroundJs.includes('LOCAL_ONLY_SETTING_KEYS.forEach(key => delete safe[key])')) fail('content-script settings are not sanitized');
+if (!backgroundJs.includes('senderUrl.startsWith(chrome.runtime.getURL(""))') || !backgroundJs.includes('settingsForSender(merged, sender)')) fail('trusted extension pages are not distinguished from ordinary tab content');
+if (backgroundJs.includes('sender.tab ? settingsForContentScript')) fail('tab-based trust check can hide local credentials from the options page');
 if (!backgroundJs.includes('chrome.storage.local.setAccessLevel?.({ accessLevel:"TRUSTED_CONTEXTS" })') || !backgroundJs.includes('chrome.storage.sync.setAccessLevel?.({ accessLevel:"TRUSTED_CONTEXTS" })')) fail('extension storage remains directly exposed to content scripts');
 if (content.includes('chrome.storage.')) fail('content script directly accesses extension storage');
 if (!content.includes('currentSettings.aiDictionaryAvailable === true')) fail('sanitized AI availability flag missing');
