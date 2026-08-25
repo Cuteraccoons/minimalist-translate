@@ -79,13 +79,17 @@
       const icon = node.querySelector(".fixture-icon")?.getBoundingClientRect();
       if (icon) node.dataset.fixtureIconWidth = icon.width.toFixed(2);
     });
+    const flexSource = document.querySelector(".fixture-flex-source");
+    if (flexSource) flexSource.dataset.fixtureInitialWidth = flexSource.getBoundingClientRect().width.toFixed(2);
+    const richMedia = document.querySelector(".fixture-rich-media");
+    if (richMedia) richMedia.dataset.fixtureInitialWidth = richMedia.getBoundingClientRect().width.toFixed(2);
     document.documentElement.dataset.fixtureReady = String(TOTAL_CASES);
     document.documentElement.dataset.fixtureLinkCount = String(document.querySelectorAll("a[href]").length);
   });
 
   window.runBilingualLayoutAudit = () => {
     const translated = Array.from(document.querySelectorAll(".raccoon-translated-block,.raccoon-translated-inline"));
-    const report = { cases:TOTAL_CASES, translated:translated.length, missing:0, overlaps:0, lowContrast:0, overflow:0, iconDrift:0 };
+    const report = { cases:TOTAL_CASES, translated:translated.length, missing:0, overlaps:0, lowContrast:0, overflow:0, iconDrift:0, squeezedRows:0, richControlDamage:0, hiddenTocMissing:0, tocNumberDamage:0 };
     translated.forEach(node => {
       const sourceId = node.dataset.raccoonSourceId;
       const source = sourceId ? document.querySelector(`[data-raccoon-id="${CSS.escape(sourceId)}"]`) : null;
@@ -111,6 +115,18 @@
     document.querySelectorAll(".case-nav a,.fixture-header a").forEach(link => {
       const icon = link.querySelector(".fixture-icon");
       if (icon && Math.abs(icon.getBoundingClientRect().width - Number(link.dataset.fixtureIconWidth)) > .75) report.iconDrift += 1;
+    });
+    const flexSource = document.querySelector(".fixture-flex-source");
+    if (flexSource && flexSource.getBoundingClientRect().width < Number(flexSource.dataset.fixtureInitialWidth) * .78) report.squeezedRows += 1;
+    const richCard = document.querySelector(".fixture-rich-card");
+    const richMedia = richCard?.querySelector(".fixture-rich-media");
+    if (richCard?.classList.contains("raccoon-ui-translated") || (richMedia && Math.abs(richMedia.getBoundingClientRect().width - Number(richMedia.dataset.fixtureInitialWidth)) > .75)) report.richControlDamage += 1;
+    const hiddenToc = document.querySelector(".fixture-toc-collapsed .vector-toc-link");
+    if (hiddenToc && !hiddenToc.classList.contains("raccoon-ui-translated")) report.hiddenTocMissing += 1;
+    document.querySelectorAll(".fixture-toc .vector-toc-link").forEach(link => {
+      const number = link.querySelector(".vector-toc-numb")?.textContent.trim() || "";
+      const label = Array.from(link.querySelectorAll(".vector-toc-text>span:not(.vector-toc-numb)")).map(node => node.textContent.trim()).join(" ");
+      if (!number || new RegExp(`^${number.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(label)) report.tocNumberDamage += 1;
     });
     return report;
   };

@@ -2399,8 +2399,8 @@ h1.reader-structural-heading{font-size:27px!important}h2.reader-structural-headi
   display:block!important;width:auto!important;max-width:100%!important;height:auto!important;
   max-height:min(72vh,760px)!important;margin:0 auto!important;object-fit:contain!important
 }
-.reader-img-wrap.reader-img-wide{width:100%!important;clear:both!important}
-.reader-img-wrap.reader-img-wide img{width:100%!important;max-height:none!important}
+.reader-img-wrap.reader-img-wide{width:min(100%,var(--reader-image-natural-width,960px))!important;clear:both!important}
+.reader-img-wrap.reader-img-wide img{width:auto!important;max-width:100%!important;max-height:min(72vh,760px)!important}
 .reader-paragraph-pair[data-heading="true"]{clear:both!important}
 @media (min-width:900px){
   .reader-img-wrap.reader-img-inline{
@@ -2793,7 +2793,6 @@ mark.minimal-text-highlight{
 .reader-advanced-panel .drawer-section-label:first-child{margin-top:8px!important}
 .reader-visibility-controls{grid-template-columns:1fr!important;gap:6px!important;margin:13px 0 11px!important}
 .reader-visibility-controls label{min-height:38px!important;padding:8px 10px!important}
-.reader-divider-hidden .reader-meta-bar{border-bottom:0!important;padding-bottom:0!important}
 .reader-export-direct{margin-top:8px!important}
 .reader-export-direct>.drawer-section-label{margin-bottom:7px!important}
 .dict-local-status-note{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:7px 0 10px;padding:7px 9px;border:1px solid rgba(115,126,139,.13);border-radius:7px;background:#fafbfc;color:#7a828d;font-size:11.5px;line-height:1.45}
@@ -2962,12 +2961,11 @@ mark.minimal-text-highlight{
 /* Surface choice: card keeps a discrete page; flat removes the paper container. */
 #raccoon-reader-root[data-surface="flat"] .reader-scroll-area{padding-top:34px!important}
 #raccoon-reader-root[data-surface="flat"] .reader-scroll-card{background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding-top:20px!important;padding-bottom:70px!important}
-#raccoon-reader-root[data-surface="flat"] .reader-meta-bar{border-bottom-color:rgba(70,78,86,.12)!important}
 .reader-surface-switch{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin:3px 0 6px!important}
 .reader-surface-switch button{min-height:42px!important;border:1px solid #e0e4e8!important;border-radius:6px!important;background:#fff!important;color:#66707b!important;padding:7px 9px!important;text-align:left!important;display:flex!important;flex-direction:column!important;gap:2px!important;cursor:pointer!important}
 .reader-surface-switch button b{font-size:11.5px!important;color:#424b55!important;font-weight:680!important}.reader-surface-switch button span{font-size:10px!important;color:#9299a2!important}
-.reader-surface-switch button.active{background:#eef1f4!important;border-color:#d3d9df!important}.reader-surface-switch button.active b{color:#20272f!important}
-#raccoon-reader-root[data-theme="dark"] .reader-surface-switch button{background:#202329!important;border-color:#373b44!important;color:#c8cbd1!important}#raccoon-reader-root[data-theme="dark"] .reader-surface-switch button b{color:#e2e4e8!important}#raccoon-reader-root[data-theme="dark"] .reader-surface-switch button.active{background:#292d34!important;border-color:#464b55!important}
+.reader-surface-switch button.active{background:#fff!important;border:2px solid #202328!important;color:#202328!important}.reader-surface-switch button.active b,.reader-surface-switch button.active span{color:#202328!important}
+#raccoon-reader-root[data-theme="dark"] .reader-surface-switch button{background:#202329!important;border-color:#373b44!important;color:#c8cbd1!important}#raccoon-reader-root[data-theme="dark"] .reader-surface-switch button b{color:#e2e4e8!important}#raccoon-reader-root[data-theme="dark"] .reader-surface-switch button.active{background:#fff!important;border:2px solid #111418!important;color:#202328!important}#raccoon-reader-root[data-theme="dark"] .reader-surface-switch button.active b,#raccoon-reader-root[data-theme="dark"] .reader-surface-switch button.active span{color:#202328!important}
 
 /* ==========================================================================
    Dictionary alignment, local rich-view interaction and Wikipedia
@@ -3625,11 +3623,18 @@ h6 + .raccoon-translated-block{font-size:var(--raccoon-block-font-size,var(--rac
   line-height:1.68!important;overflow-wrap:anywhere!important
 }
 
-/* Two complete outline lines, then an ellipsis; never a clipped third line. */
+/* Let the clickable row grow with its label. Legacy line-clamp boxes can
+   collapse the padded row on some host pages and make adjacent titles overlap. */
 .reader-outline-item{
-  white-space:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;
-  -webkit-line-clamp:2!important;line-height:1.5!important;max-height:calc(3em + 14px)!important;
-  overflow:hidden!important;text-overflow:ellipsis!important;box-sizing:border-box!important
+  display:flow-root!important;width:100%!important;height:auto!important;min-height:unset!important;
+  max-height:none!important;white-space:normal!important;overflow:visible!important;
+  line-height:1.5!important;box-sizing:border-box!important
+}
+.reader-outline-label{
+  display:block!important;width:100%!important;min-width:0!important;max-height:none!important;
+  -webkit-box-orient:initial!important;-webkit-line-clamp:unset!important;line-clamp:unset;
+  overflow:visible!important;text-overflow:clip!important;white-space:normal!important;
+  overflow-wrap:anywhere!important;word-break:break-word!important;line-height:1.5!important
 }
 
 /* ==========================================================================
@@ -4033,4 +4038,65 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
 .raccoon-dict-card .dict-body>.dict-source-footer .dict-source-inline{text-align:left!important;color:#9aa1aa!important}
 @media (prefers-reduced-motion:reduce){
   .dict-ai-followup-answer,.dict-ai-response-stack>.dict-ai-answer-bubble,.dict-ai-loading>i{animation:none!important}
+}
+
+/* Keep bilingual text inside row-oriented cards instead of creating a second
+   flex/grid column that can squeeze the source down to one glyph per line. */
+.raccoon-attached-translation{
+  box-sizing:border-box!important;clear:both!important;vertical-align:baseline!important;
+  overflow-wrap:break-word!important;word-break:normal!important
+}
+
+/* A marker belongs to glyph boxes, not to the full block or a neighbouring
+   image/column. The text wrapper also keeps multi-line highlights continuous. */
+.raccoon-translated-block[data-render-style="highlight"],
+.raccoon-translated-inline[data-render-style="highlight"],
+#raccoon-reader-root .reader-trans-p[data-render-style="highlight"]{
+  background:none!important;padding-left:0!important;padding-right:0!important
+}
+.raccoon-translated-block[data-render-style="highlight"]>.raccoon-translation-text,
+.raccoon-translated-inline[data-render-style="highlight"]>.raccoon-translation-text,
+#raccoon-reader-root .reader-trans-p[data-render-style="highlight"]>.reader-translation-text{
+  background:linear-gradient(transparent 35%,rgba(253,224,71,.43) 35%,rgba(253,224,71,.43) 91%,transparent 91%)!important;
+  box-decoration-break:clone!important;-webkit-box-decoration-break:clone!important
+}
+
+/* Compact navigation keeps the host baseline. Expandable controls align their
+   second line to the same visual start without altering icon geometry. */
+.raccoon-ui-compact{line-height:inherit!important;vertical-align:middle!important;word-break:normal!important}
+.raccoon-ui-bilingual{box-sizing:border-box!important;vertical-align:top!important}
+.raccoon-ui-translation-line{align-items:center!important;box-sizing:border-box!important}
+
+/* The selection toolbar uses the white mark from the brand glyph, with a
+   tighter label gap and no page-provided SVG outline styles leaking through. */
+.raccoon-selection-trigger .trigger-translate-brand-icon :is(path,circle){fill:#fff!important;stroke:none!important}
+.raccoon-selection-trigger .trigger-translate-brand-icon+span{margin-left:-2px!important}
+
+/* Reader finish: every outline row owns its wrapped height, hierarchy remains
+   legible, and the metadata area ends without a decorative rule. */
+.reader-outline-item{
+  opacity:.84!important;color:inherit!important;margin:0!important;
+  padding-top:7px!important;padding-bottom:7px!important
+}
+.reader-outline-item.level-1{opacity:.94!important;font-weight:680!important}
+.reader-outline-item.level-2{opacity:.82!important}
+.reader-outline-item.level-3{opacity:.72!important;color:inherit!important}
+.reader-outline-item:hover,.reader-outline-item.active-heading{opacity:1!important}
+.reader-meta-bar{
+  border-bottom:0!important;padding-bottom:0!important;margin-bottom:28px!important
+}
+
+/* Four restrained page structures. The active control stays paper-white and
+   is identified by its outline, so selecting it does not invert the preview. */
+.reader-surface-switch button{box-sizing:border-box!important}
+#raccoon-reader-root[data-surface="column"] .reader-scroll-area{padding-top:38px!important}
+#raccoon-reader-root[data-surface="column"] .reader-scroll-card{
+  max-width:720px!important;
+  padding-left:clamp(34px,5vw,54px)!important;padding-right:clamp(34px,5vw,54px)!important
+}
+#raccoon-reader-root[data-surface="folio"] .reader-scroll-area{padding-top:30px!important;padding-bottom:30px!important}
+#raccoon-reader-root[data-surface="folio"] .reader-scroll-card{
+  max-width:min(var(--reader-max-width,920px),1060px)!important;border-radius:2px!important;
+  padding-left:clamp(48px,7vw,88px)!important;padding-right:clamp(48px,7vw,88px)!important;
+  box-shadow:0 12px 36px rgba(35,39,43,.08)!important
 }

@@ -35,7 +35,7 @@ if (!content.includes('record.interactionController?.abort?.()')) fail('compact 
 if (!content.includes('function canUseExpandableUiBilingual') || !content.includes('function positionExpandableUiTranslation')) fail('bounded two-line navigation layout missing');
 if (!content.includes("rememberInlineStyles(record, ['position', 'padding-bottom', 'min-height'])")) fail('expandable navigation restoration missing');
 if (!content.includes('function setTranslationBadgeSafely')) fail('badge messaging context guard missing');
-if (!background.includes('const TRANSLATION_CACHE_NAMESPACE = "trans:v2"') || !background.includes('const BUNDLE_SIZE = engine === "google" ? 1 : 8')) fail('paragraph-safe Google translation mapping missing');
+if (!background.includes('const TRANSLATION_CACHE_NAMESPACE = "trans:v3"') || !background.includes('const BUNDLE_SIZE = engine === "google" ? 1 : 8')) fail('paragraph-safe Google translation mapping missing');
 if (!background.includes('Array.from(memoryCache.entries()).slice(-3000)')) fail('recent translation cache entries are not persisted');
 if (!content.includes('const CONCURRENCY = activeEngine === "google" ? 2 : 3')) fail('Google translation request fan-out is unbounded');
 if (!content.includes("sidebarPreviousDisplayMode || 'bilingual'") || !content.includes('function requestSidebarClose()')) fail('temporary sidebar mode restoration missing');
@@ -45,7 +45,19 @@ if (!content.includes('refreshRenderedTranslationContrast(parent, parent, active
 if (!content.includes('normalized.match(/^#([\\da-f]{3,8})$/i)')) fail('hex translation colour parsing missing');
 if (!content.includes('const placeBehind = (background) =>') || !content.includes('background.a ?? 1')) fail('translucent surface compositing missing');
 if (!content.includes('const offset = preferredGap') || content.includes('preferredGap - hostBottom')) fail('negative bilingual overlap spacing remains');
-if (!content.includes("if (!liveElement || !isVisibleTranslationElement(liveElement))")) fail('hidden source response guard missing');
+if (!content.includes('const allowHiddenToc') || !content.includes("(!allowHiddenToc && !isVisibleTranslationElement(liveElement))")) fail('hidden source response guard or structured-TOC exception missing');
+if (!content.includes('function isRichContentControl') || !content.includes('function collectCompactComponentTextUnits')) fail('rich-card/component translation boundary missing');
+if (!content.includes("meta?.kind === 'component-text'")) fail('compact component render branch missing');
+if (!content.includes('function isStructuredTocControl') || !content.includes('.vector-toc-numb,.tocnumber')) fail('TOC numbering preservation missing');
+if (!content.includes('parentIsRowFlex') || !content.includes('canOwnTranslation')) fail('row-flex bilingual squeeze safeguard missing');
+if (!content.includes('className = "raccoon-translation-text"') || !css.includes('>.raccoon-translation-text')) fail('glyph-only translation highlight wrapper missing');
+if (!content.includes('function warmReaderLazyContent') || !content.includes("[role='heading'][aria-level]")) fail('reader lazy-content or semantic-heading expansion missing');
+if (!content.includes('class="reader-outline-label"') || !css.includes('.reader-outline-label{')) fail('reader outline line-box safeguard missing');
+if (!content.includes('new Set(["card", "flat", "column", "folio"])') || (content.match(/data-reader-surface=/g) || []).length !== 4) fail('reader page surface choices are incomplete');
+if (content.includes('reader-toggle-divider') || content.includes('readerDividerVisible') || background.includes('readerDividerVisible')) fail('obsolete reader metadata divider setting remains');
+if (!css.includes('.reader-meta-bar{\n  border-bottom:0!important') || !css.includes('.reader-outline-item.level-3{opacity:.72!important')) fail('reader metadata rule or outline hierarchy finish missing');
+if (!css.includes('data-surface="column"') || !css.includes('data-surface="folio"') || !css.includes('border:2px solid #202328!important')) fail('reader surface layout or outlined selection state missing');
+if (!background.includes('async function translateUnitWithRetry') || !background.includes('const CONCURRENCY = engine === "google" ? 3 : 4')) fail('resilient bounded Google retry missing');
 if (!content.includes("data-render-style=\"${escapeHtml(savedRenderStyle)}\"")) fail('reader render-style inheritance missing');
 if (/\[data-raccoon-translated=[^\]]+\]\s*\{[^}]*margin-bottom/i.test(css)) fail('host translated nodes still receive forced margin-bottom');
 if (!css.includes('white-space:nowrap!important')) fail('translated tab height safeguard missing');
@@ -54,6 +66,7 @@ if (!css.includes('overflow-wrap:break-word!important;word-break:normal!importan
 if ((content.match(/transNode\.appendChild\(actions\)/g) || []).length !== 1) fail('action toolbar should be appended exactly once');
 if (!content.includes('function getReaderImageInfo')) fail('reader image source resolver missing');
 if (!content.includes('data-lazy-src')) fail('reader lazy image source fallback missing');
+if (!content.includes('node.currentSrc,') || !content.includes('fallbacks.indexOf(img.src)')) fail('reader animated/current image fallback missing');
 if (!css.includes('.reader-img-wrap.reader-img-inline')) fail('reader mixed image layout missing');
 if (!css.includes('max-height:min(72vh,760px)')) fail('reader image viewport limit missing');
 if (!css.includes('.dict-word-title.is-fade-clipped')) fail('passage title fade safeguard missing');
@@ -89,6 +102,9 @@ if (!punctuationSource) {
     ['第一段\n第二段', 'zh-CN', '第一段\n第二段'],
     ['2024-2025', 'zh-CN', '2024-2025'],
     ['-12°C', 'zh-CN', '-12°C'],
+    ['这是正文。[2] [n 1]', 'zh-CN', '这是正文。'],
+    ['Translated sentence [12]', 'en', 'Translated sentence'],
+    ['数组 [1, 2, 3]', 'zh-CN', '数组 [1, 2, 3]'],
     ['product-market fit', 'zh-CN', 'product-market fit'],
     ['https://example.com/a-b', 'zh-CN', 'https://example.com/a-b'],
     ['text - note', 'en', 'text - note']

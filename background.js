@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS = {
   // 沉浸阅读偏好持久化设置
   readerWidth: "920", // 默认宽敞舒适版面 (已记忆)
   readerTheme: "envelope", // envelope | white | dark | mint | mist | lavender | stone
-  readerSurface: "card", // card | flat
+  readerSurface: "card", // card | flat | column | folio
   readerFont: "system",
   readerFontSize: "17.5",
   readerLineHeight: "1.82",
@@ -40,7 +40,6 @@ const DEFAULT_SETTINGS = {
   readerImageShadow: true,
   readerProgressVisible: true,
   readerMetaVisible: true,
-  readerDividerVisible: true,
 
   fontFamily: "system",
   fontStyle: "normal",
@@ -220,7 +219,10 @@ function settingsForSender(settings, sender) {
 // Two-tier memory and local cache with a 10,000-entry limit.
 const memoryCache = new Map();
 const MAX_MEMORY_CACHE = 10000;
-const TRANSLATION_CACHE_NAMESPACE = "trans:v2";
+// v3 invalidates entries created before Google batches were split into
+// independent requests. Those older entries could associate a neighbouring
+// paragraph with a short navigation label when a marker was dropped.
+const TRANSLATION_CACHE_NAMESPACE = "trans:v3";
 
 function translationCacheKey(engine, sl, tl, text) {
   return `${TRANSLATION_CACHE_NAMESPACE}::${engine}::${sl}->${tl}::${String(text || "").trim()}`;
@@ -1599,10 +1601,14 @@ Avoid redundant headings, long introductions, invented context, and invented dic
 
 function normalizeTranslationPunctuation(value, targetLang = "") {
   const text = String(value ?? "");
+  // Citation links remain usable in the original line. A translation engine
+  // can only return their bracketed labels as dead text, so omit trailing
+  // reference clusters such as "[2] [n 1]" from the translated line.
+  const withoutTrailingReferences = text.replace(/(?:\s*(?:\[\s*(?:[a-z]{1,4}\s*)?\d+(?:\s*[-–]\s*\d+)?\s*\]|【\s*(?:[a-z]{1,4}\s*)?\d+(?:\s*[-–]\s*\d+)?\s*】)){1,8}\s*$/gi, "").trimEnd();
   const normalizedTarget = String(targetLang || "").trim().toLowerCase().replace(/_/g, "-");
-  if (!/^zh(?:-|$)/.test(normalizedTarget)) return text;
+  if (!/^zh(?:-|$)/.test(normalizedTarget)) return withoutTrailingReferences;
 
-  return text
+  return withoutTrailingReferences
     // 中文行文使用双破折号；保留负数、数值区间、URL 与单词内部连字符。
     .replace(/[ \t]*[—–―][ \t]*/g, "——")
     .replace(/(\S)[ \t]+-[ \t]+(\S)/g, "$1——$2")
@@ -1715,7 +1721,7 @@ async function translateWithDeepSeek(text, sl, tl, settings) {
 
 async function translateWithGoogle(text, sl = "auto", tl = "zh-CN") {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 4500);
+  const timeoutId = setTimeout(() => controller.abort(), 6500);
 
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
   try {
@@ -1883,8 +1889,24 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
     bundles.push(uncachedList.slice(i, i + BUNDLE_SIZE));
   }
 
-  const CONCURRENCY = engine === "google" ? 6 : 4;
+  const CONCURRENCY = engine === "google" ? 3 : 4;
   let currBundle = 0;
+
+  async function translateUnitWithRetry(target) {
+    const attempts = engine === "google" ? 3 : 1;
+    let lastError = null;
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      try {
+        return await translateText(target.text, sl, tl, settings);
+      } catch (error) {
+        lastError = error;
+        if (attempt + 1 < attempts) {
+          await new Promise(resolve => setTimeout(resolve, 260 * (attempt + 1) + Math.floor(Math.random() * 180)));
+        }
+      }
+    }
+    throw lastError || new Error("翻译请求失败");
+  }
 
   async function bundleWorker() {
     while (currBundle < bundles.length) {
@@ -1894,7 +1916,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
       if (bundle.length === 1) {
         const target = bundle[0];
         try {
-          const singleRes = await translateText(target.text, sl, tl, settings);
+          const singleRes = await translateUnitWithRetry(target);
           results[target.index] = { id: target.id, text: singleRes.text, detectedLang: singleRes.detectedLang };
           setCache(translationCacheKey(engine, sl, tl, target.text), singleRes);
         } catch (error) {
@@ -1928,7 +1950,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
           for (let k = 0; k < bundle.length; k++) {
             const target = bundle[k];
             if (!results[target.index]) {
-              const singleRes = await translateText(target.text, sl, tl, settings);
+              const singleRes = await translateUnitWithRetry(target);
               results[target.index] = { id: target.id, text: singleRes.text, detectedLang: singleRes.detectedLang };
               setCache(translationCacheKey(engine, sl, tl, target.text), singleRes);
             }
@@ -1938,7 +1960,7 @@ async function translateBatchWithIds(items, sl = "auto", tl = "zh-CN", engineOve
         for (let k = 0; k < bundle.length; k++) {
           const target = bundle[k];
           try {
-            const singleRes = await translateText(target.text, sl, tl, settings);
+            const singleRes = await translateUnitWithRetry(target);
             results[target.index] = { id: target.id, text: singleRes.text, detectedLang: singleRes.detectedLang };
             setCache(translationCacheKey(engine, sl, tl, target.text), singleRes);
           } catch (e2) {

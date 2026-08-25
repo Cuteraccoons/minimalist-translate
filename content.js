@@ -51,7 +51,6 @@
     readerImageShadow: true,
     readerProgressVisible: true,
     readerMetaVisible: true,
-    readerDividerVisible: true,
 
     fontFamily: "system",
     fontStyle: "normal",
@@ -693,13 +692,18 @@
     // chunk, especially inside lists and inline-heavy article layouts.
     const sourceTextById = new Map(blocks.map(block => [block.id, block.text]));
     const blockById = new Map(blocks.map(block => [block.id, block]));
+    const failedBlocks = [];
     totalBlocks = blocks.length;
     translatedBlocksCount = 0;
 
     if (totalBlocks === 0) {
       isTranslating = false;
-      updateFloatingPillStatus("done", "无需翻译");
-      setTimeout(resetFloatingPillText, 2500);
+      isPageTranslated = true;
+      updateFloatingPillStatus("done", "等待页面内容");
+      setTranslationBadgeSafely("active");
+      startMutationObserver();
+      setTimeout(() => scheduleVisibleTranslationRefresh(0), 900);
+      setTimeout(() => scheduleVisibleTranslationRefresh(0), 2600);
       return;
     }
 
@@ -727,6 +731,15 @@
         const chunk = chunks[nextChunkIdx++];
         if (!chunk) break;
 
+        const markChunkFailed = () => {
+          chunk.forEach(requestItem => {
+            const meta = blockById.get(requestItem.id);
+            if (!meta) return;
+            meta.element?.removeAttribute?.('data-raccoon-id');
+            failedBlocks.push(meta);
+          });
+        };
+
         try {
           const res = await sendBatchWithIds(chunk, engineOverride);
           if (runId !== translationRunGeneration) return;
@@ -734,14 +747,15 @@
             res.data.forEach(item => {
               const meta = blockById.get(item.id);
               const blockEl = meta?.element || document.querySelector(`[data-raccoon-id="${item.id}"]`);
-              if (blockEl && item.text) {
+              if (blockEl && item.text && !item.error) {
                 const liveElement = meta?.kind === 'replace-text' ? meta.textNode?.parentElement : blockEl;
-                if (!liveElement || !isVisibleTranslationElement(liveElement)) {
+                const allowHiddenToc = meta?.kind === 'ui-inplace' && isStructuredTocControl(blockEl);
+                if (!liveElement || (!allowHiddenToc && !isVisibleTranslationElement(liveElement))) {
                   blockEl.removeAttribute?.('data-raccoon-id');
                   return;
                 }
                 const origText = sourceTextById.get(item.id) || getHostOriginalText(blockEl);
-                if (meta?.kind !== 'replace-text' && meta?.kind !== 'ui-inplace') {
+                if (meta?.kind !== 'replace-text' && meta?.kind !== 'component-text' && meta?.kind !== 'ui-inplace') {
                   paragraphMap.set(item.id, { origText: origText, transText: item.text, el: blockEl });
                 }
 
@@ -751,12 +765,16 @@
                   renderTranslationNode(blockEl, item.text, meta || { id:item.id, kind:'content-block', element:blockEl });
                 }
                 translatedBlocksCount++;
+              } else if (meta) {
+                meta.element?.removeAttribute?.('data-raccoon-id');
+                failedBlocks.push(meta);
               }
             });
             updateFloatingPillStatus("loading", `${translatedBlocksCount}/${totalBlocks}`);
-          }
+          } else markChunkFailed();
         } catch (err) {
           console.warn("Pipeline chunk error:", err);
+          markChunkFailed();
         }
       }
     }
@@ -771,12 +789,18 @@
 
     isTranslating = false;
     isPageTranslated = true;
-    updateFloatingPillStatus("done", runMode === "replace" ? "已替换" : "已翻译");
+    const failedCount = new Set(failedBlocks.map(block => block.id)).size;
+    updateFloatingPillStatus("done", failedCount ? `${runMode === "replace" ? "已替换" : "已翻译"} · ${failedCount} 段待重试` : (runMode === "replace" ? "已替换" : "已翻译"));
     setTranslationBadgeSafely("active");
 
     startMutationObserver();
     if (runMode === "sidebar") {
       initSidebarScrollSync();
+    }
+    if (failedCount) {
+      setTimeout(() => scheduleVisibleTranslationRefresh(0), 1600);
+      setTimeout(() => scheduleVisibleTranslationRefresh(0), 6200);
+      setTimeout(() => scheduleVisibleTranslationRefresh(0), 16000);
     }
   }
 
@@ -862,9 +886,39 @@
     return false;
   }
 
+  function isStructuredTocControl(el) {
+    const control = el?.closest?.("a,button,[role='treeitem'],[role='menuitem']") || el;
+    if (!control) return false;
+    return !!control.matches?.(".vector-toc-link,.toc a,[data-glean-id*='toc_click']") ||
+      !!control.closest?.("#vector-toc,.vector-toc,.toc,[role='tree']");
+  }
+
+  function isRichContentControl(el) {
+    const control = el?.closest?.("a,button,[role='button']") || el;
+    if (!control?.matches?.("a,button,[role='button']")) return false;
+    if (control.closest?.("nav,header,[role='navigation'],[role='tablist'],[role='toolbar'],[role='menu']")) return false;
+    try {
+      const text = String(extractOriginalTextFromLiveDom(control) || control.innerText || "").replace(/\s+/g, " ").trim();
+      const rect = control.getBoundingClientRect();
+      const semanticCount = control.querySelectorAll("p,h1,h2,h3,h4,h5,h6,article,section,figure,table,[role='article']").length;
+      const hasMedia = !!control.querySelector("img,picture,video,canvas");
+      return rect.height >= 72 && ((hasMedia && (semanticCount >= 1 || text.length >= 64)) || (semanticCount >= 3 && text.length >= 72));
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function isCompactTranslationComponent(el) {
+    if (!el) return false;
+    if (el.closest?.(".infobox,.sidebar,.navbox,.vertical-navbox,.metadata,.ambox")) return true;
+    const control = el.closest?.("a,button,[role='button']");
+    return !!control && isRichContentControl(control);
+  }
+
   function hasPeerNavigationContext(el) {
     const control = el.closest?.("a,button,[role='tab'],[role='menuitem']") || el;
     if (!control || String(extractOriginalTextFromLiveDom(control) || control.textContent || "").trim().length > 90) return false;
+    if (isRichContentControl(control)) return false;
     let group = control.parentElement;
     for (let depth = 0; group && depth < 3; depth++, group = group.parentElement) {
       const controls = Array.from(group.querySelectorAll?.(":scope > a, :scope > button, :scope > [role='tab'], :scope > * > a, :scope > * > button, :scope > * > [role='tab']") || [])
@@ -936,6 +990,7 @@
   function shouldUseCompactUiReplacement(el, translatedText = '') {
     const control = el?.closest?.("a,button,summary,[role='tab'],[role='menuitem'],[role='option'],[role='button']") || el;
     if (!control) return true;
+    if (isStructuredTocControl(control)) return true;
     if (control.matches?.("button,summary,[role='tab'],[role='menuitem'],[role='option'],[role='button'],[aria-haspopup],[aria-controls]")) return true;
     if (control.closest?.("header,[role='tablist'],[role='toolbar'],[role='menu'],.tab-bar,.tabs,.tablist,.toolbar,.breadcrumb")) return true;
     if (hasStickyOrFixedContext(control)) return true;
@@ -963,6 +1018,7 @@
 
   function isUiChromeElement(el) {
     if (!el || isExtensionOwnedElement(el)) return false;
+    if (isRichContentControl(el)) return false;
     if (el.matches?.(INTERACTIVE_UI_SELECTOR)) return true;
     if (el.closest?.(UI_CHROME_ANCESTOR_SELECTOR)) return true;
     if (hasPeerNavigationContext(el)) return true;
@@ -1108,16 +1164,55 @@
     ].join(',');
 
     queryScopedElements(container, selector).forEach(el => {
-      if (!el || seen.has(el) || el.hasAttribute('data-raccoon-translated') || !isUiChromeElement(el) || isIgnoredTranslationNode(el) || !isVisibleTranslationElement(el)) return;
+      const allowHiddenToc = isStructuredTocControl(el);
+      if (!el || seen.has(el) || el.hasAttribute('data-raccoon-translated') || isCompactTranslationComponent(el) || isRichContentControl(el) || !isUiChromeElement(el) || (!allowHiddenToc && isIgnoredTranslationNode(el)) || (!allowHiddenToc && !isVisibleTranslationElement(el))) return;
       // Avoid nested duplicate labels such as <button role=tab><span>...</span>.
       const owner = el.parentElement?.closest?.(selector);
       if (owner && owner !== el && owner.contains(el)) return;
-      const text = extractOriginalTextFromLiveDom(el);
+      const labelNodes = collectInPlaceLabelTextNodes(el);
+      const text = labelNodes.map(node => originalTextForNode(node)).join(" ").replace(/\s+/g, " ").trim();
       if (!isValidText(text) || text.length > 140 || isIsolatedMetadata(text)) return;
       seen.add(el);
       const id = `ui_${++blockCounter}`;
       el.setAttribute('data-raccoon-id', id);
       units.push({ id, kind: 'ui-inplace', text, element: el });
+    });
+    return units;
+  }
+
+  function collectCompactComponentTextUnits(container = document.body) {
+    const units = [];
+    const seenNodes = new Set();
+    const roots = queryScopedElements(container, ".infobox,.sidebar,.navbox,.vertical-navbox,.metadata,.ambox");
+    queryScopedElements(container, "a,button,[role='button']").forEach(control => {
+      if (isRichContentControl(control)) roots.push(control);
+    });
+    const compactRoots = Array.from(new Set(roots)).filter(root => !roots.some(other => other !== root && other.contains?.(root)));
+
+    compactRoots.forEach(root => {
+      let walker;
+      try {
+        walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+          acceptNode(node) {
+            if (seenNodes.has(node) || inPlaceTranslatedNodes.has(node) || isIgnoredTranslationNode(node)) return NodeFilter.FILTER_REJECT;
+            const parent = node.parentElement;
+            if (!parent || !isVisibleTranslationElement(parent)) return NodeFilter.FILTER_REJECT;
+            if (parent.closest?.(".vector-toc-numb,.tocnumber,.mw-editsection,.noprint")) return NodeFilter.FILTER_REJECT;
+            const clean = String(node.nodeValue || "").replace(/\s+/g, " ").trim();
+            if (!isValidText(clean) || isIsolatedMetadata(clean)) return NodeFilter.FILTER_REJECT;
+            return NodeFilter.FILTER_ACCEPT;
+          }
+        });
+      } catch (_) { return; }
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        seenNodes.add(node);
+        const raw = String(node.nodeValue || "");
+        const clean = raw.replace(/\s+/g, " ").trim();
+        const id = `cmp_${++blockCounter}`;
+        units.push({ id, kind:"component-text", text:clean, element:node.parentElement, textNode:node, rawText:raw });
+        if (units.length >= 900) return;
+      }
     });
     return units;
   }
@@ -1134,6 +1229,7 @@
       seen.add(el);
       if (el.hasAttribute("data-raccoon-id") || el.hasAttribute("data-raccoon-translated")) return;
       if (isExtensionOwnedElement(el)) return;
+      if (isCompactTranslationComponent(el)) return;
       if (IGNORE_TAGS.has(el.tagName) || el.closest("[translate='no'], .notranslate, [contenteditable='true']")) return;
       if (el.tagName === 'LI' && el.querySelector(':scope > ul, :scope > ol')) return;
       const hasDeeperBlock = el.querySelector("p, h1, h2, h3, h4, h5, h6, blockquote, dd");
@@ -1158,6 +1254,7 @@
     // Bilingual mode keeps prose bilingual, but compact navigation controls use
     // a single translated label so tabs and breadcrumbs retain their geometry.
     if (currentSettings.displayMode === 'bilingual') {
+      collectCompactComponentTextUnits(container).forEach(unit => candidates.push(unit));
       collectUiTranslationUnits(container).forEach(unit => candidates.push(unit));
     }
     return candidates;
@@ -1321,10 +1418,12 @@
 
   function collectInPlaceLabelTextNodes(el) {
     const nodes = [];
+    const allowHiddenToc = isStructuredTocControl(el);
     try {
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
-          if (isIgnoredTranslationNode(node)) return NodeFilter.FILTER_REJECT;
+          if (!allowHiddenToc && isIgnoredTranslationNode(node)) return NodeFilter.FILTER_REJECT;
+          if (node.parentElement?.closest?.(".vector-toc-numb,.tocnumber,.mw-editsection,.noprint")) return NodeFilter.FILTER_REJECT;
           const clean = String(originalTextForNode(node) || '').replace(/\s+/g, ' ').trim();
           if (!clean || /^[\d\s\p{P}\p{S}]+$/u.test(clean)) return NodeFilter.FILTER_REJECT;
           return NodeFilter.FILTER_ACCEPT;
@@ -1469,6 +1568,18 @@
     return true;
   }
 
+  function applyCompactComponentTextUnit(unit, translatedText) {
+    const node = unit?.textNode;
+    if (!node?.parentNode || !isVisibleTranslationElement(node.parentElement)) return false;
+    const raw = unit.rawText ?? node.nodeValue ?? "";
+    if (!inPlaceOriginalTextByNode.has(node)) inPlaceOriginalTextByNode.set(node, raw);
+    const record = rememberInPlaceRecord(unit.id, node.parentElement, [node], "component-text", String(translatedText || "").trim());
+    setCompactUiLabel(record, false);
+    bindCompactUiOriginalPreview(record);
+    node.parentElement.classList.add("raccoon-component-translated");
+    return true;
+  }
+
   function adaptTranslatedUiLayout(el) {
     if (!el) return;
     const role = String(el.getAttribute?.('role') || '').toLowerCase();
@@ -1494,7 +1605,7 @@
   }
 
   function renderUiTranslationInPlace(origEl, translatedText, id = '') {
-    if (!origEl || !isVisibleTranslationElement(origEl)) return false;
+    if (!origEl || (!isStructuredTocControl(origEl) && !isVisibleTranslationElement(origEl))) return false;
     const nodes = collectInPlaceLabelTextNodes(origEl);
     if (!nodes.length) return false;
     const recordId = id || origEl.getAttribute('data-raccoon-id') || `ui_${++blockCounter}`;
@@ -1530,7 +1641,7 @@
       try { record.addedNode?.remove?.(); } catch (_) {}
       try { restoreRememberedInlineStyles(record); } catch (_) {}
       try {
-        record.element?.classList?.remove('raccoon-ui-translated', 'raccoon-ui-bilingual', 'raccoon-ui-bilingual-flex', 'raccoon-ui-compact', 'raccoon-ui-replaced', 'raccoon-ui-expand', 'raccoon-ui-expand-y', 'raccoon-dom-preserved-translation', 'raccoon-replaced-text');
+        record.element?.classList?.remove('raccoon-ui-translated', 'raccoon-ui-bilingual', 'raccoon-ui-bilingual-flex', 'raccoon-ui-compact', 'raccoon-ui-replaced', 'raccoon-ui-expand', 'raccoon-ui-expand-y', 'raccoon-dom-preserved-translation', 'raccoon-replaced-text', 'raccoon-component-translated');
         record.element?.removeAttribute?.('data-render-style');
         record.element?.removeAttribute?.('data-raccoon-ui-mode');
         record.element?.removeAttribute?.('data-raccoon-ui-showing');
@@ -1552,10 +1663,16 @@
   }
 
   function renderTranslationNode(origEl, translatedText, meta = null) {
-    if (!origEl || !origEl.parentNode || !isVisibleTranslationElement(origEl)) return;
+    const allowHiddenToc = meta?.kind === 'ui-inplace' && isStructuredTocControl(origEl);
+    if (!origEl || !origEl.parentNode || (!allowHiddenToc && !isVisibleTranslationElement(origEl))) return;
 
     if (meta?.kind === 'replace-text') {
       applyReplaceTextUnit(meta, translatedText);
+      return;
+    }
+
+    if (meta?.kind === 'component-text') {
+      applyCompactComponentTextUnit(meta, translatedText);
       return;
     }
 
@@ -1574,13 +1691,20 @@
     // Inserting a sibling DIV into that formatting context reorders geometry and
     // visually overlaps the caption; keep its translation inside the caption.
     if (origEl.tagName === "FIGCAPTION") attachShortLabel = true;
-    if (!attachShortLabel && origRawText.length <= 80 && /^(P|DIV|SPAN)$/.test(origEl.tagName || "")) {
-      try { attachShortLabel = getComputedStyle(origEl.parentElement).display.includes("grid"); } catch (_) {}
+    if (!attachShortLabel && /^(P|DIV|SPAN|H[1-6]|BLOCKQUOTE|DT|DD)$/.test(origEl.tagName || "")) {
+      try {
+        const parentStyle = getComputedStyle(origEl.parentElement);
+        const ownStyle = getComputedStyle(origEl);
+        const parentIsGrid = parentStyle.display.includes("grid");
+        const parentIsRowFlex = parentStyle.display.includes("flex") && !parentStyle.flexDirection.startsWith("column");
+        const canOwnTranslation = !ownStyle.display.includes("flex") && !ownStyle.display.includes("grid") && !origEl.querySelector("p,h1,h2,h3,h4,h5,h6,blockquote,table");
+        attachShortLabel = canOwnTranslation && (parentIsGrid || parentIsRowFlex);
+      } catch (_) {}
     }
 
     const isTableCell = origEl.tagName === "TD" || origEl.tagName === "TH";
     const isInline = origEl.tagName === "SPAN" || isNavOrTab;
-    const transNode = document.createElement(isInline ? "span" : "div");
+    const transNode = document.createElement(isInline || attachShortLabel ? "span" : "div");
     transNode.className = isInline ? "raccoon-translated-inline" : "raccoon-translated-block";
     transNode.__raccoonSourceElement = origEl;
     const sourceId = meta?.id || origEl.getAttribute("data-raccoon-id") || "";
@@ -1600,7 +1724,10 @@
       transNode.classList.add("has-orig-highlight");
     }
 
-    transNode.innerText = translatedText;
+    const translationTextNode = document.createElement("span");
+    translationTextNode.className = "raccoon-translation-text";
+    translationTextNode.textContent = translatedText;
+    transNode.appendChild(translationTextNode);
 
     if (!isInline && !attachShortLabel) {
       const actions = document.createElement("div");
@@ -2041,9 +2168,9 @@
         if (!res?.success || !Array.isArray(res.data)) continue;
         res.data.forEach(item => {
           const meta = chunk.find(x => x.id === item.id);
-          if (!meta || !item.text) return;
+          if (!meta || !item.text || item.error) return;
           if (meta.transEl?.isConnected) {
-            meta.transEl.textContent = item.text;
+            setReaderTranslationText(meta.transEl, item.text);
             meta.transEl.dataset.loaded = "true";
           }
           renderSidebarItem(meta.id, meta.origEl, meta.text, item.text, false, meta.index);
@@ -2313,6 +2440,47 @@
   let readerContainerCache = { url:"", element:null };
   let readerImageInfoCache = new WeakMap();
 
+  function readerHeadingLevel(node) {
+    const tagMatch = String(node?.tagName || "").match(/^H([1-6])$/);
+    if (tagMatch) return Number(tagMatch[1]);
+    if (String(node?.getAttribute?.("role") || "").toLowerCase() === "heading") {
+      return Math.min(6, Math.max(1, parseInt(node.getAttribute("aria-level") || "2", 10) || 2));
+    }
+    return 0;
+  }
+
+  function setReaderTranslationText(element, text) {
+    if (!element) return;
+    const span = document.createElement("span");
+    span.className = "reader-translation-text";
+    span.textContent = String(text || "");
+    element.replaceChildren(span);
+  }
+
+  async function warmReaderLazyContent() {
+    const viewport = Math.max(600, window.innerHeight || 800);
+    const maxScroll = Math.max(0, document.documentElement.scrollHeight - viewport);
+    if (maxScroll < viewport * 1.5) return;
+    const startY = window.scrollY;
+    const htmlStyle = document.documentElement.style;
+    const previousBehavior = htmlStyle.scrollBehavior;
+    htmlStyle.setProperty("scroll-behavior", "auto", "important");
+    const steps = Math.min(8, Math.max(3, Math.ceil(maxScroll / (viewport * 2.4))));
+    try {
+      for (let index = 1; index <= steps; index++) {
+        window.scrollTo(0, Math.round(maxScroll * index / steps));
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        await new Promise(resolve => setTimeout(resolve, 28));
+      }
+    } finally {
+      window.scrollTo(0, startY);
+      if (previousBehavior) htmlStyle.setProperty("scroll-behavior", previousBehavior);
+      else htmlStyle.removeProperty("scroll-behavior");
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      readerContainerCache = { url:"", element:null };
+    }
+  }
+
   function toggleReaderMode() {
     if (isReaderOpen) {
       closeReaderMode();
@@ -2420,14 +2588,17 @@
         if (!candidates.includes(resolved)) candidates.push(resolved);
       } catch (_) {}
     };
+    // The currently rendered asset is the best source after the warm-up pass.
+    // Prefer it over lazy-loading placeholders or static poster variants so
+    // animated GIF/WebP images keep moving in reading mode.
     [
+      node.currentSrc,
+      node.src,
+      node.getAttribute("src"),
       node.getAttribute("data-original"),
       node.getAttribute("data-src"),
       node.getAttribute("data-lazy-src"),
-      node.getAttribute("data-url"),
-      node.getAttribute("src"),
-      node.currentSrc,
-      node.src
+      node.getAttribute("data-url")
     ].forEach(addCandidate);
     const srcset = String(node.getAttribute("srcset") || node.getAttribute("data-srcset") || "");
     if (srcset && !srcset.startsWith("data:")) {
@@ -2444,8 +2615,12 @@
     const src = animatedSource || candidates[0] || "";
     const width = Number(node.naturalWidth) || Number(node.getAttribute("width")) || 0;
     const height = Number(node.naturalHeight) || Number(node.getAttribute("height")) || 0;
+    const renderedRect = node.getBoundingClientRect();
+    const displayWidth = renderedRect.width >= 160 ? Math.round(renderedRect.width) : 0;
+    const displayHeight = renderedRect.height >= 100 ? Math.round(renderedRect.height) : 0;
+    const layoutWidth = displayWidth || width;
     const ratio = width > 0 && height > 0 ? width / height : 0;
-    const compact = width > 0 && height > 0 && width <= 680 && height <= 760;
+    const compact = layoutWidth > 0 && layoutWidth <= 620 && (displayHeight || height || 0) <= 760;
     const portrait = ratio > 0 && ratio <= .86;
     const wide = !compact && (ratio >= 1.55 || width >= 1000);
     const classes = [
@@ -2457,6 +2632,9 @@
       src,
       width,
       height,
+      displayWidth,
+      displayHeight,
+      candidates,
       classes,
       alt: String(node.getAttribute("alt") || "文章配图").trim() || "文章配图"
     };
@@ -2465,7 +2643,7 @@
   }
 
   function collectReaderContentNodes(container) {
-    const selector = "p, h1, h2, h3, h4, blockquote, pre, li, img";
+    const selector = "p, h1, h2, h3, h4, h5, h6, [role='heading'][aria-level], blockquote, pre, li, dt, dd, figcaption, a[download], a[href$='.pdf'], a[href$='.epub'], a[href$='.zip'], img";
     const seenText = new Set();
     const raw = Array.from(container.querySelectorAll(selector));
     const result = [];
@@ -2499,11 +2677,11 @@
       if (text.length < (node.tagName === "LI" ? 6 : 10)) continue;
       if (seenText.has(text)) continue;
 
-      const isHeading = /^H[1-4]$/.test(node.tagName);
+      const isHeading = readerHeadingLevel(node) > 0;
       const linkText = Array.from(node.querySelectorAll?.("a") || []).reduce((n,a) => n + ((a.innerText || a.textContent || "").trim().length), 0);
       const linkDensity = text.length ? linkText / text.length : 0;
       // A recommendation heading after substantial article text is a strong end-of-article signal.
-      if (accumulatedText > 650 && isHeading && (tailHeadingRe.test(text) || linkDensity > .72)) {
+      if (accumulatedText > 650 && isHeading && tailHeadingRe.test(text)) {
         tailReached = true;
         break;
       }
@@ -2541,7 +2719,17 @@
         } catch (_) { node.replaceWith(...Array.from(node.childNodes)); }
       }
     });
-    return String(clone.innerHTML || "").trim();
+    const inner = String(clone.innerHTML || "").trim();
+    if (sourceNode.tagName === "A") {
+      const sourceHref = sourceNode.getAttribute("href") || "";
+      try {
+        const resolved = new URL(sourceHref, location.href);
+        if (["http:","https:","mailto:"].includes(resolved.protocol)) {
+          return `<a href="${escapeHtml(resolved.href)}" target="_blank" rel="noopener noreferrer">${inner || escapeHtml(getHostOriginalText(sourceNode))}</a>`;
+        }
+      } catch (_) {}
+    }
+    return inner;
   }
 
   function normalizedReaderTitle(value) {
@@ -2561,24 +2749,27 @@
   async function openReaderMode() {
     if (document.getElementById("raccoon-reader-root")) return;
 
+    await warmReaderLazyContent();
     readerImageInfoCache = new WeakMap();
     const bestContainer = findBestReaderContainer();
     const title = document.querySelector('meta[property="og:title"]')?.content || document.querySelector("h1")?.innerText || document.title || "阅读文章";
     const detectedWritingMode = detectReaderWritingMode(bestContainer);
     let contentNodes = collectReaderContentNodes(bestContainer);
     contentNodes = contentNodes.filter((node, index) => {
-      if (index > 12 || !/^H[1-3]$/.test(node.tagName)) return true;
+      if (index > 12 || readerHeadingLevel(node) < 1 || readerHeadingLevel(node) > 3) return true;
       return !readerHeadingMatchesTitle(getHostOriginalText(node), title);
     });
     const headings = [];
     contentNodes.forEach((node, idx) => {
-      if (node.tagName === "H1" || node.tagName === "H2" || node.tagName === "H3" || node.tagName === "H4") {
-        headings.push({ id: `head_${idx}`, text: getHostOriginalText(node), level: node.tagName.toLowerCase() });
+      const level = readerHeadingLevel(node);
+      if (level) {
+        headings.push({ id: `head_${idx}`, text: getHostOriginalText(node), level: `h${level}` });
       }
     });
 
     const savedTheme = currentSettings.readerTheme || "envelope";
-    const savedSurface = currentSettings.readerSurface === "flat" ? "flat" : "card";
+    const readerSurfaceValues = new Set(["card", "flat", "column", "folio"]);
+    const savedSurface = readerSurfaceValues.has(currentSettings.readerSurface) ? currentSettings.readerSurface : "card";
     const savedWidth = currentSettings.readerWidth || "920";
     const savedFont = currentSettings.readerFont || "system";
     const savedLineHeight = currentSettings.readerLineHeight || "1.82";
@@ -2599,7 +2790,6 @@
     root.setAttribute("data-reader-render-style", savedRenderStyle);
     root.classList.toggle("reader-progress-hidden", currentSettings.readerProgressVisible === false);
     root.classList.toggle("reader-meta-hidden", currentSettings.readerMetaVisible === false);
-    root.classList.toggle("reader-divider-hidden", currentSettings.readerDividerVisible === false);
     root.style.setProperty("--reader-font-family", getFontFamilyCss(savedFont));
     root.style.setProperty("--reader-body-size", `${parseFloat(currentSettings.readerFontSize) || 17.5}px`);
     root.style.setProperty("--reader-outline-width", `${Math.max(190, Math.min(380, Number(currentSettings.readerOutlineWidth) || 270))}px`);
@@ -2632,7 +2822,7 @@
             </div>
             ${headings.map(h => `
               <div class="reader-outline-item level-${Math.max(1, Number(h.level.slice(1)) - 1)}" data-target-id="${h.id}" title="${escapeHtml(h.text)}">
-                ${escapeHtml(h.text)}
+                <span class="reader-outline-label">${escapeHtml(h.text)}</span>
               </div>
             `).join("")}
             <div class="reader-outline-resizer" id="reader-outline-resizer" title="拖动调整大纲宽度" aria-hidden="true"></div>
@@ -2652,17 +2842,17 @@
               ${contentNodes.map((node, idx) => {
                 if (node.tagName === "IMG") {
                   const media = getReaderImageInfo(node);
-                  const naturalWidth = media.width ? Math.min(media.width, 1800) : 960;
+                  const naturalWidth = media.displayWidth || (media.width ? Math.min(media.width, 1800) : 960);
                   const inlineSide = idx % 2 === 0 ? "reader-img-inline-right" : "reader-img-inline-left";
-                  const loading = media.classes.includes("reader-img-animated") ? "eager" : "lazy";
-                  return `<div class="reader-img-wrap ${media.classes} ${media.classes.includes("reader-img-inline") ? inlineSide : ""}" style="--reader-image-natural-width:${naturalWidth}px"><img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt)}" loading="${loading}" decoding="async" title="点击或双击放大查看" /></div>`;
+                  return `<div class="reader-img-wrap ${media.classes} ${media.classes.includes("reader-img-inline") ? inlineSide : ""}" style="--reader-image-natural-width:${naturalWidth}px"><img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt)}" loading="eager" decoding="async" title="点击或双击放大查看" /></div>`;
                 }
-                const isHeading = /^H[1-4]$/.test(node.tagName);
-                const contentTag = isHeading ? node.tagName.toLowerCase() : "p";
+                const headingLevel = readerHeadingLevel(node);
+                const isHeading = headingLevel > 0;
+                const contentTag = isHeading ? `h${headingLevel}` : "p";
                 return `
                   <div class="reader-paragraph-pair" id="head_${idx}" data-para-id="r_${idx}" data-heading="${isHeading ? 'true' : 'false'}">
                     <${contentTag} class="reader-orig-p ${isHeading ? 'reader-structural-heading' : ''}">${readerInlineHtml(node) || escapeHtml(getHostOriginalText(node))}</${contentTag}>
-                    <${contentTag} class="reader-trans-p ${isHeading ? 'reader-structural-heading' : ''}" data-render-style="${escapeHtml(savedRenderStyle)}">正在同步精排译文...</${contentTag}>
+                    <${contentTag} class="reader-trans-p ${isHeading ? 'reader-structural-heading' : ''}" data-render-style="${escapeHtml(savedRenderStyle)}"><span class="reader-translation-text">正在同步精排译文...</span></${contentTag}>
                     ${!isHeading ? `<button type="button" class="reader-inline-translate-btn" data-reader-translate-one title="翻译这一段" aria-label="翻译这一段"><img src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true"></button>` : ""}
                   </div>
                 `;
@@ -2702,6 +2892,8 @@
           <div class="reader-surface-switch" id="reader-surface-switch">
             <button type="button" class="${savedSurface === 'card' ? 'active' : ''}" data-reader-surface="card"><b>纸张</b><span>居中阅读页</span></button>
             <button type="button" class="${savedSurface === 'flat' ? 'active' : ''}" data-reader-surface="flat"><b>铺开</b><span>直接融入背景</span></button>
+            <button type="button" class="${savedSurface === 'column' ? 'active' : ''}" data-reader-surface="column"><b>专栏</b><span>窄栏聚焦正文</span></button>
+            <button type="button" class="${savedSurface === 'folio' ? 'active' : ''}" data-reader-surface="folio"><b>书页</b><span>宽边舒展留白</span></button>
           </div>
 
           <span class="drawer-section-label">字体</span>
@@ -2767,7 +2959,6 @@
           <div class="reader-visibility-controls">
             <label><span>阅读进度条</span><input type="checkbox" id="reader-toggle-progress" ${currentSettings.readerProgressVisible === false ? "" : "checked"}></label>
             <label><span>标题信息</span><input type="checkbox" id="reader-toggle-meta" ${currentSettings.readerMetaVisible === false ? "" : "checked"}></label>
-            <label><span>标题分割线</span><input type="checkbox" id="reader-toggle-divider" ${currentSettings.readerDividerVisible === false ? "" : "checked"}></label>
           </div>
 
           <span class="drawer-section-label">快捷工具</span>
@@ -2918,7 +3109,6 @@
 
     const progressToggle = root.querySelector("#reader-toggle-progress");
     const metaToggle = root.querySelector("#reader-toggle-meta");
-    const dividerToggle = root.querySelector("#reader-toggle-divider");
     progressToggle?.addEventListener("change", () => {
       currentSettings.readerProgressVisible = !!progressToggle.checked;
       root.classList.toggle("reader-progress-hidden", !progressToggle.checked);
@@ -2928,11 +3118,6 @@
       currentSettings.readerMetaVisible = !!metaToggle.checked;
       root.classList.toggle("reader-meta-hidden", !metaToggle.checked);
       chrome.runtime.sendMessage({action:"UPDATE_SETTINGS",settings:{readerMetaVisible:!!metaToggle.checked}});
-    });
-    dividerToggle?.addEventListener("change", () => {
-      currentSettings.readerDividerVisible = !!dividerToggle.checked;
-      root.classList.toggle("reader-divider-hidden", !dividerToggle.checked);
-      chrome.runtime.sendMessage({action:"UPDATE_SETTINGS",settings:{readerDividerVisible:!!dividerToggle.checked}});
     });
     const readerLangHint = inferDictionaryLanguageHint(title);
     const verticalBtn = root.querySelector(".reader-writing-vertical");
@@ -3007,7 +3192,7 @@
       chrome.runtime.sendMessage({ action: "UPDATE_SETTINGS", settings: { readerTheme: val } });
     }));
     root.querySelectorAll("[data-reader-surface]").forEach(btn => btn.addEventListener("click", () => {
-      const val = btn.dataset.readerSurface === "flat" ? "flat" : "card";
+      const val = readerSurfaceValues.has(btn.dataset.readerSurface) ? btn.dataset.readerSurface : "card";
       root.setAttribute("data-surface", val);
       root.querySelectorAll("[data-reader-surface]").forEach(b => b.classList.toggle("active", b === btn));
       currentSettings.readerSurface = val;
@@ -3106,7 +3291,14 @@
       });
     });
 
-    root.querySelectorAll(".reader-img-wrap img").forEach(img => {
+    const readerImageNodes = contentNodes.filter(node => node.tagName === "IMG");
+    root.querySelectorAll(".reader-img-wrap img").forEach((img, index) => {
+      const fallbacks = getReaderImageInfo(readerImageNodes[index])?.candidates || [];
+      let fallbackIndex = Math.max(0, fallbacks.indexOf(img.src));
+      img.addEventListener("error", () => {
+        fallbackIndex += 1;
+        if (fallbackIndex < fallbacks.length) img.src = fallbacks[fallbackIndex];
+      });
       img.addEventListener("click", () => openImageLightbox(img.src));
     });
     if (currentSettings.enableImageTranslation) initImageTranslation();
@@ -3123,8 +3315,8 @@
         btn.classList.add("is-loading");
         sendDictionaryRuntimeMessage({action:"TRANSLATE_SINGLE_BLOCK", text:orig, sl:"auto", tl:currentSettings.targetLang || "zh-CN"}, res => {
           btn.classList.remove("is-loading");
-          if (res?.success && res.text) { transEl.textContent = res.text; transEl.dataset.loaded = "true"; }
-          else transEl.textContent = "这一段暂时没有翻译结果。";
+          if (res?.success && res.text) { setReaderTranslationText(transEl, res.text); transEl.dataset.loaded = "true"; }
+          else setReaderTranslationText(transEl, "这一段暂时没有翻译结果。");
         });
       });
     });
@@ -3207,7 +3399,7 @@
 
           const pairEl = root.querySelector(`[data-para-id="r_${idx}"] .reader-trans-p`);
           if (matchedTrans && pairEl) {
-            pairEl.textContent = matchedTrans;
+            setReaderTranslationText(pairEl, matchedTrans);
             pairEl.dataset.loaded = "true";
           } else if (pairEl) {
             uncachedItems.push({ id: `r_${idx}`, text: raw });
@@ -3220,19 +3412,21 @@
         if (!root?.isConnected) return;
 
         if (transRes?.success && Array.isArray(transRes.data)) {
+          let failedReaderItems = 0;
           transRes.data.forEach(item => {
             if (!item?.id) return;
             const pairEl = root.querySelector(`[data-para-id="${item.id}"] .reader-trans-p`);
-            if (pairEl && item.text) {
-              pairEl.textContent = item.text;
+            if (pairEl && item.text && !item.error) {
+              setReaderTranslationText(pairEl, item.text);
               pairEl.dataset.loaded = "true";
               const pair = pairEl.closest(".reader-paragraph-pair");
               if (root.getAttribute("data-reader-view") === "trans" && pair?.dataset.heading === "true") {
                 const titleEl = root.querySelector(".reader-title");
                 if (titleEl && item.text.trim().length < 180) titleEl.textContent = item.text.trim();
               }
-            }
+            } else if (pairEl) failedReaderItems++;
           });
+          if (failedReaderItems) hasTriggeredTranslation = false;
           return;
         }
 
@@ -4139,28 +4333,33 @@
     const items = newBlocks.map(b => ({ id: b.id, text: b.text }));
     const sourceTextById = new Map(newBlocks.map(b => [b.id, b.text]));
     const blockById = new Map(newBlocks.map(b => [b.id, b]));
+    let failedCount = 0;
     try {
       const res = await sendBatchWithIds(items);
       if (res && res.success && Array.isArray(res.data)) {
         res.data.forEach(item => {
           const meta = blockById.get(item.id);
           const el = meta?.element || document.querySelector(`[data-raccoon-id="${item.id}"]`);
-          if (el && item.text) {
+          if (el && item.text && !item.error) {
             const liveElement = meta?.kind === 'replace-text' ? meta.textNode?.parentElement : el;
-            if (!liveElement || !isVisibleTranslationElement(liveElement)) {
+            const allowHiddenToc = meta?.kind === 'ui-inplace' && isStructuredTocControl(el);
+            if (!liveElement || (!allowHiddenToc && !isVisibleTranslationElement(liveElement))) {
               el.removeAttribute?.('data-raccoon-id');
               return;
             }
             const origText = sourceTextById.get(item.id) || getHostOriginalText(el);
-            if (meta?.kind !== 'replace-text' && meta?.kind !== 'ui-inplace') {
+            if (meta?.kind !== 'replace-text' && meta?.kind !== 'component-text' && meta?.kind !== 'ui-inplace') {
               paragraphMap.set(item.id, { origText, transText: item.text, el });
             }
             if (currentSettings.displayMode === 'sidebar') renderSidebarItem(item.id, el, origText, item.text);
             else renderTranslationNode(el, item.text, meta || { id:item.id, kind:'content-block', element:el });
             translatedBlocksCount++;
+          } else if (meta) {
+            meta.element?.removeAttribute?.('data-raccoon-id');
+            failedCount++;
           }
         });
-        updateFloatingPillStatus('done', currentSettings.displayMode === 'replace' ? '已替换' : '已翻译');
+        updateFloatingPillStatus('done', failedCount ? `${currentSettings.displayMode === 'replace' ? '已替换' : '已翻译'} · ${failedCount} 段待重试` : (currentSettings.displayMode === 'replace' ? '已替换' : '已翻译'));
       }
     } catch (e) {
       console.warn('Incremental translation warning:', e);
@@ -4634,7 +4833,7 @@
     const left = Math.max(12, Math.min(clickX - toolbarWidth / 2, window.innerWidth - toolbarWidth - 12));
     selectionRoot.innerHTML = `
       <div class="raccoon-selection-trigger raccoon-input-selection-trigger" style="top:${top}px!important;left:${left}px!important">
-        <button type="button" class="selection-tool-btn" data-action="translate" title="翻译选中文字"><svg class="trigger-logo-icon trigger-translate-brand-icon" viewBox="0 0 128 128" aria-hidden="true"><circle cx="44" cy="21" r="9"/><path d="M18 31h52v12H55l-9 11-14-12-9 9 15 13-19 19 10 9 17-18 13 18 10-9-15-18 18-22H18z"/><path fill-rule="evenodd" d="M87 49c3 0 5 2 7 6l23 57h-14l-5-13H76l-5 13H57l24-57c1-4 3-6 6-6Zm0 21-7 18h14Z"/></svg><span>翻译</span></button>
+        <button type="button" class="selection-tool-btn" data-action="translate" title="翻译选中文字"><svg class="trigger-logo-icon trigger-translate-brand-icon" viewBox="0 0 128 128" fill="#fff" aria-hidden="true"><circle cx="44" cy="21" r="9" fill="#fff"/><path fill="#fff" d="M18 31h52v12H55l-9 11-14-12-9 9 15 13-19 19 10 9 17-18 13 18 10-9-15-18 18-22H18z"/><path fill="#fff" fill-rule="evenodd" d="M87 49c3 0 5 2 7 6l23 57h-14l-5-13H76l-5 13H57l24-57c1-4 3-6 6-6Zm0 21-7 18h14Z"/></svg><span>翻译</span></button>
         <button type="button" class="selection-tool-btn" data-action="replace-translate" title="翻译并替换选中文字"><svg class="trigger-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7h-9a5 5 0 0 0-5 5v1"/><path d="m17 4 3 3-3 3"/><path d="M4 17h9a5 5 0 0 0 5-5v-1"/><path d="m7 20-3-3 3-3"/></svg><span>替换翻译</span></button>
       </div>`;
     const toolbar = selectionRoot.querySelector(".raccoon-input-selection-trigger");
@@ -4793,7 +4992,7 @@
     const primaryLabel = allowDictionary ? "查词" : "翻译";
     const primaryIcon = allowDictionary
       ? `<svg class="trigger-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/><path d="M8.5 9.2h5M8.5 12.5h3.8"/></svg>`
-      : `<svg class="trigger-logo-icon trigger-translate-brand-icon" viewBox="0 0 128 128" aria-hidden="true"><circle cx="44" cy="21" r="9"/><path d="M18 31h52v12H55l-9 11-14-12-9 9 15 13-19 19 10 9 17-18 13 18 10-9-15-18 18-22H18z"/><path fill-rule="evenodd" d="M87 49c3 0 5 2 7 6l23 57h-14l-5-13H76l-5 13H57l24-57c1-4 3-6 6-6Zm0 21-7 18h14Z"/></svg>`;
+      : `<svg class="trigger-logo-icon trigger-translate-brand-icon" viewBox="0 0 128 128" fill="#fff" aria-hidden="true"><circle cx="44" cy="21" r="9" fill="#fff"/><path fill="#fff" d="M18 31h52v12H55l-9 11-14-12-9 9 15 13-19 19 10 9 17-18 13 18 10-9-15-18 18-22H18z"/><path fill="#fff" fill-rule="evenodd" d="M87 49c3 0 5 2 7 6l23 57h-14l-5-13H76l-5 13H57l24-57c1-4 3-6 6-6Zm0 21-7 18h14Z"/></svg>`;
     selectionRoot.innerHTML = `
       <div class="raccoon-selection-trigger" style="top: ${top}px !important; left: ${left}px !important;">
         <button type="button" class="selection-tool-btn" data-action="${primaryAction}" title="${primaryLabel}">${primaryIcon}<span>${primaryLabel}</span></button>

@@ -90,7 +90,7 @@ if (!content.includes("element.addEventListener('mouseenter', showOriginal") || 
 if (!content.includes('function positionExpandableUiTranslation') || !content.includes('function setTranslationBadgeSafely')) fail('navigation geometry or badge safety missing');
 if (!content.includes("sidebarPreviousDisplayMode || 'bilingual'") || !content.includes('function requestSidebarClose()')) fail('temporary sidebar mode restoration missing');
 if (!content.includes('translationRunGeneration') || !content.includes('runId !== translationRunGeneration')) fail('stale async translation run cancellation missing');
-if (!read('background.js').includes('const TRANSLATION_CACHE_NAMESPACE = "trans:v2"') || !read('background.js').includes('const BUNDLE_SIZE = engine === "google" ? 1 : 8')) fail('paragraph-safe translation cache/mapping missing');
+if (!read('background.js').includes('const TRANSLATION_CACHE_NAMESPACE = "trans:v3"') || !read('background.js').includes('const BUNDLE_SIZE = engine === "google" ? 1 : 8')) fail('paragraph-safe translation cache/mapping missing');
 if (!content.includes('function refreshRenderedTranslationContrast') || !content.includes('applyAdaptiveTranslationColor(transNode, transNode')) fail('post-insertion contrast recalculation missing');
 if (!content.includes('refreshRenderedTranslationContrast(parent, parent, activePageRenderStyle()')) fail('replacement post-style contrast recalculation missing');
 if (!content.includes('normalized.match(/^#([\\da-f]{3,8})$/i)')) fail('hex translation colour parsing missing');
@@ -98,6 +98,8 @@ if (!content.includes('const placeBehind = (background) =>')) fail('translucent 
 if (!content.includes('const offset = preferredGap') || content.includes('preferredGap - hostBottom')) fail('bilingual spacing can still collapse into a negative overlap');
 if (!read('floating.css').includes('clear:none!important')) fail('float-safe bilingual layout missing');
 if (!read('floating.css').includes('ruby.raccoon-replaced-ruby')) fail('missing ruby replacement safeguard');
+if (content.includes('reader-toggle-divider') || !content.includes('data-reader-surface="column"') || !content.includes('data-reader-surface="folio"')) fail('reader finishing controls are incomplete');
+if (!read('floating.css').includes('.reader-outline-item.level-3{opacity:.72!important') || !read('floating.css').includes('border-bottom:0!important;padding-bottom:0!important;margin-bottom:28px!important')) fail('reader outline hierarchy or metadata separator regressed');
 if (!process.exitCode) pass('DOM-preserving translation safeguards');
 
 const sandbox = read('ocr-sandbox.html');
@@ -201,7 +203,7 @@ if (!read('floating.css').includes('button.active,.input-replace-language-grid b
 if (!content.includes('dict-ai-live-preview') || !content.includes('renderDictionaryAiMarkdown(question)') || !content.includes('orderedListNext')) fail('two-way Markdown rendering or continuous ordered lists missing');
 if (!read('floating.css').includes('.dict-ai-send svg{width:17px')) fail('AI send icon size regression');
 if (!content.includes('class="trigger-highlight-icon"') || !read('floating.css').includes('width:10px!important;height:10px!important')) fail('selection highlight icon hierarchy regression');
-if (!content.includes('class="trigger-logo-icon trigger-translate-brand-icon" viewBox="0 0 128 128"') || !read('floating.css').includes('fill:#fff!important')) fail('selection translation mark still exposes the blue app-icon background');
+if (!content.includes('class="trigger-logo-icon trigger-translate-brand-icon" viewBox="0 0 128 128" fill="#fff"') || !read('floating.css').includes('fill:#fff!important')) fail('selection translation mark still exposes the blue app-icon background');
 if (!popupJs.includes('function closePopupMenus') || !read('options.js').includes('model-input-row.model-menu-open')) fail('single-open menu coordination missing');
 if (!popupJs.includes('radial-gradient(circle at center') || !read('popup.html').includes('color-wheel-dot')) fail('follow-page colour icon is not a colour wheel');
 if (!popupJs.includes('wrap.classList.toggle("is-standard"') || !read('popup.css').includes('.popup-select.is-standard')) fail('dictionary engine selector does not adapt width by option length');

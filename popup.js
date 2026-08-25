@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnPopupDictSearch = document.getElementById("btn-popup-dict-search");
   const popupDictResultBox = document.getElementById("popup-dict-result-box");
 
-  // 生词本与高亮金句
+  // 生词本与高亮收藏
   const labelVocabCount = document.getElementById("label-vocab-count");
   const labelHighlightCount = document.getElementById("label-highlight-count");
   const popupLangFilter = document.getElementById("popup-lang-filter");
@@ -717,7 +717,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     URL.revokeObjectURL(url);
   });
 
-  // 12. 高亮金句按文章/网站分类管理 (Highlight Sentences Grouped by Article)
+  // 12. 高亮收藏按文章与网站分类管理
   async function loadPopupHighlights() {
     const hRes = await sendRuntimeMessage({ action: "GET_HIGHLIGHT_SENTENCES" }, 5000);
     currentHighlightList = (hRes && Array.isArray(hRes.list)) ? hRes.list : [];
