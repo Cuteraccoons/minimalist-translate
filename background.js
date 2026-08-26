@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS = {
   // 沉浸阅读偏好持久化设置
   readerWidth: "920", // 默认宽敞舒适版面 (已记忆)
   readerTheme: "envelope", // envelope | white | dark | mint | mist | lavender | stone
-  readerSurface: "card", // card | flat | column | folio | safari | forum | reddit
+  readerSurface: "card", // card | flat | column | folio
   readerFont: "system",
   readerFontSize: "17.5",
   readerLineHeight: "1.82",
@@ -74,6 +74,7 @@ const DEFAULT_SETTINGS = {
   localDictionaryPriority: false,
   dictionaryAiMode: "manual", // Retained for settings-schema compatibility.
   enableImageTranslation: true, // 图片角落显示本机识字翻译入口
+  imageTranslationDisabledDomains: [], // 只对指定网站隐藏图片翻译入口
   imageOcrLanguage: "auto", // auto | eng | jpn | chi_sim | chi_tra | kor | fra | deu | spa | ita | por | rus | nld | pol | tur | ukr | ara | vie | tha | ind | mixed presets
   imageTranslationFont: "system", // system | rounded | serif | handwriting
   selectionModifierKey: "none",

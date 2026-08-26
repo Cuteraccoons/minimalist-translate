@@ -129,7 +129,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const optEnableImageTranslation = document.getElementById("opt-enable-image-translation");
   const optImageOcrLanguage = document.getElementById("opt-image-ocr-language");
   const optImageTranslationFont = document.getElementById("opt-image-translation-font");
-  const optReaderImageShadow = document.getElementById("opt-reader-image-shadow");
   const highlightStyleCardGrid = document.getElementById("highlight-style-card-grid");
   const optFloatingShortcut = document.getElementById("opt-floating-shortcut");
   const optReaderShortcut = document.getElementById("opt-reader-shortcut");
@@ -414,7 +413,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (optSidebarSync) {
     optSidebarSync.addEventListener("change", (e) => saveSetting({ sidebarSyncScroll: e.target.checked }));
   }
-  optReaderImageShadow?.addEventListener("change", e => { currentSettings.readerImageShadow = e.target.checked; saveSetting({readerImageShadow:e.target.checked}); });
   highlightStyleCardGrid?.querySelectorAll("button[data-value]").forEach(btn => btn.addEventListener("click", () => {
     const val = btn.dataset.value || "soft-marker";
     currentSettings.highlightStyle = val;
@@ -1102,7 +1100,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (optImageTranslationFont) optImageTranslationFont.value = s.imageTranslationFont || "system";
     syncImageOcrUi();
-    if (optReaderImageShadow) optReaderImageShadow.checked = s.readerImageShadow !== false;
     highlightStyleCardGrid?.querySelectorAll("button[data-value]").forEach(btn => btn.classList.toggle("active", btn.dataset.value === (s.highlightStyle || "soft-marker")));
     if (optFloatingShortcut) optFloatingShortcut.value = String(s.floatingShortcut || "zz").toUpperCase();
     if (optReaderShortcut) optReaderShortcut.value = String(s.readerShortcut || "aa").toUpperCase();
@@ -1249,31 +1246,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     requestAnimationFrame(() => {
       const targetX = active.offsetLeft;
       const targetWidth = active.offsetWidth;
-      const previousX = Number(indicator.dataset.x ?? targetX);
-      const previousWidth = Number(indicator.dataset.width ?? targetWidth);
-      if (animate && indicator.animate && (previousX !== targetX || previousWidth !== targetWidth)) {
-        indicator.getAnimations().forEach(animation => animation.cancel());
-        const direction = Math.sign(targetX - previousX) || 1;
-        const stretch = Math.min(13, Math.max(7, Math.abs(targetX - previousX) * .12));
-        const midX = previousX + (targetX - previousX) * .58 - (direction < 0 ? stretch : 0);
-        indicator.classList.add("is-animating");
-        const animation = indicator.animate([
-          { transform:`translateX(${previousX}px)`, width:`${previousWidth}px`, offset:0 },
-          { transform:`translateX(${previousX - (direction < 0 ? stretch : 0)}px)`, width:`${previousWidth + stretch}px`, offset:.24 },
-          { transform:`translateX(${midX}px)`, width:`${targetWidth + stretch * .65}px`, offset:.68 },
-          { transform:`translateX(${targetX}px)`, width:`${targetWidth}px`, offset:1 }
-        ], { duration:300, easing:"cubic-bezier(.22,.72,.22,1)" });
-        const settle = () => {
-          indicator.style.width = `${targetWidth}px`;
-          indicator.style.transform = `translateX(${targetX}px)`;
-          indicator.classList.remove("is-animating");
-        };
-        animation.addEventListener("finish", settle, { once:true });
-        animation.addEventListener("cancel", () => indicator.classList.remove("is-animating"), { once:true });
-      } else {
-        indicator.style.width = `${targetWidth}px`;
-        indicator.style.transform = `translateX(${targetX}px)`;
-      }
+      indicator.style.transitionDuration = animate ? ".22s" : "0s";
+      indicator.style.width = `${targetWidth}px`;
+      indicator.style.transform = `translateX(${targetX}px)`;
       indicator.dataset.x = String(targetX);
       indicator.dataset.width = String(targetWidth);
     });

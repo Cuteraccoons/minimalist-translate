@@ -85,6 +85,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnToggleBlockSite = document.getElementById("btn-toggle-block-site");
   const siteDockNote = document.getElementById("site-dock-note");
   const popupRenderStyleGrid = document.getElementById("popup-render-style-grid");
+  const siteImageTranslationToggle = document.getElementById("site-image-translation-toggle");
+  const siteImageTranslationState = document.getElementById("site-image-translation-state");
+  const siteImageTranslationDomain = document.getElementById("site-image-translation-domain");
 
   // 弹窗内 API 配置抽屉
   const apiQuickDrawer = document.getElementById("api-quick-drawer");
@@ -190,6 +193,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const urlObj = new URL(activeTab.url);
       activeHost = urlObj.hostname;
       if (currentSiteDomain) currentSiteDomain.textContent = activeHost;
+      syncSiteImageTranslationCard();
 
       const isBlocked = (currentSettings.excludeDomainList || []).some(d => activeHost === d || activeHost.endsWith(`.${d}`));
       updateBlockButtonState(isBlocked);
@@ -230,6 +234,35 @@ document.addEventListener("DOMContentLoaded", async () => {
       btnToggleBlockSite.classList.remove("is-blocked");
     }
   }
+
+  function matchedImageDisabledDomain() {
+    const host = String(activeHost || "").toLowerCase();
+    return (currentSettings.imageTranslationDisabledDomains || []).find(entry => {
+      const domain = String(entry || "").toLowerCase();
+      return domain && (host === domain || host.endsWith(`.${domain}`));
+    }) || "";
+  }
+
+  function syncSiteImageTranslationCard() {
+    if (!siteImageTranslationToggle) return;
+    const globallyDisabled = currentSettings.enableImageTranslation === false;
+    const disabled = !!matchedImageDisabledDomain() || globallyDisabled;
+    siteImageTranslationToggle.classList.toggle("is-disabled", disabled);
+    siteImageTranslationToggle.setAttribute("aria-pressed", String(!disabled));
+    if (siteImageTranslationState) siteImageTranslationState.textContent = globallyDisabled ? "全局关闭" : disabled ? "已关闭" : "已开启";
+    if (siteImageTranslationDomain) siteImageTranslationDomain.textContent = activeHost || "按网站单独控制图片入口";
+    siteImageTranslationToggle.disabled = !activeHost || globallyDisabled;
+  }
+
+  siteImageTranslationToggle?.addEventListener("click", () => {
+    if (!activeHost) return;
+    const list = [...(currentSettings.imageTranslationDisabledDomains || [])];
+    const matched = matchedImageDisabledDomain();
+    const next = matched ? list.filter(domain => domain !== matched) : [...list, activeHost];
+    currentSettings.imageTranslationDisabledDomains = [...new Set(next)];
+    saveSetting({ imageTranslationDisabledDomains:currentSettings.imageTranslationDisabledDomains });
+    syncSiteImageTranslationCard();
+  });
 
   if (btnToggleBlockSite) {
     btnToggleBlockSite.addEventListener("click", () => {
@@ -1187,6 +1220,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     toggleHoverTranslate.checked = s.enableParagraphHoverTranslate !== false;
     if (toggleParagraphActions) toggleParagraphActions.checked = s.enableParagraphActions !== false;
     toggleFloatingBall.checked = s.enableFloatingBall !== false;
+    syncSiteImageTranslationCard();
 
     updateLiveCardPreview();
   }
@@ -1204,33 +1238,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const active = items.find(item => item.classList.contains("active")) || items[0];
     const targetX = Math.max(0, active.offsetLeft - 3);
     const targetWidth = active.offsetWidth;
-    const previousX = Number(indicator.dataset.x ?? targetX);
-    const previousWidth = Number(indicator.dataset.width ?? targetWidth);
     indicator.dataset.x = String(targetX);
     indicator.dataset.width = String(targetWidth);
-    if (animate && indicator.animate && (previousX !== targetX || previousWidth !== targetWidth)) {
-      indicator.getAnimations().forEach(animation => animation.cancel());
-      const direction = Math.sign(targetX - previousX) || 1;
-      const stretch = Math.min(12, Math.max(7, Math.abs(targetX - previousX) * .12));
-      const midX = previousX + (targetX - previousX) * .6 - (direction < 0 ? stretch : 0);
-      indicator.classList.add('is-animating');
-      const animation = indicator.animate([
-        { transform:`translateX(${previousX}px)`, width:`${previousWidth}px`, offset:0 },
-        { transform:`translateX(${previousX - (direction < 0 ? stretch : 0)}px)`, width:`${previousWidth + stretch}px`, offset:.24 },
-        { transform:`translateX(${midX}px)`, width:`${targetWidth + stretch * .65}px`, offset:.68 },
-        { transform:`translateX(${targetX}px)`, width:`${targetWidth}px`, offset:1 }
-      ], { duration:300, easing:"cubic-bezier(.22,.72,.22,1)" });
-      const finish = () => {
-        indicator.style.width = `${targetWidth}px`;
-        indicator.style.transform = `translateX(${targetX}px)`;
-        indicator.classList.remove('is-animating');
-      };
-      animation.addEventListener('finish', finish, { once:true });
-      animation.addEventListener('cancel', () => indicator.classList.remove('is-animating'), { once:true });
-    } else {
-      indicator.style.width = `${targetWidth}px`;
-      indicator.style.transform = `translateX(${targetX}px)`;
-    }
+    indicator.style.transitionDuration = animate ? ".22s" : "0s";
+    indicator.style.width = `${targetWidth}px`;
+    indicator.style.transform = `translateX(${targetX}px)`;
   }
 
   function bindSegmentedControl(container, onChange) {

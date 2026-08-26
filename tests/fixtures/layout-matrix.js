@@ -68,6 +68,9 @@
       nav.innerHTML = `<a href="#one"><span class="fixture-icon" aria-hidden="true">◆</span><span>Latest research</span></a><a href="#two"><span class="fixture-icon" aria-hidden="true">●</span><span>Learning resources</span></a>`;
       card.appendChild(nav);
     }
+    const typographySource = card.querySelector(".fixture-source");
+    if (typographySource && index % 10 === 0) typographySource.style.textAlign = "center";
+    if (typographySource && index % 11 === 0) typographySource.style.fontWeight = "700";
     matrix.appendChild(card);
   }
 
@@ -89,7 +92,7 @@
 
   window.runBilingualLayoutAudit = () => {
     const translated = Array.from(document.querySelectorAll(".raccoon-translated-block,.raccoon-translated-inline"));
-    const report = { cases:TOTAL_CASES, translated:translated.length, missing:0, overlaps:0, lowContrast:0, overflow:0, iconDrift:0, squeezedRows:0, richControlDamage:0, richLinkedMissing:0, hiddenTocMissing:0, tocNumberDamage:0 };
+    const report = { cases:TOTAL_CASES, translated:translated.length, missing:0, overlaps:0, lowContrast:0, overflow:0, iconDrift:0, squeezedRows:0, richControlDamage:0, richLinkedMissing:0, hiddenTocMissing:0, tocNumberDamage:0, alignmentMismatch:0, emphasisMismatch:0 };
     translated.forEach(node => {
       const sourceId = node.dataset.raccoonSourceId;
       const source = sourceId ? document.querySelector(`[data-raccoon-id="${CSS.escape(sourceId)}"]`) : null;
@@ -98,6 +101,11 @@
         const translatedRect = node.getBoundingClientRect();
         const horizontalIntersection = Math.min(sourceRect.right, translatedRect.right) - Math.max(sourceRect.left, translatedRect.left);
         if (horizontalIntersection > 1 && translatedRect.top - sourceRect.bottom < -.5) report.overlaps += 1;
+      }
+      if(source){
+        const sourceStyle=getComputedStyle(source),translatedStyle=getComputedStyle(node);
+        if(sourceStyle.textAlign==="center"&&translatedStyle.textAlign!=="center")report.alignmentMismatch+=1;
+        if(Number.parseInt(sourceStyle.fontWeight,10)>=600&&Number.parseInt(translatedStyle.fontWeight,10)<600)report.emphasisMismatch+=1;
       }
       const card = node.closest(".fixture-case");
       if (card) {

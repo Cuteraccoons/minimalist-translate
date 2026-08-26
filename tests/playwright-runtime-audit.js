@@ -4,7 +4,7 @@ async page => {
     const listeners = [];
     const settings = {
       sourceLang:"auto", targetLang:"zh-CN", displayMode:"bilingual", renderStyle:"classic",
-      replaceRenderStyle:"clean", enableImageTranslation:false, enableDictionaryAi:false,
+      replaceRenderStyle:"clean", enableImageTranslation:true, enableDictionaryAi:false,
       excludeDomainList:["127.0.0.1","example.com"], excludeDomainDefaultRule:{floating:true,hover:true,selection:true,image:true,auto:true},
       readerSurface:"card", readerTheme:"white", readerWidth:"920", readerFont:"system",
       readerLineHeight:"1.82", readerParagraphSpacing:"28", readerWritingMode:"horizontal"
@@ -28,9 +28,13 @@ async page => {
           return reply(callback,{success:true});
         }
       },
-      tabs:{query:async()=>[],sendMessage:async()=>({success:true}),create:async()=>({})},
+      tabs:{
+        query:(query,callback)=>{const value=[{id:1,url:`${baseUrl}/tests/fixtures/layout-matrix.html`}];if(typeof callback==="function")queueMicrotask(()=>callback(value));return Promise.resolve(value);},
+        sendMessage:(id,message,callback)=>{const value={success:true};if(typeof callback==="function")queueMicrotask(()=>callback(value));return Promise.resolve(value);},
+        create:async()=>({})
+      },
       permissions:{contains:async()=>false,request:async()=>false},
-      storage:{local:{get:async()=>({}),set:async()=>{}},sync:{get:async()=>({}),set:async()=>{}}}
+      storage:{local:{get:async()=>({}),set:async()=>{}},sync:{get:async()=>({}),set:async()=>{}},onChanged:{addListener:()=>{}}}
     };
     globalThis.__jijianRuntimeListeners=listeners;
   }, base);
@@ -45,7 +49,7 @@ async page => {
   });
   await page.waitForFunction(() => document.querySelectorAll(".raccoon-translated-block,.raccoon-translated-inline,.raccoon-linked-card-translation").length > 80, null, {timeout:20000});
   const layout = await page.evaluate(() => globalThis.runBilingualLayoutAudit());
-  if(layout.missing || layout.overlaps || layout.lowContrast || layout.overflow || layout.iconDrift || layout.squeezedRows || layout.richControlDamage || layout.richLinkedMissing || layout.hiddenTocMissing || layout.tocNumberDamage){
+  if(layout.missing || layout.overlaps || layout.lowContrast || layout.overflow || layout.iconDrift || layout.squeezedRows || layout.richControlDamage || layout.richLinkedMissing || layout.hiddenTocMissing || layout.tocNumberDamage || layout.alignmentMismatch || layout.emphasisMismatch){
     throw new Error(`布局矩阵失败：${JSON.stringify(layout)}`);
   }
 
@@ -80,7 +84,7 @@ async page => {
     }
     return {count:buttons.length,unique:new Set(signatures).size,outline:root.querySelectorAll(".reader-outline-item").length};
   });
-  if(reader.count!==7 || reader.unique<6 || reader.outline<3)throw new Error(`阅读模式结构失败：${JSON.stringify(reader)}`);
+  if(reader.count!==4 || reader.unique<4 || reader.outline<3)throw new Error(`阅读模式结构失败：${JSON.stringify(reader)}`);
 
   await page.goto(`${base}/options.html`);
   await page.waitForFunction(() => document.querySelectorAll("[data-preview-pair]").length === 3);
@@ -107,5 +111,10 @@ async page => {
     };
   });
   if(blacklist.rows<2||blacklist.openPanels!==1||blacklist.activeButtons!==1)throw new Error(`黑名单设置面板协调失败：${JSON.stringify(blacklist)}`);
-  return {layout,hover,reader,preview,blacklist};
+  await page.goto(`${base}/popup.html`);
+  await page.waitForFunction(()=>document.querySelector("#site-image-translation-domain")?.textContent==="127.0.0.1");
+  await page.click("#site-image-translation-toggle");
+  const siteImageToggle=await page.evaluate(()=>({state:document.querySelector("#site-image-translation-state")?.textContent,pressed:document.querySelector("#site-image-translation-toggle")?.getAttribute("aria-pressed")}));
+  if(siteImageToggle.state!=="已关闭"||siteImageToggle.pressed!=="false")throw new Error(`当前网站图片开关失败：${JSON.stringify(siteImageToggle)}`);
+  return {layout,hover,reader,preview,blacklist,siteImageToggle};
 }

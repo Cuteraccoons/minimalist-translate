@@ -1601,13 +1601,45 @@ input:checked + .switch-knob:before {
 /* Hidden sections report zero offsets; resync on navigation and keep the selected
    button visible even before the moving indicator has measured itself. */
 .segmented-control .segment-item.active,.vocab-view-switch button.active{
-  background:#fff!important;box-shadow:0 1px 2px rgba(15,23,42,.08)!important
+  background:transparent!important;box-shadow:none!important
 }
 .settings-segment-indicator{transition:transform .26s cubic-bezier(.22,.8,.22,1),width .26s cubic-bezier(.22,.8,.22,1)!important}
 
 /* Keep the language selector aligned with the search field instead of letting
    the global select minimum stretch the toolbar. */
 .vocab-toolbar .jijian-select{width:140px!important;min-width:0!important;max-width:140px!important}
+
+/* Compact API cards keep model selection inside the card. DeepSeek refresh is
+   intentionally beside the connectivity test, where there is stable room. */
+.model-input-row-without-refresh{grid-template-columns:minmax(0,1fr) 86px!important}
+.model-input-row-without-refresh .model-picker-menu{right:0!important}
+.deepseek-refresh-action{flex:0 0 34px!important;background:#fff!important;border:1px solid #dfe4e8!important;color:#5a6470!important}
+
+/* Blacklist controls: border and label are enough; no nested status dots. */
+.blacklist-default-card .domain-default-chips label span{
+  justify-content:center!important;gap:0!important;background:#fff!important;border:1.5px solid #dfe3e7!important;
+  color:#626c77!important;box-shadow:none!important
+}
+.blacklist-default-card .domain-default-chips label span::before{display:none!important;content:none!important}
+.blacklist-default-card .domain-default-chips label input:checked+span{
+  border:2px solid #2d343c!important;background:#fff!important;color:#20262d!important;box-shadow:none!important
+}
+.blacklist-domain-list .domain-row{overflow:hidden!important}
+.blacklist-domain-list .domain-row:has(.domain-scope-panel.is-open){border-color:#cbd2d9!important}
+.blacklist-domain-list .domain-scope-panel{
+  display:grid!important;grid-template-columns:repeat(5,minmax(88px,1fr)) auto!important;align-items:center!important;
+  gap:7px!important;padding:0 12px 12px!important;background:#fff!important;border-top:0!important
+}
+.blacklist-domain-list .domain-scope-chip{display:block!important;min-width:0!important}
+.blacklist-domain-list .domain-scope-chip span{
+  width:100%!important;min-height:32px!important;padding:0 8px!important;box-sizing:border-box!important;
+  border:1px solid #e0e4e8!important;border-radius:8px!important;background:#f7f8f9!important;color:#69737e!important
+}
+.blacklist-domain-list .domain-scope-chip.active span{
+  border:1.5px solid #303842!important;background:#fff!important;color:#222a32!important;box-shadow:none!important
+}
+.blacklist-domain-list .domain-reset-rule{justify-self:end!important;white-space:nowrap!important}
+@media(max-width:900px){.blacklist-domain-list .domain-scope-panel{grid-template-columns:repeat(3,minmax(88px,1fr))!important}.blacklist-domain-list .domain-reset-rule{justify-self:start!important}}
 
 /* Project and support use two clear accents on solid cards. */
 .project-hero-card{background:#fff!important;border:1px solid #dfe4e8!important;box-shadow:0 1px 0 rgba(15,23,42,.03)!important}

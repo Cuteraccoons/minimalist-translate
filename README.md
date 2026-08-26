@@ -12,7 +12,7 @@ Minimalist Translate is an open-source Chrome extension for reading foreign-lang
 
 - **Bilingual page** adds the translation below the source text while preserving the page's original structure. Editorial link cards keep their source copy and place the translation inside the same link; compact tabs can use an in-place label with hover-to-original.
 - **Replace original** changes text nodes in place and keeps links, buttons, navigation, and tabs interactive.
-- **Immersive reader** extracts the article, removes duplicate headings, keeps safe links, and provides a three-level outline, text-to-speech, and seven page structures including Safari-, classic-forum-, and Reddit-inspired views.
+- **Immersive reader** extracts the article, removes duplicate headings, keeps safe links, and provides a three-level outline, text-to-speech, plus paper, flat, column, and folio layouts.
 - **Side-by-side view** creates an independent bilingual panel with synchronized navigation, adjustable width, and paragraph playback.
 
 ## Look up words without leaving the page

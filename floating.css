@@ -4226,56 +4226,28 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
 #raccoon-reader-root[data-theme="dark"] .reader-outline-item.level-2{color:#c4cad1!important}
 #raccoon-reader-root[data-theme="dark"] .reader-outline-item.level-3{color:#a6afb9!important}
 
-/* Distinct reading structures, not only width presets. */
-#raccoon-reader-root[data-surface="safari"]{background:#f5f5f7!important}
-#raccoon-reader-root[data-surface="safari"] .reader-scroll-area{padding-top:20px!important}
-#raccoon-reader-root[data-surface="safari"] .reader-scroll-card{
-  max-width:min(var(--reader-max-width,920px),780px)!important;background:transparent!important;
-  border:0!important;border-radius:0!important;box-shadow:none!important;
-  padding:42px clamp(28px,5vw,62px) 90px!important
+/* Preserve the source row's geometry. Generated Chinese may use a different
+   typeface, but it must keep the source alignment, emphasis and baseline. */
+.raccoon-translated-block{
+  width:100%!important;min-width:0!important;max-width:100%!important;
+  text-align:var(--raccoon-source-text-align,start)!important;
+  font-weight:var(--raccoon-source-font-weight,400)!important
 }
-#raccoon-reader-root[data-surface="safari"] .reader-title{
-  font-family:ui-serif,Georgia,"Songti SC",serif!important;font-weight:720!important;letter-spacing:-.025em!important
+.raccoon-translated-inline,.raccoon-attached-translation{
+  text-align:var(--raccoon-source-text-align,start)!important;
+  font-weight:var(--raccoon-source-font-weight,400)!important;
+  vertical-align:baseline!important
 }
-#raccoon-reader-root[data-surface="safari"] .reader-meta-bar{opacity:.56!important;margin-bottom:34px!important}
+.raccoon-attached-translation{
+  align-self:stretch!important;line-height:var(--raccoon-source-line-height,1.38)!important
+}
+.raccoon-translation-text{position:relative!important;top:-.025em!important}
+.raccoon-translated-block[data-raccoon-heading]{font-weight:var(--raccoon-block-font-weight,var(--raccoon-source-font-weight,650))!important}
 
-#raccoon-reader-root[data-surface="forum"]{background:#e8e5dc!important;color:#292820!important}
-#raccoon-reader-root[data-surface="forum"] .reader-scroll-area{padding:24px 28px 90px!important}
-#raccoon-reader-root[data-surface="forum"] .reader-scroll-card{
-  max-width:min(var(--reader-max-width,920px),1040px)!important;background:#fbfaf5!important;
-  border:1px solid #c9c5b8!important;border-radius:2px!important;box-shadow:0 2px 8px rgba(56,52,40,.08)!important;
-  padding:0 34px 68px!important
+.reader-drawer-switch-row{
+  min-height:42px;margin:4px 0 9px;padding:7px 9px;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  border:1px solid rgba(90,98,108,.13);border-radius:8px;background:rgba(255,255,255,.48);cursor:pointer;box-sizing:border-box
 }
-#raccoon-reader-root[data-surface="forum"] .reader-title{
-  margin:0 -34px 12px!important;padding:24px 34px 18px!important;background:#ded9ca!important;
-  border-bottom:1px solid #c6c0ae!important;font-family:ui-serif,Georgia,"Songti SC",serif!important;font-size:29px!important
-}
-#raccoon-reader-root[data-surface="forum"] .reader-meta-bar{margin:0 -34px 22px!important;padding:10px 34px!important;background:#f2efe6!important}
-#raccoon-reader-root[data-surface="forum"] .reader-paragraph-pair:not([data-heading="true"]){
-  border-bottom:1px dotted rgba(74,70,56,.18)!important;padding-bottom:calc(var(--reader-paragraph-spacing,28px) * .72)!important
-}
-
-#raccoon-reader-root[data-surface="reddit"]{background:#dae0e6!important;color:#1a1a1b!important}
-#raccoon-reader-root[data-surface="reddit"] .reader-scroll-area{padding:22px 24px 90px!important}
-#raccoon-reader-root[data-surface="reddit"] .reader-scroll-card{
-  max-width:min(var(--reader-max-width,920px),880px)!important;background:#fff!important;
-  border:1px solid #ccc!important;border-radius:5px!important;box-shadow:none!important;padding:30px 34px 68px 58px!important
-}
-#raccoon-reader-root[data-surface="reddit"] .reader-title{font-size:27px!important;font-weight:650!important;letter-spacing:-.015em!important}
-#raccoon-reader-root[data-surface="reddit"] .reader-meta-bar{font-size:11px!important;margin-bottom:26px!important}
-#raccoon-reader-root[data-surface="reddit"] .reader-paragraph-pair{position:relative!important}
-#raccoon-reader-root[data-surface="reddit"] .reader-paragraph-pair:not([data-heading="true"])::before{
-  content:""!important;position:absolute!important;left:-30px!important;top:.45em!important;width:3px!important;height:calc(100% - .7em)!important;
-  border-radius:3px!important;background:#edeff1!important
-}
-#raccoon-reader-root[data-surface="reddit"] .reader-paragraph-pair[data-heading="true"]{border-top:1px solid #edeff1!important;padding-top:1em!important}
-
-#raccoon-reader-root[data-theme="dark"][data-surface="safari"],
-#raccoon-reader-root[data-theme="dark"][data-surface="forum"],
-#raccoon-reader-root[data-theme="dark"][data-surface="reddit"]{background:#0f1012!important;color:#eceef1!important}
-#raccoon-reader-root[data-theme="dark"][data-surface="safari"] .reader-scroll-card{background:transparent!important;border:0!important}
-#raccoon-reader-root[data-theme="dark"][data-surface="forum"] .reader-scroll-card,
-#raccoon-reader-root[data-theme="dark"][data-surface="reddit"] .reader-scroll-card{background:#191b1f!important;border-color:#30343a!important}
-#raccoon-reader-root[data-theme="dark"][data-surface="forum"] .reader-title,
-#raccoon-reader-root[data-theme="dark"][data-surface="forum"] .reader-meta-bar{background:#22252a!important;border-color:#34383f!important}
-#raccoon-reader-root[data-theme="dark"][data-surface="reddit"] .reader-paragraph-pair:not([data-heading="true"])::before{background:#34383f!important}
+.reader-drawer-switch-row>span:first-child{display:flex;min-width:0;flex-direction:column;gap:2px}.reader-drawer-switch-row b{font-size:11.5px;font-weight:680;color:inherit}.reader-drawer-switch-row small{font-size:10px;color:#8a929c}
+.reader-drawer-switch{position:relative;width:34px;height:20px;flex:0 0 34px}.reader-drawer-switch input{position:absolute;opacity:0;pointer-events:none}.reader-drawer-switch i{position:absolute;inset:0;border-radius:999px;background:#d8dce1;transition:background .18s ease}.reader-drawer-switch i::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:transform .18s ease}.reader-drawer-switch input:checked+i{background:#252a30}.reader-drawer-switch input:checked+i::after{transform:translateX(14px)}
+#raccoon-reader-root[data-theme="dark"] .reader-drawer-switch-row{background:rgba(255,255,255,.035);border-color:rgba(255,255,255,.1)}#raccoon-reader-root[data-theme="dark"] .reader-drawer-switch-row small{color:#929aa4}

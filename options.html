@@ -117,11 +117,12 @@
             </div>
             <div class="form-item flex-1">
               <label class="item-label" for="input-deepseek-model">模型名称</label>
-              <div class="model-input-row"><input type="text" id="input-deepseek-model" class="apple-input" value="deepseek-v4-flash" placeholder="选择或输入模型"><button type="button" class="model-refresh-btn" data-engine="deepseek" title="从服务商读取模型" aria-label="从服务商读取模型"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66L20 8"/><path d="M20 3v5h-5"/></svg></button></div><datalist id="models-deepseek"><option value="deepseek-v4-flash"><option value="deepseek-v4-pro"></datalist>
+              <div class="model-input-row model-input-row-without-refresh"><input type="text" id="input-deepseek-model" class="apple-input" value="deepseek-v4-flash" placeholder="选择或输入模型"></div><datalist id="models-deepseek"><option value="deepseek-v4-flash"><option value="deepseek-v4-pro"></datalist>
             </div>
           </div>
           <div class="form-actions">
             <button type="button" class="test-btn" data-engine="deepseek">测试 DeepSeek 连通性</button>
+            <button type="button" class="model-refresh-btn deepseek-refresh-action" data-engine="deepseek" title="刷新 DeepSeek 模型" aria-label="刷新 DeepSeek 模型"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66L20 8"/><path d="M20 3v5h-5"/></svg></button>
             <span class="test-result" id="test-result-deepseek"></span>
           </div>
         </div>
@@ -403,10 +404,6 @@
             <div class="card-row compact-row">
               <div class="row-info"><span class="row-title">分栏联动滚动</span></div>
               <label class="apple-switch"><input type="checkbox" id="opt-sidebar-sync" checked><span class="switch-knob"></span></label>
-            </div>
-            <div class="card-row compact-row">
-              <div class="row-info"><span class="row-title">阅读图片阴影</span></div>
-              <label class="apple-switch"><input type="checkbox" id="opt-reader-image-shadow"><span class="switch-knob"></span></label>
             </div>
           </div>
 
