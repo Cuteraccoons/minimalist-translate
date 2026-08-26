@@ -428,6 +428,10 @@
                 <div class="demo-trans-h" id="live-trans-h">设计直观的人机交互界面</div>
                 <p class="demo-orig-p">Clarity, contrast, and alignment create an effortless reading experience across devices.</p>
                 <div class="demo-trans-p" id="live-trans-p">清晰度、对比度与对齐原则共同构成自然、轻松的阅读体验。</div>
+                <figure class="demo-preview-figure">
+                  <img src="assets/readme/hero-background.png" alt="阅读界面配图示例">
+                  <figcaption>Images and captions stay inside the article flow.</figcaption>
+                </figure>
                 <p class="demo-orig-p">A good interface preserves hierarchy without asking the reader to notice the interface itself.</p>
                 <div class="demo-trans-p live-trans-extra">优秀的界面会保留清晰层级，却不会迫使读者把注意力放在界面本身。</div>
                 <blockquote>“The best reading tools quietly disappear behind the content.”</blockquote>
@@ -549,7 +553,7 @@
           </div>
 
           <div class="card-row">
-            <div class="row-info"><span class="row-title">图片翻译</span><span class="row-desc">优先使用浏览器本机识别；需要时启用 Tesseract 多语言 OCR。图片不上传到 OCR 服务，识别后的纯文本再交给当前翻译引擎。</span></div>
+            <div class="row-info"><span class="row-title">图片翻译</span><span class="row-desc">使用扩展内置的 Tesseract.js 在浏览器本地识别；首次使用会下载并缓存对应语言模型。原图不上传到 OCR 服务，识别后的纯文本再交给当前翻译引擎。</span></div>
             <label class="apple-switch"><input type="checkbox" id="opt-enable-image-translation"><span class="switch-knob"></span></label>
           </div>
 

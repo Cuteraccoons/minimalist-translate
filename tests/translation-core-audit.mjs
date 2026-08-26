@@ -47,6 +47,8 @@ if (!content.includes('const placeBehind = (background) =>') || !content.include
 if (!content.includes('const offset = preferredGap') || content.includes('preferredGap - hostBottom')) fail('negative bilingual overlap spacing remains');
 if (!content.includes('const allowHiddenToc') || !content.includes("(!allowHiddenToc && !isVisibleTranslationElement(liveElement))")) fail('hidden source response guard or structured-TOC exception missing');
 if (!content.includes('function isRichContentControl') || !content.includes('function collectCompactComponentTextUnits')) fail('rich-card/component translation boundary missing');
+if (!content.includes('raccoon-linked-card-translation') || !content.includes('textHost.appendChild(transNode)')) fail('linked editorial-card translation safeguard missing');
+if (!content.includes('cloneWalker.currentNode.nodeValue = originalTextForNode')) fail('reader original-text restoration missing');
 if (!content.includes("meta?.kind === 'component-text'")) fail('compact component render branch missing');
 if (!content.includes('function isStructuredTocControl') || !content.includes('.vector-toc-numb,.tocnumber')) fail('TOC numbering preservation missing');
 if (!content.includes('parentIsRowFlex') || !content.includes('canOwnTranslation')) fail('row-flex bilingual squeeze safeguard missing');

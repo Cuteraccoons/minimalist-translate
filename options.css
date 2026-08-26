@@ -1565,6 +1565,39 @@ input:checked + .switch-knob:before {
 .row-desc,.row-hint{font-size:13px!important;line-height:1.5!important}
 #tab-auto-translate .row-info,#tab-rules .row-info{gap:5px!important}
 
+/* Final settings polish: richer live preview and stable blacklist controls. */
+.demo-preview-figure{
+  margin:15px 0 16px!important;padding:0!important;border:0!important;background:transparent!important
+}
+.demo-preview-figure img{
+  display:block;width:100%!important;height:116px!important;object-fit:cover!important;object-position:center 46%!important;
+  border:1px solid #e4e7ea!important;border-radius:9px!important;background:#f3f5f6!important
+}
+.demo-preview-figure figcaption{
+  margin-top:6px!important;color:#9098a2!important;font-size:11px!important;line-height:1.45!important
+}
+.preview-body .demo-orig-h,.preview-body .demo-trans-h,
+.preview-body .demo-orig-p,.preview-body .demo-trans-p{box-sizing:border-box!important;vertical-align:baseline!important}
+.preview-body .demo-trans-h,.preview-body .demo-trans-p{padding-left:0!important}
+
+.blacklist-add-card .domain-add-row .apple-input,
+.blacklist-add-card .domain-add-row .test-btn{
+  height:38px!important;min-height:38px!important;box-sizing:border-box!important;margin:0!important
+}
+.blacklist-domain-list .domain-row-line{
+  display:grid!important;grid-template-columns:32px minmax(0,1fr) auto 30px!important
+}
+.blacklist-domain-list .domain-config-btn{justify-self:end!important;white-space:nowrap!important}
+.blacklist-domain-list .domain-remove-icon{justify-self:end!important}
+
+.interaction-page-card{
+  overflow:visible!important;border:1px solid #e5e8ec!important;border-radius:12px!important;background:#fff!important
+}
+.interaction-page-card>.card-row{min-height:56px!important;padding:11px 15px!important}
+.interaction-page-card>.card-row:last-child{border-bottom:0!important}
+.nav-btn .nav-brand-icon{color:#46515d!important;stroke-width:2!important;opacity:.92!important}
+.nav-btn.active .nav-brand-icon,.nav-btn:hover .nav-brand-icon{color:#1f252c!important;opacity:1!important}
+
 /* Hidden sections report zero offsets; resync on navigation and keep the selected
    button visible even before the moving indicator has measured itself. */
 .segmented-control .segment-item.active,.vocab-view-switch button.active{

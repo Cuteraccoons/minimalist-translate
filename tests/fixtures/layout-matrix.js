@@ -89,7 +89,7 @@
 
   window.runBilingualLayoutAudit = () => {
     const translated = Array.from(document.querySelectorAll(".raccoon-translated-block,.raccoon-translated-inline"));
-    const report = { cases:TOTAL_CASES, translated:translated.length, missing:0, overlaps:0, lowContrast:0, overflow:0, iconDrift:0, squeezedRows:0, richControlDamage:0, hiddenTocMissing:0, tocNumberDamage:0 };
+    const report = { cases:TOTAL_CASES, translated:translated.length, missing:0, overlaps:0, lowContrast:0, overflow:0, iconDrift:0, squeezedRows:0, richControlDamage:0, richLinkedMissing:0, hiddenTocMissing:0, tocNumberDamage:0 };
     translated.forEach(node => {
       const sourceId = node.dataset.raccoonSourceId;
       const source = sourceId ? document.querySelector(`[data-raccoon-id="${CSS.escape(sourceId)}"]`) : null;
@@ -121,6 +121,8 @@
     const richCard = document.querySelector(".fixture-rich-card");
     const richMedia = richCard?.querySelector(".fixture-rich-media");
     if (richCard?.classList.contains("raccoon-ui-translated") || (richMedia && Math.abs(richMedia.getBoundingClientRect().width - Number(richMedia.dataset.fixtureInitialWidth)) > .75)) report.richControlDamage += 1;
+    const richTranslation = richCard?.querySelector(".raccoon-linked-card-translation");
+    if (!richTranslation || richTranslation.closest("a[href]") !== richCard || !richCard.innerText.includes("Research model card")) report.richLinkedMissing += 1;
     const hiddenToc = document.querySelector(".fixture-toc-collapsed .vector-toc-link");
     if (hiddenToc && !hiddenToc.classList.contains("raccoon-ui-translated")) report.hiddenTocMissing += 1;
     document.querySelectorAll(".fixture-toc .vector-toc-link").forEach(link => {

@@ -902,7 +902,8 @@
       const rect = control.getBoundingClientRect();
       const semanticCount = control.querySelectorAll("p,h1,h2,h3,h4,h5,h6,article,section,figure,table,[role='article']").length;
       const hasMedia = !!control.querySelector("img,picture,video,canvas");
-      return rect.height >= 72 && ((hasMedia && (semanticCount >= 1 || text.length >= 64)) || (semanticCount >= 3 && text.length >= 72));
+      const hasEditorialCopy = !!control.querySelector("strong,b") && control.children.length >= 2 && text.length >= 52;
+      return rect.height >= 58 && ((hasMedia && (semanticCount >= 1 || text.length >= 52)) || (semanticCount >= 3 && text.length >= 72) || hasEditorialCopy);
     } catch (_) {
       return false;
     }
@@ -910,9 +911,11 @@
 
   function isCompactTranslationComponent(el) {
     if (!el) return false;
-    if (el.closest?.(".infobox,.sidebar,.navbox,.vertical-navbox,.metadata,.ambox")) return true;
-    const control = el.closest?.("a,button,[role='button']");
-    return !!control && isRichContentControl(control);
+    // Compact components are bounded reference/navigation surfaces whose text
+    // can be replaced in place without changing article prose. A large link
+    // card is content (Medium recommendations are a common example), not UI:
+    // its original title must stay visible and receive a linked translation.
+    return !!el.closest?.(".infobox,.sidebar,.navbox,.vertical-navbox,.metadata,.ambox");
   }
 
   function hasPeerNavigationContext(el) {
@@ -1184,9 +1187,6 @@
     const units = [];
     const seenNodes = new Set();
     const roots = queryScopedElements(container, ".infobox,.sidebar,.navbox,.vertical-navbox,.metadata,.ambox");
-    queryScopedElements(container, "a,button,[role='button']").forEach(control => {
-      if (isRichContentControl(control)) roots.push(control);
-    });
     const compactRoots = Array.from(new Set(roots)).filter(root => !roots.some(other => other !== root && other.contains?.(root)));
 
     compactRoots.forEach(root => {
@@ -1250,6 +1250,16 @@
     }
 
     queryScopedElements(container, TRANSLATABLE_BLOCK_SELECTOR).forEach(el => append(el, false));
+
+    // Some editorial cards are a single <a> made only from spans. They do not
+    // match the normal paragraph selector, but they are still article content.
+    // Appending the translation inside the anchor preserves both the original
+    // label and the destination for the translated line.
+    queryScopedElements(container, "a[href]").forEach(link => {
+      if (!isRichContentControl(link)) return;
+      if (link.querySelector(TRANSLATABLE_BLOCK_SELECTOR)) return;
+      append(link, false);
+    });
 
     // Bilingual mode keeps prose bilingual, but compact navigation controls use
     // a single translated label so tabs and breadcrumbs retain their geometry.
@@ -1686,7 +1696,8 @@
 
     const origRawText = getHostOriginalText(origEl);
     const isNavOrTab = false;
-    let attachShortLabel = origEl.tagName === "A" && origRawText.length <= 80;
+    const isRichLinkedContent = origEl.tagName === "A" && isRichContentControl(origEl);
+    let attachShortLabel = origEl.tagName === "A" && (origRawText.length <= 80 || isRichLinkedContent);
     // A figcaption can be rendered as table-caption (Wikipedia does this).
     // Inserting a sibling DIV into that formatting context reorders geometry and
     // visually overlaps the caption; keep its translation inside the caption.
@@ -1782,7 +1793,16 @@
     }
 
     if (attachShortLabel || origEl.tagName === "LI" || isTableCell || isInline) {
-      origEl.appendChild(transNode);
+      if (isRichLinkedContent) {
+        const textHost = Array.from(origEl.children || []).reverse().find(child => {
+          if (child.matches?.("img,picture,video,canvas,svg")) return false;
+          return String(child.innerText || child.textContent || "").replace(/\s+/g, " ").trim().length >= 24;
+        }) || origEl;
+        transNode.classList.add("raccoon-linked-card-translation");
+        textHost.appendChild(transNode);
+      } else {
+        origEl.appendChild(transNode);
+      }
     } else {
       if (origEl.nextSibling) {
         origEl.parentNode.insertBefore(transNode, origEl.nextSibling);
@@ -2700,6 +2720,18 @@
     const holder = document.createElement("div");
     const clone = sourceNode.cloneNode(true);
     holder.appendChild(clone);
+
+    // Reader Mode may be opened after compact navigation has been translated
+    // in place. Restore every cloned text node from the live-node registry so
+    // the reader's original column never starts from an already translated
+    // Chinese label.
+    try {
+      const sourceWalker = document.createTreeWalker(sourceNode, NodeFilter.SHOW_TEXT);
+      const cloneWalker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+      while (sourceWalker.nextNode() && cloneWalker.nextNode()) {
+        cloneWalker.currentNode.nodeValue = originalTextForNode(sourceWalker.currentNode);
+      }
+    } catch (_) {}
     clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
     const allowed = new Set(["A","STRONG","B","EM","I","U","S","MARK","CODE","KBD","SAMP","SUB","SUP","RUBY","RT","RP","BR","SPAN","SMALL","Q"]);
     Array.from(clone.querySelectorAll?.("*") || []).reverse().forEach(node => {
@@ -3528,7 +3560,9 @@
     imageTranslateTrigger.dataset.triggerSize = String(size);
     imageTranslateTrigger.style.setProperty("--jijian-image-trigger-size", `${size}px`);
     imageTranslateTrigger.style.left = `${visibleRight - size - 8}px`;
-    imageTranslateTrigger.style.top = `${visibleTop + 8}px`;
+    // Bottom-right avoids the close/menu controls that image viewers commonly
+    // place in the top-right corner.
+    imageTranslateTrigger.style.top = `${visibleBottom - size - 8}px`;
     setImageTranslateTriggerVisible(true);
   }
 
@@ -4079,7 +4113,7 @@
     const image=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=originalDataUrl;});
     const canvas=document.createElement("canvas");
     canvas.width=Math.max(1,image.naturalWidth||image.width); canvas.height=Math.max(1,image.naturalHeight||image.height);
-    const ctx=canvas.getContext("2d",{alpha:false}); if(!ctx) throw new Error("无法创建译图画布");
+    const ctx=canvas.getContext("2d",{alpha:false,willReadFrequently:true}); if(!ctx) throw new Error("无法创建译图画布");
     ctx.drawImage(image,0,0,canvas.width,canvas.height);
 
     const sourceW=Math.max(1,Number(ocr?.imageWidth||canvas.width));
@@ -4143,8 +4177,9 @@
 
     const overlay=document.createElement("div");
     overlay.id="raccoon-image-translate-overlay";
+    overlay.className="is-preparing";
     imageTranslateOverlay=overlay;
-    overlay.innerHTML=`<div class="image-translate-scan"><span></span></div><div class="image-translate-topbar"><span class="image-translate-status-wrap"><i class="image-translate-spinner" aria-hidden="true"></i><span class="image-translate-status">正在扫描文字…</span><span class="image-translate-progress" aria-hidden="true"><span></span></span></span><div class="image-ocr-model-prompt" hidden></div><button type="button" data-act="close" aria-label="恢复原图并关闭"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg></button></div><div class="image-translate-result" hidden></div><div class="image-translate-actions" hidden><div class="image-translate-view-switch"><button type="button" data-act="original">原图</button><button type="button" data-act="translated" class="active">译图</button></div><div class="image-translate-action-end"><button type="button" class="image-translate-download-current" data-act="download-current" title="下载当前图片"><svg viewBox="0 0 24 24"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 16.5V20h14v-3.5"/></svg><span>下载</span></button><button type="button" class="image-translate-action-close" data-act="close-ready" title="关闭图片翻译" aria-label="关闭图片翻译"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg></button></div></div>`;
+    overlay.innerHTML=`<div class="image-translate-scan"><span></span></div><div class="image-translate-topbar"><span class="image-translate-status-wrap"><i class="image-translate-spinner" aria-hidden="true"></i><span class="image-translate-status">正在准备图片…</span><span class="image-translate-progress" aria-hidden="true"><span></span></span></span><div class="image-ocr-model-prompt" hidden></div><button type="button" data-act="close" aria-label="恢复原图并关闭"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg></button></div><div class="image-translate-result" hidden></div><div class="image-translate-actions" hidden><div class="image-translate-view-switch"><button type="button" data-act="original">原图</button><button type="button" data-act="translated" class="active">译图</button></div><div class="image-translate-action-end"><button type="button" class="image-translate-download-current" data-act="download-current" title="下载当前图片"><svg viewBox="0 0 24 24"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 16.5V20h14v-3.5"/></svg><span>下载</span></button><button type="button" class="image-translate-action-close" data-act="close-ready" title="关闭图片翻译" aria-label="关闭图片翻译"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7 7 17"/></svg></button></div></div>`;
     document.documentElement.appendChild(overlay);
     positionImageOverlay(overlay,img);
 
@@ -4180,7 +4215,25 @@
       originalBlob=dataUrlToBlob(originalDataUrl);
       status.textContent="正在读取原图尺寸…";
       let sourceBitmap=null;
-      try{sourceBitmap=await createImageBitmap(originalBlob);overlay.dataset.imageNaturalWidth=String(sourceBitmap.width||img.naturalWidth||0);overlay.dataset.imageNaturalHeight=String(sourceBitmap.height||img.naturalHeight||0);}finally{try{sourceBitmap?.close?.();}catch(_){}}
+      try{
+        try {
+          sourceBitmap=await createImageBitmap(originalBlob);
+          overlay.dataset.imageNaturalWidth=String(sourceBitmap.width||img.naturalWidth||0);
+          overlay.dataset.imageNaturalHeight=String(sourceBitmap.height||img.naturalHeight||0);
+        } catch (_) {
+          // Chromium cannot create an ImageBitmap for every SVG/GitHub image.
+          // Fall back to the ordinary image decoder instead of failing before
+          // the user even sees the OCR model prompt.
+          const decoded=await new Promise((resolve,reject)=>{
+            const probe=new Image();
+            probe.onload=()=>resolve(probe);
+            probe.onerror=()=>reject(new Error("无法解码这张图片"));
+            probe.src=originalDataUrl;
+          });
+          overlay.dataset.imageNaturalWidth=String(decoded.naturalWidth||decoded.width||img.naturalWidth||0);
+          overlay.dataset.imageNaturalHeight=String(decoded.naturalHeight||decoded.height||img.naturalHeight||0);
+        }
+      }finally{try{sourceBitmap?.close?.();}catch(_){}}
       positionImageOverlay(overlay,img);
 
       status.textContent="正在识别图片文字…"; setProgress(8,true);
@@ -4188,6 +4241,8 @@
       const consent=await ensureImageOcrConsent(overlay,status,result,meta); if(disposed)return;
       if(!consent?.allowed){cleanup();return;}
       status.textContent=consent.cached?`正在加载已缓存的${meta.label} OCR…`:`正在下载并准备${meta.label} OCR…`; setProgress(10,true);
+      overlay.classList.remove("is-preparing");
+      overlay.classList.add("is-recognizing");
       const ocr=await recognizeImageTextTesseract(originalDataUrl,state=>{
         if(disposed)return;
         const s=String(state.status||"");
@@ -4202,7 +4257,7 @@
         setProgress(Math.max(10,Math.min(78,10+Number(state.percent||0)*.68)),!state.percent);
       },meta);
       await markImageOcrModelReady(meta);
-      overlay.classList.remove("is-ocr-downloading");
+      overlay.classList.remove("is-ocr-downloading","is-recognizing");
       if(disposed)return;
       const cleanedText=cleanImageOcrText(ocr?.text); if(!cleanedText||(cleanedText.match(/[\p{L}\p{N}]/gu)||[]).length<2)throw new Error("OCR 没有识别到足够清晰的可翻译文字");
       ocr.text=cleanedText;
@@ -4212,7 +4267,7 @@
       translatedDataUrl=await makeTranslatedImageDataUrl(originalDataUrl,ocr,translation); if(disposed)return;
       showImageSource(translatedDataUrl);
 
-      overlay.classList.add("is-ready"); overlay.classList.remove("controls-visible"); actions.hidden=false; result.hidden=true; result.innerHTML=""; setProgress(100,false);
+      overlay.classList.add("is-ready"); overlay.classList.remove("controls-visible","is-preparing","is-recognizing"); actions.hidden=false; result.hidden=true; result.innerHTML=""; setProgress(100,false);
       status.textContent="翻译完成"; positionImageOverlay(overlay,img);
 
       const selectView=name=>{if(disposed)return;currentView=name;const original=name==="original";if(original)restoreImageSource();else showImageSource(translatedDataUrl);overlay.classList.toggle("show-original",original);overlay.querySelectorAll('.image-translate-view-switch button').forEach(b=>b.classList.toggle('active',b.dataset.act===name));showControls();positionImageOverlay(overlay,img);};
@@ -4225,6 +4280,7 @@
       });
     } catch(err) {
       if(disposed)return;
+      overlay.classList.remove("is-preparing","is-recognizing","is-ocr-downloading");
       overlay.classList.add("is-error","controls-visible"); setProgress(0,false); result.hidden=false;
       result.innerHTML=`<strong>暂时无法翻译这张图片</strong><span>${escapeHtml(err?.message||String(err))}</span><small>OCR 在本机浏览器内运行；识别成功后的纯文本才交给你当前的翻译引擎。</small><div class="image-translate-error-actions"><button type="button" data-image-retry>重试</button><button type="button" data-image-close>关闭</button></div>`;
       status.textContent="图片翻译不可用"; showControls(); positionImageOverlay(overlay,img);

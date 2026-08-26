@@ -1098,9 +1098,18 @@ async function lookupWikipediaSummary(term, lang = "en") {
   } catch (_) { return null; }
 }
 
+function normalizeDictionaryExample(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (!text) return "";
+  // DictionaryAPI occasionally returns sentence examples beginning with a
+  // lowercase Latin letter. Normalise only that first letter; abbreviations,
+  // CJK text, quoted examples and deliberate internal casing stay untouched.
+  return /^[a-z]/.test(text) ? `${text[0].toUpperCase()}${text.slice(1)}` : text;
+}
+
 async function lookupDictionary(text, sl = "auto", tl = "zh-CN") {
   const clean = (text || "").replace(/\s+/g, " ").trim();
-  const cacheKey = `dict::schema-1::${sl}->${tl}::${clean.toLowerCase()}`;
+  const cacheKey = `dict::schema-2::${sl}->${tl}::${clean.toLowerCase()}`;
   const cached = getCache(cacheKey);
   // Local dictionaries are permission- and source-dependent and must never be
   // frozen inside the online dictionary cache. Refresh them on every lookup so
@@ -1129,7 +1138,12 @@ async function lookupDictionary(text, sl = "auto", tl = "zh-CN") {
 
   // 英语：Free Dictionary API 负责英文词典义，Google 只负责中文对应与例句翻译。
   if (isEnglishWord) {
-    const quick = await googleQuickTranslate(clean, "en", "zh-CN");
+    // Start the two remote sources together. The old sequential path made a
+    // normal lookup pay Google latency first and DictionaryAPI latency second.
+    const quickPromise = googleQuickTranslate(clean, "en", "zh-CN");
+    const dictionaryPromise = fetchWithTimeout(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodedWord}`, { headers: { "Accept": "application/json" } }, 3200)
+      .catch(() => null);
+    const quick = await quickPromise;
     let translation = quick?.translated || clean;
     let phonetic = quick?.phonetic || "";
     let humanAudioUs = `https://dict.youdao.com/dictvoice?audio=${encodedWord}&type=2`;
@@ -1141,8 +1155,8 @@ async function lookupDictionary(text, sl = "auto", tl = "zh-CN") {
     let sourceUrls = [];
 
     try {
-      const res = await fetchWithTimeout(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodedWord}`, { headers: { "Accept": "application/json" } }, 3200);
-      if (res.ok) {
+      const res = await dictionaryPromise;
+      if (res?.ok) {
         const entries = await res.json();
         const posMap = new Map();
         const seenDef = new Set();
@@ -1165,7 +1179,7 @@ async function lookupDictionary(text, sl = "auto", tl = "zh-CN") {
               const en = (def?.definition || "").trim();
               if (en && !seenDef.has(en.toLowerCase()) && posMap.get(pos).length < 3) {
                 seenDef.add(en.toLowerCase());
-                posMap.get(pos).push({ en, example: (def?.example || "").trim() });
+                posMap.get(pos).push({ en, example: normalizeDictionaryExample(def?.example) });
               }
             });
           });
@@ -1176,7 +1190,7 @@ async function lookupDictionary(text, sl = "auto", tl = "zh-CN") {
           const senses = await Promise.all(selected.map(async (def) => ({
             en: def.en,
             zh: (await translateSenseText(def.en, "en")) || "",
-            example: def.example || ""
+            example: normalizeDictionaryExample(def.example)
           })));
           const posLabel = ({noun:"名词",verb:"动词",adjective:"形容词",adverb:"副词",pronoun:"代词",preposition:"介词",conjunction:"连词",interjection:"感叹词",determiner:"限定词",exclamation:"感叹词",phrase:"词组"})[String(pos || "").toLowerCase()] || pos;
           return { pos: posLabel, senses };
@@ -1189,7 +1203,7 @@ async function lookupDictionary(text, sl = "auto", tl = "zh-CN") {
             const ex = (def.example || "").trim();
             if (!ex || seenEx.has(ex.toLowerCase()) || exampleCandidates.length >= 3) continue;
             seenEx.add(ex.toLowerCase());
-            exampleCandidates.push(ex);
+            exampleCandidates.push(normalizeDictionaryExample(ex));
           }
         }
         const translatedExamples = await Promise.all(exampleCandidates.map(async ex => ({
@@ -1204,8 +1218,8 @@ async function lookupDictionary(text, sl = "auto", tl = "zh-CN") {
 
     if (!examplePairs.length && Array.isArray(quick?.examples)) {
       const translatedFallbackExamples = await Promise.all(quick.examples.slice(0, 3).map(async ex => ({
-        source: ex,
-        translation: (await translateSenseText(ex, "en")) || ""
+        source: normalizeDictionaryExample(ex),
+        translation: (await translateSenseText(normalizeDictionaryExample(ex), "en")) || ""
       })));
       examplePairs.push(...translatedFallbackExamples);
     }
@@ -2289,12 +2303,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const url = String(request.url || "");
         if (!/^https?:\/\//i.test(url)) throw new Error("仅支持 http/https 图片地址");
         const pageUrl = /^https?:\/\//i.test(String(request.pageUrl || "")) ? String(request.pageUrl) : undefined;
-        const res = await fetchWithTimeout(url, {
-          headers: { "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8" },
-          credentials: "include",
-          referrer: pageUrl,
-          referrerPolicy: "strict-origin-when-cross-origin"
-        }, 18000);
+        const requestOrigin = (() => { try { return pageUrl ? new URL(pageUrl).origin : ""; } catch (_) { return ""; } })();
+        const imageOrigin = (() => { try { return new URL(url).origin; } catch (_) { return ""; } })();
+        const attempts = requestOrigin && requestOrigin === imageOrigin
+          ? [
+              { credentials:"include", referrer:pageUrl, referrerPolicy:"strict-origin-when-cross-origin" },
+              { credentials:"omit", referrerPolicy:"no-referrer" }
+            ]
+          : [
+              // CDN-backed images (GitHub camo/raw assets are common) are more
+              // reliable without page cookies or a foreign referrer.
+              { credentials:"omit", referrerPolicy:"no-referrer" },
+              { credentials:"include", referrer:pageUrl, referrerPolicy:"strict-origin-when-cross-origin" }
+            ];
+        let res = null;
+        let fetchError = null;
+        for (const init of attempts) {
+          try {
+            const candidate = await fetchWithTimeout(url, {
+              headers: { "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8" },
+              ...init
+            }, 18000);
+            if (candidate.ok) { res = candidate; break; }
+            fetchError = new Error(`图片读取失败 (${candidate.status})`);
+          } catch (err) {
+            fetchError = err;
+          }
+        }
+        if (!res) throw fetchError || new Error("图片读取失败");
         if (!res.ok) throw new Error(`图片读取失败 (${res.status})`);
         const responseType = String(res.headers.get("content-type") || "").toLowerCase();
         if (responseType.startsWith("text/html") || responseType.includes("application/json")) throw new Error("图片地址返回了网页内容，可能需要重新登录或刷新页面");

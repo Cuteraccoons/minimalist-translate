@@ -4100,3 +4100,105 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
   padding-left:clamp(48px,7vw,88px)!important;padding-right:clamp(48px,7vw,88px)!important;
   box-shadow:0 12px 36px rgba(35,39,43,.08)!important
 }
+
+/* ==========================================================================
+   Release finish: stable prose, reveal styles and local OCR states
+   ========================================================================== */
+
+/* The highlight choice is a live setting. Keep the marker on glyph boxes and
+   consume the same CSS variable used by the settings preview. */
+.raccoon-translated-block[data-render-style="highlight"]>.raccoon-translation-text,
+.raccoon-translated-inline[data-render-style="highlight"]>.raccoon-translation-text,
+#raccoon-reader-root .reader-trans-p[data-render-style="highlight"]>.reader-translation-text{
+  background:linear-gradient(transparent 35%,var(--raccoon-bg-color,rgba(253,224,71,.43)) 35%,var(--raccoon-bg-color,rgba(253,224,71,.43)) 91%,transparent 91%)!important
+}
+
+/* Hover reveal changes only opacity. Font weight, glyph width and line boxes
+   stay stable, avoiding the apparent bold/jitter jump caused by recolouring. */
+.raccoon-translated-block[data-render-style="hover-reveal"],
+.raccoon-translated-inline[data-render-style="hover-reveal"]{
+  color:var(--raccoon-local-text-color,var(--raccoon-text-color,#111827))!important;
+  -webkit-text-fill-color:currentColor!important;opacity:.2!important;
+  filter:none!important;text-shadow:none!important;font-weight:inherit!important;
+  transition:opacity .18s ease!important
+}
+*:hover + .raccoon-translated-block[data-render-style="hover-reveal"],
+*:hover > .raccoon-translated-block[data-render-style="hover-reveal"],
+*:hover > .raccoon-translated-inline[data-render-style="hover-reveal"],
+.raccoon-translated-block[data-render-style="hover-reveal"]:hover,
+.raccoon-translated-inline[data-render-style="hover-reveal"]:hover{opacity:1!important}
+
+/* Blur only the text wrapper. The parent remains geometrically stable and the
+   operation toolbar is never dragged through the filter compositor. */
+.raccoon-translated-block[data-render-style="blur-reveal"],
+.raccoon-translated-inline[data-render-style="blur-reveal"]{
+  color:var(--raccoon-local-text-color,var(--raccoon-text-color,#111827))!important;
+  -webkit-text-fill-color:currentColor!important;filter:none!important;
+  text-shadow:none!important;opacity:1!important
+}
+.raccoon-translated-block[data-render-style="blur-reveal"]>.raccoon-translation-text,
+.raccoon-translated-inline[data-render-style="blur-reveal"]>.raccoon-translation-text{
+  display:inline!important;filter:blur(5px)!important;opacity:.74!important;
+  transition:filter .18s ease,opacity .18s ease!important
+}
+.raccoon-translated-block[data-render-style="blur-reveal"]:hover>.raccoon-translation-text,
+.raccoon-translated-inline[data-render-style="blur-reveal"]:hover>.raccoon-translation-text{
+  filter:none!important;opacity:1!important
+}
+
+/* A click mask has no meaningful paragraph actions until it is revealed. */
+.raccoon-translated-block[data-render-style="click-reveal"]:not(.raccoon-revealed) .raccoon-block-actions,
+.raccoon-translated-inline[data-render-style="click-reveal"]:not(.raccoon-revealed) .raccoon-block-actions{
+  display:none!important;visibility:hidden!important;pointer-events:none!important
+}
+
+/* Reader body pairs use one user-controlled rhythm instead of view-specific
+   em margins. The source/translation relationship is handled inside the pair. */
+#raccoon-reader-root .reader-paragraph-pair:not([data-heading="true"]){
+  margin:0 0 var(--reader-paragraph-spacing,28px)!important;padding:0!important
+}
+#raccoon-reader-root .reader-paragraph-pair:not([data-heading="true"])>.reader-orig-p,
+#raccoon-reader-root .reader-paragraph-pair:not([data-heading="true"])>.reader-trans-p{
+  margin-top:0!important;margin-bottom:0!important
+}
+#raccoon-reader-root[data-reader-view="bilingual"] .reader-paragraph-pair:not([data-heading="true"])>.reader-orig-p{
+  margin-bottom:8px!important
+}
+#raccoon-reader-root .reader-paragraph-pair[data-heading="true"]{
+  margin:0 0 calc(var(--reader-paragraph-spacing,28px) * .72)!important;padding-top:.55em!important
+}
+#raccoon-reader-root .reader-paragraph-pair[data-heading="true"]>.reader-structural-heading{
+  margin:.16em 0 .4em!important
+}
+#raccoon-reader-root h4.reader-structural-heading{font-size:18.5px!important;font-weight:740!important;opacity:1!important}
+#raccoon-reader-root h5.reader-structural-heading{font-size:17px!important;font-weight:720!important;opacity:.96!important}
+#raccoon-reader-root h6.reader-structural-heading{font-size:16px!important;font-weight:700!important;opacity:.92!important}
+#raccoon-reader-root .reader-orig-p :is(strong,b),#raccoon-reader-root .reader-trans-p :is(strong,b){font-weight:720!important}
+#raccoon-reader-root .reader-trans-p[data-render-style="hover-reveal"]{font-weight:inherit!important}
+#raccoon-reader-root .reader-trans-p[data-render-style="blur-reveal"]{filter:none!important;opacity:1!important}
+#raccoon-reader-root .reader-trans-p[data-render-style="blur-reveal"]>.reader-translation-text{filter:blur(5px)!important;opacity:.74!important;transition:filter .18s ease,opacity .18s ease!important}
+#raccoon-reader-root .reader-trans-p[data-render-style="blur-reveal"]:hover>.reader-translation-text{filter:none!important;opacity:1!important}
+
+/* The image entry belongs to the bottom-right of its image. Scanning begins
+   only after consent/model readiness, never while the download prompt is open. */
+#raccoon-image-translate-overlay .image-translate-scan{display:none!important}
+#raccoon-image-translate-overlay.is-recognizing .image-translate-scan{display:block!important}
+#raccoon-image-translate-overlay.is-model-prompt .image-translate-scan,
+#raccoon-image-translate-overlay.is-preparing .image-translate-scan,
+#raccoon-image-translate-overlay.is-ocr-downloading:not(.is-recognizing) .image-translate-scan{display:none!important}
+.image-ocr-model-prompt [data-ocr-model-download],
+.image-ocr-model-prompt [data-ocr-model-download]:hover,
+.image-ocr-model-prompt [data-ocr-model-download]:focus-visible{
+  background:#111316!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+  box-shadow:none!important;filter:none!important;opacity:1!important;transform:none!important
+}
+.image-ocr-model-prompt [data-ocr-model-cancel],
+.image-ocr-model-prompt [data-ocr-model-cancel]:hover,
+.image-ocr-model-prompt [data-ocr-model-cancel]:focus-visible{
+  background:#eef0f2!important;color:#505a65!important;-webkit-text-fill-color:#505a65!important;
+  box-shadow:none!important;filter:none!important;opacity:1!important;transform:none!important
+}
+
+/* Optical alignment in the compact dictionary rows. */
+.raccoon-dict-card .dict-brief-meaning{transform:translateY(1px)!important}
+.raccoon-selection-trigger .trigger-translate-brand-icon{width:16px!important;height:16px!important}

@@ -129,6 +129,7 @@ if (!process.exitCode) pass('1.0 image trigger / reader OCR safeguards');
 if (!read('options.js').includes('function syncImageOcrUi()')) fail('settings early-init function is not hoisted');
 if (!read('background.js').includes('SEARCH_ENGINE_BLACKLIST_RULE') || !read('background.js').includes('image: false')) fail('search-engine blacklist does not preserve image translation');
 if (!read('floating.css').includes('is-ocr-downloading')) fail('single-surface OCR download progress state missing');
+if (!content.includes('无法解码这张图片') || !read('floating.css').includes('.is-recognizing .image-translate-scan')) fail('SVG OCR decode fallback or scan-state gate missing');
 if (!process.exitCode) pass('settings startup / search-engine / OCR prompt safeguards');
 
 
@@ -163,15 +164,16 @@ if (!backgroundJs.includes('replaceRenderStyle: "clean"')) fail('replacement cle
 if (!content.includes("parent.classList.add('raccoon-dom-preserved-translation','raccoon-replaced-text')")) fail('replacement typography class is not applied');
 if (!read('floating.css').includes('.raccoon-replaced-text[data-render-style="native"]') || !read('floating.css').includes('font-style:normal!important')) fail('replacement reference style may inherit italics');
 if (!content.includes('function applyAdaptiveTranslationColor') || !read('floating.css').includes('var(--raccoon-local-text-color,var(--raccoon-text-color,inherit))')) fail('translation styles do not share adaptive surface contrast');
+if (!read('floating.css').includes('var(--raccoon-bg-color,rgba(253,224,71,.43))')) fail('live webpage highlight colour binding missing');
 if (!content.includes('style.backgroundImage && style.backgroundImage !== "none"') || !content.includes('dataset.raccoonSurface')) fail('gradient/dark surface diagnostics missing');
-if (!read('floating.css').includes(':not([data-render-style="hover-reveal"])') || !read('floating.css').includes('20%,transparent)')) fail('hover reveal is indistinguishable from clean text');
-if (!read('floating.css').includes('[data-render-style="blur-reveal"] .raccoon-action-btn:hover')) fail('concealment action toolbar contrast safeguard missing');
+if (!read('floating.css').includes('opacity:.2!important') || !read('floating.css').includes('transition:opacity .18s ease!important')) fail('hover reveal is indistinguishable from clean text');
+if (!read('floating.css').includes('[data-render-style="blur-reveal"]>.raccoon-translation-text') || !read('floating.css').includes('[data-render-style="click-reveal"]:not(.raccoon-revealed) .raccoon-block-actions')) fail('concealment text/action safeguards missing');
 if (!backgroundJs.includes('enableParagraphActions: true') || !content.includes('raccoon-paragraph-actions-disabled')) fail('paragraph action toolbar preference missing');
 if (content.includes('speechSynthesis.cancel()') || content.includes('speechSynthesis.onvoiceschanged =')) fail('speech synthesis can interrupt other page audio');
 if (/\bWebSocket\b/.test(content) || /\bWebSocket\b/.test(backgroundJs)) fail('unexpected WebSocket integration present');
 if (content.includes('TextDetector') || !backgroundJs.includes('jijianImageOcrReadyV1') || !content.includes('GET_IMAGE_OCR_READY_MAP')) fail('image OCR must use the verified local model path');
 if (!content.includes('TRANSLATE_BATCH_IDS')) fail('structured image-line translation mapping missing');
-if (!content.includes('dataset?.canonicalSrc') || !backgroundJs.includes('credentials: "include"')) fail('authenticated GitHub image fallback missing');
+if (!content.includes('dataset?.canonicalSrc') || !backgroundJs.includes('credentials:"include"') || !backgroundJs.includes('credentials:"omit"')) fail('authenticated/CDN GitHub image fallback missing');
 for (const direction of ['n','e','s','w','nw','ne','se','sw']) {
   if (!content.includes(`data-resize="${direction}"`)) fail(`dictionary resize direction missing: ${direction}`);
 }
