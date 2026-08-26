@@ -88,10 +88,11 @@ async page => {
       outline:root.querySelectorAll(".reader-outline-item").length,
       codeBlocks:root.querySelectorAll(".reader-code-block").length,
       quotes:root.querySelectorAll(".reader-blockquote").length,
-      captions:root.querySelectorAll(".reader-figcaption").length
+      captions:root.querySelectorAll(".reader-figcaption").length,
+      maintenanceLeaks:root.textContent.includes("Machine translation maintenance notice") ? 1 : 0
     };
   });
-  if(reader.count!==4 || reader.unique<4 || reader.outline<3 || reader.codeBlocks<1 || reader.quotes<1 || reader.captions<1)throw new Error(`阅读模式结构失败：${JSON.stringify(reader)}`);
+  if(reader.count!==4 || reader.unique<4 || reader.outline<3 || reader.codeBlocks<1 || reader.quotes<1 || reader.captions<1 || reader.maintenanceLeaks)throw new Error(`阅读模式结构失败：${JSON.stringify(reader)}`);
 
   await page.goto(`${base}/options.html`);
   await page.waitForFunction(() => document.querySelectorAll("[data-preview-pair]").length === 3);

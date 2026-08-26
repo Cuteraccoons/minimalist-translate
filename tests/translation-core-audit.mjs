@@ -57,6 +57,7 @@ if (!content.includes('parentIsRowFlex') || !content.includes('canOwnTranslation
 if (!content.includes('className = "raccoon-translation-text"') || !css.includes('>.raccoon-translation-text')) fail('glyph-only translation highlight wrapper missing');
 if (!content.includes('function warmReaderLazyContent') || !content.includes("[role='heading'][aria-level]")) fail('reader lazy-content or semantic-heading expansion missing');
 if (!content.includes('readerOriginalTextPreservingWhitespace') || !content.includes('reader-code-block') || !css.includes('#raccoon-reader-root .reader-blockquote')) fail('semantic reader blocks missing');
+if (!content.includes('function isReaderMaintenanceContainer') || !content.includes('.ambox,.tmbox,.cmbox,.ombox,.fmbox,.mw-message-box,.metadata')) fail('reader maintenance-template filtering missing');
 if (!content.includes('class="reader-outline-label"') || !css.includes('.reader-outline-label{')) fail('reader outline line-box safeguard missing');
 if (!content.includes('new Set(["card", "flat", "column", "folio"])') || (content.match(/data-reader-surface=/g) || []).length !== 4) fail('reader page surface choices are incomplete');
 if (content.includes('reader-toggle-divider') || content.includes('readerDividerVisible') || background.includes('readerDividerVisible')) fail('obsolete reader metadata divider setting remains');

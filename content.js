@@ -2769,6 +2769,19 @@
     return info;
   }
 
+  function isReaderMaintenanceContainer(node) {
+    const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+    if (!element) return false;
+    // MediaWiki maintenance/template boxes belong to the editing interface,
+    // not to the article narrative. Their class names are shared across
+    // languages, so filtering by structure is safer than matching notice text.
+    if (element.closest?.(".ambox,.tmbox,.cmbox,.ombox,.fmbox,.mw-message-box,.metadata")) return true;
+    const presentationBox = element.closest?.("table[role='presentation']");
+    if (!presentationBox) return false;
+    const className = typeof presentationBox.className === "string" ? presentationBox.className : "";
+    return /(?:^|\s)(?:box-|mbox-)[^\s]*/i.test(className);
+  }
+
   function collectReaderContentNodes(container) {
     const selector = "p, h1, h2, h3, h4, h5, h6, [role='heading'][aria-level], blockquote, pre, li, dt, dd, figcaption, a[download], a[href$='.pdf'], a[href$='.epub'], a[href$='.zip'], img";
     const seenText = new Set();
@@ -2782,6 +2795,7 @@
     for (const node of raw) {
       if (tailReached) break;
       if (node.closest("nav, header, footer, aside, [role='navigation'], [aria-hidden='true'], #raccoon-sidebar-root, #raccoon-floating-ball-root, #raccoon-selection-bubble-root, .raccoon-translated-block, .raccoon-translated-inline, #raccoon-hover-trigger-root")) continue;
+      if (isReaderMaintenanceContainer(node)) continue;
       const ancestor = node.closest("section, div, ul, ol");
       const noiseHint = `${ancestor?.id || ""} ${typeof ancestor?.className === "string" ? ancestor.className : ""}`.trim();
       if (noiseContainerRe.test(noiseHint)) continue;

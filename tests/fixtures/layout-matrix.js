@@ -5,6 +5,12 @@
   const structures = ["links", "heading", "nested-list", "icon-nav"];
   const matrix = document.getElementById("matrix");
 
+  const maintenanceNotice = document.createElement("table");
+  maintenanceNotice.className = "box-Expand_language metadata ambox ambox-notice";
+  maintenanceNotice.setAttribute("role", "presentation");
+  maintenanceNotice.innerHTML = `<tbody><tr><td><ul><li>Machine translation maintenance notice should not appear in reader mode.</li><li>Editors must compare the translated article with its original source.</li></ul></td></tr></tbody>`;
+  matrix.appendChild(maintenanceNotice);
+
   const prose = [
     "Researchers compare social relationships across cities while preserving links to primary sources and supporting evidence.",
     "A readable translation should remain visually paired with its original paragraph without covering the next line of text.",
