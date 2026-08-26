@@ -37,14 +37,63 @@
 
     // Preserve character size on long screenshots. The old longest-edge cap
     // could turn an 800×10000 screenshot into ~208×2600 and destroy OCR detail.
-    if (shortest < 620 && longest < 7000) scale = Math.min(2.15, 720 / shortest);
+    if (shortest < 760 && longest < 7000) scale = Math.min(2.6, 820 / shortest);
 
     // Cap by total pixels rather than a single edge. This keeps strip images
     // legible while preventing ordinary giant photos from consuming too much RAM.
     const targetPixels = 12_000_000;
     if (pixels * scale * scale > targetPixels) scale *= Math.sqrt(targetPixels / (pixels * scale * scale));
     if (longest * scale > 14_000) scale *= 14_000 / (longest * scale);
-    return Math.max(.32, Math.min(2.15, scale));
+    return Math.max(.32, Math.min(2.6, scale));
+  }
+
+  function analyzeCanvasTone(canvas) {
+    try {
+      const sample=document.createElement('canvas');
+      const ratio=Math.min(1,360/Math.max(canvas.width,canvas.height));
+      sample.width=Math.max(1,Math.round(canvas.width*ratio));
+      sample.height=Math.max(1,Math.round(canvas.height*ratio));
+      const ctx=sample.getContext('2d',{alpha:false,willReadFrequently:true});
+      if(!ctx)return {low:0,high:255,span:255,colorfulness:0};
+      ctx.drawImage(canvas,0,0,sample.width,sample.height);
+      const data=ctx.getImageData(0,0,sample.width,sample.height).data;
+      const histogram=new Uint32Array(256);
+      let colorfulness=0,count=0;
+      for(let i=0;i<data.length;i+=4){
+        const r=data[i],g=data[i+1],b=data[i+2];
+        const l=Math.max(0,Math.min(255,Math.round(r*.299+g*.587+b*.114)));
+        histogram[l]++; colorfulness+=Math.max(r,g,b)-Math.min(r,g,b); count++;
+      }
+      const percentile=p=>{
+        const target=count*p;let seen=0;
+        for(let i=0;i<histogram.length;i++){seen+=histogram[i];if(seen>=target)return i;}
+        return 255;
+      };
+      const low=percentile(.035),high=percentile(.965);
+      return {low,high,span:Math.max(0,high-low),colorfulness:colorfulness/Math.max(1,count)};
+    } catch (_) { return {low:0,high:255,span:255,colorfulness:0}; }
+  }
+
+  function prepareCanvasPixelsForOcr(canvas) {
+    const tone=analyzeCanvasTone(canvas);
+    // Tesseract already performs its own binarisation. Only rescue genuinely
+    // low-contrast, mostly neutral screenshots here; aggressive black/white
+    // conversion destroys coloured labels, gradients and antialiased glyphs.
+    if(tone.span<18||tone.span>=108||tone.colorfulness>=44)return 'source';
+    try{
+      const ctx=canvas.getContext('2d',{alpha:false,willReadFrequently:true});
+      const image=ctx.getImageData(0,0,canvas.width,canvas.height);
+      const range=Math.max(28,tone.high-tone.low);
+      for(let i=0;i<image.data.length;i+=4){
+        const r=image.data[i],g=image.data[i+1],b=image.data[i+2];
+        const l=r*.299+g*.587+b*.114;
+        const stretched=Math.max(0,Math.min(255,(l-tone.low)*255/range));
+        const value=Math.round(l*.26+stretched*.74);
+        image.data[i]=value;image.data[i+1]=value;image.data[i+2]=value;image.data[i+3]=255;
+      }
+      ctx.putImageData(image,0,0);
+      return 'contrast';
+    }catch(_){return 'source';}
   }
 
   function imageToDataUrl(img, sourceRect, destSize) {
@@ -57,7 +106,8 @@
     ctx.imageSmoothingQuality='high';
     ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(img,sourceRect.x,sourceRect.y,sourceRect.width,sourceRect.height,0,0,canvas.width,canvas.height);
-    return canvas.toDataURL('image/png');
+    const preprocessing=prepareCanvasPixelsForOcr(canvas);
+    return {dataUrl:canvas.toDataURL('image/png'),preprocessing};
   }
 
   async function prepareImageForOcr(dataUrl) {
@@ -77,12 +127,8 @@
           const segments=[];
 
           if(!extreme){
-            if(Math.abs(scale-1)<.035){
-              segments.push({dataUrl,offsetX:0,offsetY:0,width:processedWidth,height:processedHeight});
-            }else{
-              const rendered=imageToDataUrl(img,{x:0,y:0,width:originalWidth,height:originalHeight},{width:processedWidth,height:processedHeight});
-              segments.push({dataUrl:rendered||dataUrl,offsetX:0,offsetY:0,width:processedWidth,height:processedHeight});
-            }
+            const rendered=imageToDataUrl(img,{x:0,y:0,width:originalWidth,height:originalHeight},{width:processedWidth,height:processedHeight});
+            segments.push({dataUrl:rendered?.dataUrl||dataUrl,preprocessing:rendered?.preprocessing||'source',offsetX:0,offsetY:0,width:processedWidth,height:processedHeight});
           }else{
             // Long screenshots / banners are recognized in overlapping tiles so
             // Tesseract never has to shrink the full strip to a tiny short edge.
@@ -96,7 +142,7 @@
               const pw=vertical?processedWidth:len, ph=vertical?len:processedHeight;
               const sx=px/scale, sy=py/scale, sw=pw/scale, sh=ph/scale;
               const rendered=imageToDataUrl(img,{x:sx,y:sy,width:sw,height:sh},{width:pw,height:ph});
-              if(rendered) segments.push({dataUrl:rendered,offsetX:px,offsetY:py,width:pw,height:ph});
+              if(rendered?.dataUrl) segments.push({dataUrl:rendered.dataUrl,preprocessing:rendered.preprocessing||'source',offsetX:px,offsetY:py,width:pw,height:ph});
               if(end>=total) break;
             }
           }
@@ -200,6 +246,21 @@
   }
 
   function normalizeLineKey(text){return String(text||'').toLowerCase().replace(/[\s\p{P}\p{S}]+/gu,'').slice(0,80);}
+  function lineTextSimilarity(a,b){
+    const left=normalizeLineKey(a),right=normalizeLineKey(b);
+    if(!left||!right)return 0;if(left===right)return 1;
+    if(Math.abs(left.length-right.length)>Math.max(3,Math.ceil(Math.max(left.length,right.length)*.28)))return 0;
+    const prev=Array.from({length:right.length+1},(_,i)=>i);
+    for(let i=1;i<=left.length;i++){
+      let diagonal=prev[0];prev[0]=i;
+      for(let j=1;j<=right.length;j++){
+        const old=prev[j];
+        prev[j]=Math.min(prev[j]+1,prev[j-1]+1,diagonal+(left[i-1]===right[j-1]?0:1));
+        diagonal=old;
+      }
+    }
+    return 1-prev[right.length]/Math.max(left.length,right.length);
+  }
   function dedupeLines(lines){
     const sorted=[...lines].sort((a,b)=>(a.bbox?.y0||0)-(b.bbox?.y0||0)||(a.bbox?.x0||0)-(b.bbox?.x0||0));
     const out=[];
@@ -207,14 +268,31 @@
       const key=normalizeLineKey(line.text); if(!key) continue;
       const cy=((line.bbox.y0+line.bbox.y1)/2), cx=((line.bbox.x0+line.bbox.x1)/2);
       const dup=out.find(prev=>{
-        if(normalizeLineKey(prev.text)!==key)return false;
+        if(lineTextSimilarity(prev.text,line.text)<.8)return false;
         const py=(prev.bbox.y0+prev.bbox.y1)/2, px=(prev.bbox.x0+prev.bbox.x1)/2;
         const h=Math.max(8,line.bbox.y1-line.bbox.y0,prev.bbox.y1-prev.bbox.y0);
-        return Math.abs(cy-py)<h*.9&&Math.abs(cx-px)<Math.max(20,(line.bbox.x1-line.bbox.x0)*.35);
+        const w=Math.max(16,line.bbox.x1-line.bbox.x0,prev.bbox.x1-prev.bbox.x0);
+        return Math.abs(cy-py)<h*1.05&&Math.abs(cx-px)<Math.max(24,w*.4);
       });
       if(!dup)out.push(line); else if((line.confidence||0)>(dup.confidence||0))Object.assign(dup,line);
     }
     return out;
+  }
+
+  function selectPageSegMode(width,height){
+    const ratio=width/Math.max(1,height);
+    if(height<=220&&ratio>=3.2)return '7';
+    if(width<=360&&height>=width*2.2)return '4';
+    return '3';
+  }
+
+  function inferLineAlignment(line,imageWidth){
+    const width=Math.max(1,imageWidth||0),box=line?.bbox||{};
+    const x0=Number(box.x0||0),x1=Number(box.x1||0),center=(x0+x1)/2;
+    const boxWidth=Math.max(1,x1-x0);
+    if(Math.abs(center-width/2)<=Math.max(width*.065,boxWidth*.12))return 'center';
+    if(x1>width*.9&&x0>width*.45)return 'right';
+    return 'left';
   }
 
   async function getWorker(rawLangs) {
@@ -238,6 +316,8 @@
       for(let i=0;i<segments.length;i++){
         const seg=segments[i]; currentRecognizeProgress={index:i,total:segments.length};
         post('progress',{id:msg.id,status:segments.length>1?`recognizing segment ${i+1}/${segments.length}`:'recognizing text',progress:i/segments.length});
+        const psm=selectPageSegMode(seg.width||0,seg.height||0);
+        try{await worker.setParameters({tessedit_pageseg_mode:psm,preserve_interword_spaces:'1'});}catch(_){}
         const out=await worker.recognize(seg.dataUrl,{rotateAuto:true},{text:true,tsv:true});
         const scale=Math.max(.0001,prepared.scale||1);
         const mapped=tsvToLines(out?.data?.tsv||'',seg.width||0).map(line=>({
@@ -254,9 +334,9 @@
         if(Number.isFinite(Number(out?.data?.confidence)))confidences.push(Number(out.data.confidence));
       }
       currentRecognizeProgress=null;
-      const lines=dedupeLines(allLines);
+      const lines=dedupeLines(allLines).map(line=>({...line,alignment:inferLineAlignment(line,prepared.originalWidth||0)}));
       const text=lines.length?lines.map(x=>x.text).join('\n'):texts.join('\n');
-      post('result',{id:msg.id,text,confidence:confidences.length?confidences.reduce((a,b)=>a+b,0)/confidences.length:0,langKey:langKey(langs),imageWidth:prepared.originalWidth||0,imageHeight:prepared.originalHeight||0,processedWidth:prepared.processedWidth||0,processedHeight:prepared.processedHeight||0,lines});
+      post('result',{id:msg.id,text,confidence:confidences.length?confidences.reduce((a,b)=>a+b,0)/confidences.length:0,langKey:langKey(langs),imageWidth:prepared.originalWidth||0,imageHeight:prepared.originalHeight||0,processedWidth:prepared.processedWidth||0,processedHeight:prepared.processedHeight||0,preprocessing:[...new Set(segments.map(segment=>segment.preprocessing||'source'))],lines});
     }catch(e){post('error',{id:msg.id,error:readableOcrError(e)});}
     finally{currentRecognizeProgress=null;self.__jijianActiveOcrId='';}
   });

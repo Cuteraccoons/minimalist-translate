@@ -43,6 +43,16 @@
       figure.innerHTML = `<div class="fixture-figure-surface" aria-hidden="true">figure</div><figcaption>A table-caption description must keep its translated text inside the figure caption.</figcaption>`;
       card.appendChild(figure);
     }
+    if (index === 2) {
+      const quote = document.createElement("blockquote");
+      quote.textContent = "A quoted observation should remain visibly distinct from the surrounding article prose.";
+      card.appendChild(quote);
+    }
+    if (index === 3) {
+      const code = document.createElement("pre");
+      code.textContent = "const reading = true;\nconsole.log(reading);";
+      card.appendChild(code);
+    }
 
     if (structure === "heading") {
       const heading = document.createElement("h3");
@@ -92,7 +102,7 @@
 
   window.runBilingualLayoutAudit = () => {
     const translated = Array.from(document.querySelectorAll(".raccoon-translated-block,.raccoon-translated-inline"));
-    const report = { cases:TOTAL_CASES, translated:translated.length, missing:0, overlaps:0, lowContrast:0, overflow:0, iconDrift:0, squeezedRows:0, richControlDamage:0, richLinkedMissing:0, hiddenTocMissing:0, tocNumberDamage:0, alignmentMismatch:0, emphasisMismatch:0 };
+    const report = { cases:TOTAL_CASES, translated:translated.length, missing:0, overlaps:0, lowContrast:0, overflow:0, iconDrift:0, squeezedRows:0, richControlDamage:0, richLinkedMissing:0, proseLinkDamage:0, hiddenTocMissing:0, tocNumberDamage:0, alignmentMismatch:0, emphasisMismatch:0 };
     translated.forEach(node => {
       const sourceId = node.dataset.raccoonSourceId;
       const source = sourceId ? document.querySelector(`[data-raccoon-id="${CSS.escape(sourceId)}"]`) : null;
@@ -131,6 +141,10 @@
     if (richCard?.classList.contains("raccoon-ui-translated") || (richMedia && Math.abs(richMedia.getBoundingClientRect().width - Number(richMedia.dataset.fixtureInitialWidth)) > .75)) report.richControlDamage += 1;
     const richTranslation = richCard?.querySelector(".raccoon-linked-card-translation");
     if (!richTranslation || richTranslation.closest("a[href]") !== richCard || !richCard.innerText.includes("Research model card")) report.richLinkedMissing += 1;
+    const relatedProse = document.querySelector(".fixture-related-prose");
+    const relatedLinks = Array.from(relatedProse?.querySelectorAll("a[href]") || []);
+    const relatedTranslation = relatedProse?.querySelector(".raccoon-translated-block,.raccoon-translated-inline") || relatedProse?.nextElementSibling?.matches(".raccoon-translated-block,.raccoon-translated-inline");
+    if (relatedLinks.length !== 3 || relatedLinks.some(link => link.classList.contains("raccoon-ui-translated")) || relatedLinks.some(link => /^译文/.test(link.textContent.trim())) || !relatedTranslation) report.proseLinkDamage += 1;
     const hiddenToc = document.querySelector(".fixture-toc-collapsed .vector-toc-link");
     if (hiddenToc && !hiddenToc.classList.contains("raccoon-ui-translated")) report.hiddenTocMissing += 1;
     document.querySelectorAll(".fixture-toc .vector-toc-link").forEach(link => {

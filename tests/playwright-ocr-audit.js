@@ -17,9 +17,15 @@ async page => {
         if(msg.type==="progress")progress.push(`${msg.status}:${Math.round(Number(msg.progress||0)*100)}`);
         if(msg.type==="error"){cleanup();reject(new Error(msg.error||"OCR 失败"));}
         if(msg.type==="result"){
-          const result={text:String(msg.text||"").trim(),lines:Array.isArray(msg.lines)?msg.lines.length:0,progress:progress.slice(-8)};
+          const result={
+            text:String(msg.text||"").trim(),
+            lines:Array.isArray(msg.lines)?msg.lines.length:0,
+            alignments:Array.isArray(msg.lines)?msg.lines.map(line=>line.alignment):[],
+            preprocessing:Array.isArray(msg.preprocessing)?msg.preprocessing:[],
+            progress:progress.slice(-8)
+          };
           cleanup();
-          if(!/HELLO/i.test(result.text)||!/SECOND/i.test(result.text)||result.lines<2)reject(new Error(`OCR 跨栏分区不完整：${JSON.stringify(result)}`));
+          if(!/HELLO/i.test(result.text)||!/SECOND/i.test(result.text)||result.lines<2||!result.alignments.includes("left")||!result.alignments.includes("right")||!result.preprocessing.length)reject(new Error(`OCR 跨栏分区或对齐信息不完整：${JSON.stringify(result)}`));
           else resolve(result);
         }
       };

@@ -985,10 +985,29 @@
     return !!el.closest?.(".infobox,.sidebar,.navbox,.vertical-navbox,.metadata,.ambox");
   }
 
+  function isArticleProseLink(el) {
+    const link = el?.closest?.("a[href]");
+    if (!link || link.closest?.(UI_CHROME_ANCESTOR_SELECTOR)) return false;
+    if (link.matches?.("[role='tab'],[role='menuitem'],[role='option'],[role='button'],[aria-haspopup],[aria-controls]")) return false;
+    if (isRichContentControl(link)) return true;
+
+    const proseHost = link.closest?.("p,blockquote,figcaption,dd,dt,h1,h2,h3,h4,h5,h6,[role='heading']");
+    if (proseHost) {
+      const hostText = String(extractOriginalTextFromLiveDom(proseHost) || proseHost.textContent || "").replace(/\s+/g, " ").trim();
+      const linkText = String(extractOriginalTextFromLiveDom(link) || link.textContent || "").replace(/\s+/g, " ").trim();
+      if (proseHost !== link && hostText.length >= linkText.length + 4) return true;
+      if (/^H[1-6]$/.test(proseHost.tagName || "")) return true;
+    }
+
+    const listItem = link.closest?.("li");
+    if (listItem && listItem.closest?.("article,main,[role='main'],[role='article']") && !listItem.closest?.("nav,[role='navigation'],[role='menu'],[role='tablist']")) return true;
+    return false;
+  }
+
   function hasPeerNavigationContext(el) {
     const control = el.closest?.("a,button,[role='tab'],[role='menuitem']") || el;
     if (!control || String(extractOriginalTextFromLiveDom(control) || control.textContent || "").trim().length > 90) return false;
-    if (isRichContentControl(control)) return false;
+    if (isRichContentControl(control) || isArticleProseLink(control)) return false;
     let group = control.parentElement;
     for (let depth = 0; group && depth < 3; depth++, group = group.parentElement) {
       const controls = Array.from(group.querySelectorAll?.(":scope > a, :scope > button, :scope > [role='tab'], :scope > * > a, :scope > * > button, :scope > * > [role='tab']") || [])
@@ -1088,7 +1107,7 @@
 
   function isUiChromeElement(el) {
     if (!el || isExtensionOwnedElement(el)) return false;
-    if (isRichContentControl(el)) return false;
+    if (isRichContentControl(el) || isArticleProseLink(el)) return false;
     if (el.matches?.(INTERACTIVE_UI_SELECTOR)) return true;
     if (el.closest?.(UI_CHROME_ANCESTOR_SELECTOR)) return true;
     if (hasPeerNavigationContext(el)) return true;
@@ -1231,7 +1250,7 @@
     const selector = [
       '[role="tab"]','[role="menuitem"]','[role="option"]','[aria-selected]','[data-tab]','.tab','button','summary',
       'nav a','header a','[role="navigation"] a','[role="toolbar"] a','[role="menu"] a',
-      '.tab-bar a','.tabs a','.tablist a','a'
+      '.tab-bar a','.tabs a','.tablist a'
     ].join(',');
 
     queryScopedElements(container, selector).forEach(el => {
@@ -1766,7 +1785,7 @@
     const origRawText = getHostOriginalText(origEl);
     const isNavOrTab = false;
     const isRichLinkedContent = origEl.tagName === "A" && isRichContentControl(origEl);
-    let attachShortLabel = origEl.tagName === "A" && (origRawText.length <= 80 || isRichLinkedContent);
+    let attachShortLabel = origEl.tagName === "A" && isRichLinkedContent;
     // A figcaption can be rendered as table-caption (Wikipedia does this).
     // Inserting a sibling DIV into that formatting context reorders geometry and
     // visually overlaps the caption; keep its translation inside the caption.
@@ -2604,18 +2623,36 @@
     };
     const host = window.location.hostname.toLowerCase();
     const siteSelectors = [
-      [/(medium\.com|substack\.com)/, "article, .story-model, .postArticle-content"],
-      [/zhihu\.com/, ".QuestionAnswer-content, .Post-RichText, .RichContent-inner"],
-      [/douban\.com/, ".note-content, .review-content, #link-report"],
-      [/bilibili\.com/, ".article-holder, .bili-article"],
-      [/nytimes\.com/, 'section[name="articleBody"], .meteredContent'],
-      [/psychologytoday\.com/, ".article-body, .field--name-body"],
+      [/(?:medium\.com|substack\.com|wordpress\.com|blogspot\.com|ghost\.io)/, "article, .pw-post-body-paragraph, .body.markup, .entry-content, .post-content, .gh-content"],
+      [/(?:zhihu\.com|zhuanlan\.zhihu\.com)/, ".Post-RichText, .QuestionAnswer-content, .RichContent-inner, .RichText.ztext"],
+      [/douban\.com/, ".note-content, .review-content, #link-report, .topic-content"],
+      [/bilibili\.com/, ".article-holder, .bili-article, .read-article-holder"],
+      [/mp\.weixin\.qq\.com/, "#js_content, .rich_media_content"],
+      [/(?:juejin\.cn|juejin\.im)/, ".article-content, .markdown-body, .entry-content"],
+      [/cnblogs\.com/, "#cnblogs_post_body, .postBody, .blogpost-body"],
+      [/csdn\.net/, "#content_views, .article_content, .markdown_views"],
+      [/sspai\.com/, "#article-content, .article-content"],
+      [/(?:github\.com|gitlab\.com|gitee\.com)/, ".markdown-body, .wiki, .readme, [data-testid='readme']"],
+      [/(?:developer\.mozilla\.org|web\.dev|react\.dev|kubernetes\.io)/, "main article, article, .main-page-content, .content, .td-content"],
+      [/(?:docs\.aws\.amazon\.com|readthedocs\.io)/, "#main-content, [role='main'], .rst-content, .document"],
+      [/freecodecamp\.org/, "article, .post-content, .article-content"],
+      [/(?:reuters\.com|apnews\.com|npr\.org|cnn\.com|cnbc\.com|axios\.com|politico\.com|propublica\.org)/, "article, [data-testid='article-body'], [data-key='article'], .article-body, .storytext"],
+      [/(?:theguardian\.com|theverge\.com|arstechnica\.com|wired\.com|techcrunch\.com|theatlantic\.com|newyorker\.com)/, "article, .article-body, .article-content, .entry-content, .c-entry-content"],
+      [/(?:economist\.com|ft\.com|foreignaffairs\.com|foreignpolicy\.com)/, "article, .article__body-text, .article-body, .story-body"],
+      [/(?:nature\.com|sciencedirect\.com|ieeexplore\.ieee\.org)/, "article, .c-article-body, .article-body, .document-main"],
+      [/pubmed\.ncbi\.nlm\.nih\.gov/, "main, .abstract-content, .full-view"],
+      [/(?:nhk\.or\.jp|www3\.nhk\.or\.jp)/, "article, .content--detail-body, .body-text, .detail-main"],
+      [/note\.com/, "article, .note-common-styles__textnote-body, .p-article__content"],
+      [/(?:36kr\.com|huxiu\.com|thepaper\.cn|jiemian\.com|yicai\.com)/, "article, .article-content, .article-body, .news_txt, .kr-rich-text"],
+      [/nytimes\.com/, 'section[name="articleBody"], .meteredContent, article'],
+      [/psychologytoday\.com/, ".article-body, .field--name-body, article"],
       [/wikipedia\.org/, "#mw-content-text .mw-parser-output"]
     ];
     for (const [pattern, selector] of siteSelectors) {
       if (pattern.test(host)) {
-        const hit = document.querySelector(selector);
-        if (hit && (hit.innerText || "").trim().length > 180) return remember(hit);
+        const hits = Array.from(document.querySelectorAll(selector)).filter(hit => (hit.innerText || "").trim().length > 180);
+        const hit = hits.reduce((best, candidate) => scoreReaderCandidate(candidate) > scoreReaderCandidate(best) ? candidate : best, null);
+        if (hit) return remember(hit);
       }
     }
 
@@ -2739,8 +2776,8 @@
     const result = [];
     let accumulatedText = 0;
     let tailReached = false;
-    const noiseContainerRe = /(?:^|[-_\s])(related|recommend|recommended|suggest|suggested|more-stories|more-from|next-article|prev-article|newsletter|comments?|responses?|discussion|outbrain|taboola|sidebar|footer|social|share)(?:$|[-_\s])/i;
-    const tailHeadingRe = /^(?:related|recommended|read more|more stories|you may also like|more from|相关推荐|相关阅读|推荐阅读|更多文章|相关文章|猜你喜欢|延伸阅读|更多推荐|関連記事|おすすめ|こちらもおすすめ|あわせて読みたい|次の記事|関連コンテンツ)/i;
+    const noiseContainerRe = /(?:^|[-_\s])(related|recommend|recommended|suggest|suggested|more-stories|more-from|next-article|prev-article|newsletter|comments?|responses?|discussion|outbrain|taboola|sidebar|footer|social|share|promo|sponsored|advertisement|ads?|banner|popup|modal|subscribe|signup)(?:$|[-_\s])/i;
+    const tailHeadingRe = /^(?:related|recommended|read more|more stories|you may also like|more from|keep reading|further reading|most read|popular now|相关推荐|相关阅读|推荐阅读|更多文章|相关文章|猜你喜欢|延伸阅读|更多推荐|関連記事|おすすめ|こちらもおすすめ|あわせて読みたい|次の記事|関連コンテンツ|人気記事|관련 기사|추천 기사|더보기|articles connexes|à lire aussi|artículos relacionados|te puede interesar|articoli correlati|ähnliche artikel|weiterlesen|похожие статьи|читайте также)/i;
 
     for (const node of raw) {
       if (tailReached) break;
@@ -2751,10 +2788,11 @@
 
       if (node.tagName === "IMG") {
         const src = getReaderImageInfo(node).src;
-        const hint = `${src} ${node.alt || ""} ${node.className || ""}`.toLowerCase();
-        if (!src || /icon|avatar|logo|emoji|sprite|tracking|pixel/.test(hint)) continue;
+        const hint = `${src} ${node.alt || ""} ${node.className || ""} ${node.id || ""}`.toLowerCase();
+        if (!src || /icon|avatar|logo|emoji|sprite|tracking|pixel|badge|button|chevron|favicon|placeholder|loading|spinner|divider|separator|advert|promo|sponsor|banner|watermark|qrcode|qr-code/.test(hint)) continue;
         const w = Number(node.getAttribute("width")) || node.naturalWidth || 0;
         const h = Number(node.getAttribute("height")) || node.naturalHeight || 0;
+        if (w > 0 && h > 0 && Math.max(w,h) / Math.max(1,Math.min(w,h)) > 12) continue;
         if (!(w >= 180 || h >= 120 || (!w && !h))) continue;
         result.push(node);
         continue;
@@ -2832,6 +2870,20 @@
       } catch (_) {}
     }
     return inner;
+  }
+
+  function readerOriginalTextPreservingWhitespace(sourceNode) {
+    if (!sourceNode) return "";
+    try {
+      const clone = sourceNode.cloneNode(true);
+      const sourceWalker = document.createTreeWalker(sourceNode, NodeFilter.SHOW_TEXT);
+      const cloneWalker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+      while (sourceWalker.nextNode() && cloneWalker.nextNode()) {
+        cloneWalker.currentNode.nodeValue = originalTextForNode(sourceWalker.currentNode);
+      }
+      clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
+      return String(clone.textContent || "").replace(/^\n+|\n+$/g, "");
+    } catch (_) { return String(sourceNode.textContent || ""); }
   }
 
   function normalizedReaderTitle(value) {
@@ -2950,13 +3002,22 @@
                 }
                 const headingLevel = readerHeadingLevel(node);
                 const isHeading = headingLevel > 0;
+                const isFigcaption = node.tagName === "FIGCAPTION";
+                const isCode = node.tagName === "PRE";
+                const isQuote = node.tagName === "BLOCKQUOTE";
+                const isListItem = node.tagName === "LI";
                 const contentTag = isHeading ? `h${headingLevel}` : "p";
+                const wrapperClass = isCode ? "reader-code-block" : isQuote ? "reader-blockquote" : isListItem ? "reader-list-block" : "";
+                const pairClass = isFigcaption ? " reader-figcaption" : "";
+                const originalHtml = isCode
+                  ? escapeHtml(readerOriginalTextPreservingWhitespace(node)).replace(/\n/g, "<br>")
+                  : (readerInlineHtml(node) || escapeHtml(getHostOriginalText(node)));
                 return `
-                  <div class="reader-paragraph-pair" id="head_${idx}" data-para-id="r_${idx}" data-heading="${isHeading ? 'true' : 'false'}">
-                    <${contentTag} class="reader-orig-p ${isHeading ? 'reader-structural-heading' : ''}">${readerInlineHtml(node) || escapeHtml(getHostOriginalText(node))}</${contentTag}>
+                  ${wrapperClass ? `<div class="${wrapperClass}">` : ""}<div class="reader-paragraph-pair${pairClass}" id="head_${idx}" data-para-id="r_${idx}" data-heading="${isHeading ? 'true' : 'false'}">
+                    <${contentTag} class="reader-orig-p ${isHeading ? 'reader-structural-heading' : ''}">${originalHtml}</${contentTag}>
                     <${contentTag} class="reader-trans-p ${isHeading ? 'reader-structural-heading' : ''}" data-render-style="${escapeHtml(savedRenderStyle)}"><span class="reader-translation-text">正在同步精排译文...</span></${contentTag}>
-                    ${!isHeading ? `<button type="button" class="reader-inline-translate-btn" data-reader-translate-one title="翻译这一段" aria-label="翻译这一段"><img src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true"></button>` : ""}
-                  </div>
+                    ${!isHeading && !isFigcaption && !isCode ? `<button type="button" class="reader-inline-translate-btn" data-reader-translate-one title="翻译这一段" aria-label="翻译这一段"><img src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true"></button>` : ""}
+                  </div>${wrapperClass ? "</div>" : ""}
                 `;
               }).join("")}
             </div>
@@ -4096,7 +4157,8 @@
       index,
       text: cleanImageOcrText(line?.text || "").replace(/\n+/g," ").trim(),
       bbox: line?.bbox,
-      confidence: Number(line?.confidence || 0)
+      confidence: Number(line?.confidence || 0),
+      alignment: ["left","center","right"].includes(line?.alignment) ? line.alignment : ""
     })).filter(line => {
       const b=line.bbox;
       return line.text && b && Number.isFinite(b.x0) && Number.isFinite(b.y0) && Number.isFinite(b.x1) && Number.isFinite(b.y1)
@@ -4188,16 +4250,17 @@
 
   function fitTranslatedText(ctx,text,rect,initialFont) {
     const fontFamily = getImageTranslationFontCss();
-    const minFont=Math.max(9,Math.round(initialFont*.46));
+    const cjk=/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/u.test(String(text||""));
+    const minFont=Math.max(8,Math.round(initialFont*.43));
     for(let fs=Math.round(initialFont);fs>=minFont;fs--){
       ctx.font=`600 ${fs}px ${fontFamily}`;
       const lines=wrapCanvasText(ctx,text,Math.max(10,rect.width));
-      const lineHeight=Math.round(fs*1.24);
+      const lineHeight=Math.round(fs*(cjk?1.34:1.27));
       if(lines.length*lineHeight<=rect.height && lines.every(line=>ctx.measureText(line).width<=rect.width+1)) return {fontSize:fs,lineHeight,lines};
     }
     const fs=minFont;
     ctx.font=`600 ${fs}px ${fontFamily}`;
-    const lineHeight=Math.round(fs*1.22);
+    const lineHeight=Math.round(fs*(cjk?1.32:1.25));
     const maxLines=Math.max(1,Math.floor(rect.height/lineHeight));
     const lines=wrapCanvasText(ctx,text,Math.max(10,rect.width)).slice(0,maxLines);
     if(lines.length){
@@ -4206,6 +4269,46 @@
       if(lines.join("").length<String(text||"").replace(/\s/g,"").length)lines[lines.length-1]=`${last.replace(/[.,，。;；:：!?！？…]+$/u,"")}…`;
     }
     return {fontSize:fs,lineHeight,lines};
+  }
+
+  function buildImageTranslationLayout(items, sx, sy, canvasWidth, canvasHeight) {
+    const mapped=items.map((item,index)=>{
+      const box=item.bbox||{};
+      const x0=clampNumber(Number(box.x0||0)*sx,0,canvasWidth-1);
+      const y0=clampNumber(Number(box.y0||0)*sy,0,canvasHeight-1);
+      const x1=clampNumber(Number(box.x1||0)*sx,x0+1,canvasWidth);
+      const y1=clampNumber(Number(box.y1||0)*sy,y0+1,canvasHeight);
+      return {...item,index,base:{x0,y0,x1,y1,width:x1-x0,height:y1-y0}};
+    });
+
+    return mapped.map(item=>{
+      const base=item.base;
+      let leftLimit=0,rightLimit=canvasWidth,topLimit=0,bottomLimit=canvasHeight;
+      for(const other of mapped){
+        if(other===item)continue;
+        const box=other.base;
+        const overlapY=Math.max(0,Math.min(base.y1,box.y1)-Math.max(base.y0,box.y0));
+        const sameBand=overlapY/Math.max(1,Math.min(base.height,box.height))>.28 || Math.abs((base.y0+base.y1-box.y0-box.y1)/2)<Math.max(base.height,box.height)*.58;
+        if(sameBand&&box.x1<=base.x0)leftLimit=Math.max(leftLimit,(box.x1+base.x0)/2);
+        if(sameBand&&box.x0>=base.x1)rightLimit=Math.min(rightLimit,(base.x1+box.x0)/2);
+
+        const overlapX=Math.max(0,Math.min(base.x1,box.x1)-Math.max(base.x0,box.x0));
+        const sameColumn=overlapX/Math.max(1,Math.min(base.width,box.width))>.24;
+        if(sameColumn&&box.y1<=base.y0)topLimit=Math.max(topLimit,(box.y1+base.y0)/2);
+        if(sameColumn&&box.y0>=base.y1)bottomLimit=Math.min(bottomLimit,(base.y1+box.y0)/2);
+      }
+      const padX=Math.max(2,Math.min(12,Math.round(base.height*.22)));
+      const padY=Math.max(2,Math.min(8,Math.round(base.height*.16)));
+      const x0=clampNumber(Math.max(leftLimit,base.x0-padX),0,canvasWidth-1);
+      const y0=clampNumber(Math.max(topLimit,base.y0-padY),0,canvasHeight-1);
+      const x1=clampNumber(Math.min(rightLimit,base.x1+padX),x0+1,canvasWidth);
+      const y1=clampNumber(Math.min(bottomLimit,base.y1+padY),y0+1,canvasHeight);
+      const center=(base.x0+base.x1)/2;
+      const inferred=Math.abs(center-canvasWidth/2)<Math.max(canvasWidth*.065,base.width*.12)
+        ? "center"
+        : (base.x1>canvasWidth*.9&&base.x0>canvasWidth*.45 ? "right" : "left");
+      return {...item,rect:{x:x0,y:y0,width:x1-x0,height:y1-y0},textAlign:item.alignment||inferred};
+    });
   }
 
   function getImageTranslationFontCss() {
@@ -4234,22 +4337,13 @@
     const items=Array.isArray(translation?.items)?translation.items:[];
 
     if(items.length){
-      for(let itemIndex=0;itemIndex<items.length;itemIndex++){
-        const item=items[itemIndex];
-        const b=item.bbox||{};
-        let x=clampNumber(Number(b.x0||0)*sx,0,canvas.width-1);
-        let y=clampNumber(Number(b.y0||0)*sy,0,canvas.height-1);
-        let w=clampNumber((Number(b.x1||0)-Number(b.x0||0))*sx,8,canvas.width-x);
-        let h=clampNumber((Number(b.y1||0)-Number(b.y0||0))*sy,8,canvas.height-y);
-        const pad=Math.max(2,Math.min(8,Math.round(h*.12)));
-        const horizontalPad=Math.max(2,Math.min(10,Math.round(h*.18)));
-        x=clampNumber(x-horizontalPad,0,canvas.width-1);
-        y=clampNumber(y-pad,0,canvas.height-1);
-        w=Math.min(canvas.width-x,w+horizontalPad*2);
-        h=Math.min(canvas.height-y,h+pad*2);
-        const initial=Math.max(10,Math.min(52,h*.64));
-        const rect={x,y,width:w,height:h};
-        let fitted=fitTranslatedText(ctx,item.translated,rect,initial);
+      const layoutItems=buildImageTranslationLayout(items,sx,sy,canvas.width,canvas.height);
+      for(const item of layoutItems){
+        const rect=item.rect;
+        const inset=Math.max(2,Math.min(8,Math.round(rect.height*.12)));
+        const textRect={x:rect.x+inset,y:rect.y,width:Math.max(8,rect.width-inset*2),height:rect.height};
+        const initial=Math.max(10,Math.min(54,rect.height*.72));
+        const fitted=fitTranslatedText(ctx,item.translated,textRect,initial);
         const sample=sampleCanvasBackground(sourceCtx,rect,canvas.width,canvas.height);
         const [localR,localG,localB]=sample.color;
         const useLightText=(localR*299+localG*587+localB*114)/1000<132;
@@ -4261,11 +4355,10 @@
         ctx.font=`600 ${fitted.fontSize}px ${getImageTranslationFontCss()}`;
         const totalH=fitted.lines.length*fitted.lineHeight;
         const startY=rect.y+Math.max(0,(rect.height-totalH)/2);
-        const centerX=rect.x+rect.width/2;
-        ctx.textAlign="center";
-        const drawX=centerX;
+        ctx.textAlign=item.textAlign;
+        const drawX=item.textAlign==="center"?rect.x+rect.width/2:item.textAlign==="right"?rect.x+rect.width-inset:rect.x+inset;
         fitted.lines.forEach((line,i)=>{
-          ctx.fillText(line,drawX,startY+i*fitted.lineHeight,Math.max(8,rect.width-pad*2));
+          ctx.fillText(line,drawX,startY+i*fitted.lineHeight,Math.max(8,rect.width-inset*2));
         });
         ctx.restore();
       }

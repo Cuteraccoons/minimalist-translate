@@ -5,11 +5,12 @@ body{margin:0;padding:24px}
 .fixture-header nav{display:flex;align-items:center;gap:10px;min-width:0}
 .fixture-header a,.case-nav a{display:flex;align-items:center;gap:7px;min-width:0;color:inherit;text-decoration:none}
 .fixture-icon{flex:0 0 18px;width:18px;height:18px;display:grid;place-items:center;font-size:11px}
-.fixture-regressions{display:grid;grid-template-columns:1.2fr .8fr 1fr;gap:14px;margin:0 0 18px}
-.fixture-flex-row,.fixture-toc,.fixture-rich-card{min-width:0;padding:13px;border:1px solid #d8dde5;border-radius:12px;background:#fff;color:#18202a}
+.fixture-regressions{display:grid;grid-template-columns:1.2fr .8fr 1fr 1.15fr;gap:14px;margin:0 0 18px}
+.fixture-flex-row,.fixture-toc,.fixture-rich-card,.fixture-related-prose{min-width:0;padding:13px;border:1px solid #d8dde5;border-radius:12px;background:#fff;color:#18202a}
 .fixture-flex-row{display:flex;align-items:flex-start;gap:10px}.fixture-flex-row button{flex:0 0 34px;width:34px;height:34px}.fixture-flex-row p{flex:1 1 0;min-width:0;margin:0}
 .fixture-toc{display:flex;flex-direction:column;gap:4px}.fixture-toc a{display:flex;min-width:0;padding:4px 6px;color:inherit;text-decoration:none}.vector-toc-text{display:flex;gap:7px;min-width:0}.vector-toc-numb{flex:0 0 28px}.fixture-toc-collapsed{display:none}
 .fixture-rich-card{display:flex;align-items:flex-start;gap:10px;text-decoration:none}.fixture-rich-media{display:grid;place-items:center;flex:0 0 46px;width:46px;height:46px;border-radius:10px;background:#e7edf4}.fixture-rich-card>span:last-child{display:grid;gap:5px;min-width:0}.fixture-rich-card strong{font-size:15px}.fixture-rich-card strong+span{font-size:13px;line-height:1.45;color:#596575}
+.fixture-related-prose{margin:0;line-height:1.55}.fixture-related-prose a{color:#235da7;text-decoration:underline;text-underline-offset:2px}
 #matrix{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;align-items:start}
 .fixture-case{position:relative;min-width:0;padding:16px;border:1px solid rgba(110,120,135,.22);border-radius:13px;box-shadow:0 4px 14px rgba(20,25,35,.06)}
 .surface-light{color:#18202a;background:#fff}

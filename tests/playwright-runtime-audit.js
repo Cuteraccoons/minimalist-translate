@@ -49,7 +49,7 @@ async page => {
   });
   await page.waitForFunction(() => document.querySelectorAll(".raccoon-translated-block,.raccoon-translated-inline,.raccoon-linked-card-translation").length > 80, null, {timeout:20000});
   const layout = await page.evaluate(() => globalThis.runBilingualLayoutAudit());
-  if(layout.missing || layout.overlaps || layout.lowContrast || layout.overflow || layout.iconDrift || layout.squeezedRows || layout.richControlDamage || layout.richLinkedMissing || layout.hiddenTocMissing || layout.tocNumberDamage || layout.alignmentMismatch || layout.emphasisMismatch){
+  if(layout.missing || layout.overlaps || layout.lowContrast || layout.overflow || layout.iconDrift || layout.squeezedRows || layout.richControlDamage || layout.richLinkedMissing || layout.proseLinkDamage || layout.hiddenTocMissing || layout.tocNumberDamage || layout.alignmentMismatch || layout.emphasisMismatch){
     throw new Error(`布局矩阵失败：${JSON.stringify(layout)}`);
   }
 
@@ -82,9 +82,16 @@ async page => {
       const cs=getComputedStyle(card),ps=pair?getComputedStyle(pair):null;
       signatures.push([root.dataset.surface,cs.maxWidth,cs.backgroundColor,cs.borderRadius,cs.paddingLeft,ps?.borderBottomStyle||""].join("|"));
     }
-    return {count:buttons.length,unique:new Set(signatures).size,outline:root.querySelectorAll(".reader-outline-item").length};
+    return {
+      count:buttons.length,
+      unique:new Set(signatures).size,
+      outline:root.querySelectorAll(".reader-outline-item").length,
+      codeBlocks:root.querySelectorAll(".reader-code-block").length,
+      quotes:root.querySelectorAll(".reader-blockquote").length,
+      captions:root.querySelectorAll(".reader-figcaption").length
+    };
   });
-  if(reader.count!==4 || reader.unique<4 || reader.outline<3)throw new Error(`阅读模式结构失败：${JSON.stringify(reader)}`);
+  if(reader.count!==4 || reader.unique<4 || reader.outline<3 || reader.codeBlocks<1 || reader.quotes<1 || reader.captions<1)throw new Error(`阅读模式结构失败：${JSON.stringify(reader)}`);
 
   await page.goto(`${base}/options.html`);
   await page.waitForFunction(() => document.querySelectorAll("[data-preview-pair]").length === 3);

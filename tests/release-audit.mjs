@@ -106,6 +106,9 @@ const sandbox = read('ocr-sandbox.html');
 for (const needle of [
   'calculateOcrScale',
   'prepareImageForOcr',
+  'prepareCanvasPixelsForOcr',
+  'selectPageSegMode',
+  'lineTextSimilarity',
   'segments',
   'TESSDATA_GITHUB',
   'recognizing segment'
@@ -117,6 +120,8 @@ for (const needle of ['showImageSource','restoreImageSource','data-act="download
 }
 if (content.includes('class="image-translate-render"')) fail('translated image still renders in a fixed viewport overlay');
 if (content.includes('data-act="save-original"') || content.includes('data-act="save-translated"')) fail('legacy two-download image actions remain');
+if (!content.includes('function buildImageTranslationLayout') || !content.includes('textAlign:item.alignment||inferred')) fail('translated image does not preserve bounded source alignment');
+if (!content.includes('function isArticleProseLink') || content.includes("'.tab-bar a','.tabs a','.tablist a','a'")) fail('article links can still be classified as navigation chrome');
 if (!manifest.content_security_policy?.sandbox?.includes('raw.githubusercontent.com')) fail('OCR fallback host missing from sandbox CSP');
 if (!process.exitCode) pass('image translation geometry / OCR fallback safeguards');
 

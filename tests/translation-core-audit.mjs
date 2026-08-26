@@ -33,6 +33,7 @@ if (!content.includes("line.className = 'raccoon-ui-translation-line'") || !cont
 if (!content.includes("element.addEventListener('mouseenter', showOriginal") || !content.includes("element.addEventListener('focusin', showOriginal")) fail('compact UI original-text preview missing');
 if (!content.includes('record.interactionController?.abort?.()')) fail('compact UI interaction cleanup missing');
 if (!content.includes('function canUseExpandableUiBilingual') || !content.includes('function positionExpandableUiTranslation')) fail('bounded two-line navigation layout missing');
+if (!content.includes('function isArticleProseLink') || content.includes("'.tab-bar a','.tabs a','.tablist a','a'")) fail('article links can still be misclassified as navigation');
 if (!content.includes("rememberInlineStyles(record, ['position', 'padding-bottom', 'min-height'])")) fail('expandable navigation restoration missing');
 if (!content.includes('function setTranslationBadgeSafely')) fail('badge messaging context guard missing');
 if (!background.includes('const TRANSLATION_CACHE_NAMESPACE = "trans:v3"') || !background.includes('const BUNDLE_SIZE = engine === "google" ? 1 : 8')) fail('paragraph-safe Google translation mapping missing');
@@ -48,12 +49,14 @@ if (!content.includes('const offset = preferredGap') || content.includes('prefer
 if (!content.includes('const allowHiddenToc') || !content.includes("(!allowHiddenToc && !isVisibleTranslationElement(liveElement))")) fail('hidden source response guard or structured-TOC exception missing');
 if (!content.includes('function isRichContentControl') || !content.includes('function collectCompactComponentTextUnits')) fail('rich-card/component translation boundary missing');
 if (!content.includes('raccoon-linked-card-translation') || !content.includes('textHost.appendChild(transNode)')) fail('linked editorial-card translation safeguard missing');
+if (!content.includes('function buildImageTranslationLayout') || !content.includes('textAlign:item.alignment||inferred')) fail('OCR bounded alignment layout missing');
 if (!content.includes('cloneWalker.currentNode.nodeValue = originalTextForNode')) fail('reader original-text restoration missing');
 if (!content.includes("meta?.kind === 'component-text'")) fail('compact component render branch missing');
 if (!content.includes('function isStructuredTocControl') || !content.includes('.vector-toc-numb,.tocnumber')) fail('TOC numbering preservation missing');
 if (!content.includes('parentIsRowFlex') || !content.includes('canOwnTranslation')) fail('row-flex bilingual squeeze safeguard missing');
 if (!content.includes('className = "raccoon-translation-text"') || !css.includes('>.raccoon-translation-text')) fail('glyph-only translation highlight wrapper missing');
 if (!content.includes('function warmReaderLazyContent') || !content.includes("[role='heading'][aria-level]")) fail('reader lazy-content or semantic-heading expansion missing');
+if (!content.includes('readerOriginalTextPreservingWhitespace') || !content.includes('reader-code-block') || !css.includes('#raccoon-reader-root .reader-blockquote')) fail('semantic reader blocks missing');
 if (!content.includes('class="reader-outline-label"') || !css.includes('.reader-outline-label{')) fail('reader outline line-box safeguard missing');
 if (!content.includes('new Set(["card", "flat", "column", "folio"])') || (content.match(/data-reader-surface=/g) || []).length !== 4) fail('reader page surface choices are incomplete');
 if (content.includes('reader-toggle-divider') || content.includes('readerDividerVisible') || background.includes('readerDividerVisible')) fail('obsolete reader metadata divider setting remains');
@@ -114,6 +117,21 @@ if (!punctuationSource) {
   for (const [input, lang, expected] of punctuationCases) {
     if (normalize(input, lang) !== expected) fail(`punctuation normalization failed: ${input}`);
   }
+}
+
+const imageLayoutSource = extractFunction(content, 'buildImageTranslationLayout');
+if (!imageLayoutSource) {
+  fail('image translation layout function missing');
+} else {
+  const buildLayout = Function(`function clampNumber(value,min,max){return Math.max(min,Math.min(max,value));}${imageLayoutSource};return buildImageTranslationLayout;`)();
+  const layout = buildLayout([
+    {translated:'左侧',alignment:'left',bbox:{x0:30,y0:40,x1:260,y1:92}},
+    {translated:'右侧',alignment:'right',bbox:{x0:650,y0:42,x1:970,y1:94}},
+    {translated:'下一行',alignment:'center',bbox:{x0:300,y0:140,x1:700,y1:196}}
+  ],1,1,1000,240);
+  const [left,right,below] = layout;
+  if (layout.length !== 3 || left.textAlign !== 'left' || right.textAlign !== 'right' || below.textAlign !== 'center') fail('image translation source alignment was not preserved');
+  if (left.rect.x + left.rect.width > right.rect.x || left.rect.y + left.rect.height > below.rect.y) fail('image translation rectangles overlap neighbouring OCR regions');
 }
 
 if (!process.exitCode) pass('translation core invariants');
