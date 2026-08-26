@@ -1,0 +1,111 @@
+async page => {
+  const base = "http://127.0.0.1:8765";
+  await page.addInitScript(baseUrl => {
+    const listeners = [];
+    const settings = {
+      sourceLang:"auto", targetLang:"zh-CN", displayMode:"bilingual", renderStyle:"classic",
+      replaceRenderStyle:"clean", enableImageTranslation:false, enableDictionaryAi:false,
+      excludeDomainList:["127.0.0.1","example.com"], excludeDomainDefaultRule:{floating:true,hover:true,selection:true,image:true,auto:true},
+      readerSurface:"card", readerTheme:"white", readerWidth:"920", readerFont:"system",
+      readerLineHeight:"1.82", readerParagraphSpacing:"28", readerWritingMode:"horizontal"
+    };
+    const reply = (callback, value) => typeof callback === "function" && queueMicrotask(() => callback(value));
+    globalThis.chrome = {
+      runtime: {
+        id:"jijian-test-runtime", lastError:null,
+        getURL:path => `${baseUrl}/${String(path||"").replace(/^\//,"")}`,
+        getManifest:() => ({version:"1.0.0"}),
+        onMessage:{addListener:listener => listeners.push(listener)},
+        sendMessage(message, callback) {
+          const action=message?.action||"";
+          if(action==="GET_SETTINGS")return reply(callback,{success:true,settings:{...settings}});
+          if(action==="UPDATE_SETTINGS"){Object.assign(settings,message.settings||{});return reply(callback,{success:true});}
+          if(action==="TRANSLATE_BATCH_IDS")return reply(callback,{success:true,data:(message.items||[]).map((item,index)=>({id:item.id,text:`译文 ${index+1}：${String(item.text||"").slice(0,42)}`}))});
+          if(action==="TRANSLATE_SINGLE_BLOCK")return reply(callback,{success:true,text:`译文：${String(message.text||"").slice(0,60)}`});
+          if(action==="GET_IMAGE_OCR_READY_MAP")return reply(callback,{success:true,map:{}});
+          if(action==="GET_TAB_TRANSLATION_SESSION")return reply(callback,{success:true,session:null});
+          if(action==="GET_COLLECTION_COUNTS")return reply(callback,{success:true,vocabulary:0,highlights:0});
+          return reply(callback,{success:true});
+        }
+      },
+      tabs:{query:async()=>[],sendMessage:async()=>({success:true}),create:async()=>({})},
+      permissions:{contains:async()=>false,request:async()=>false},
+      storage:{local:{get:async()=>({}),set:async()=>{}},sync:{get:async()=>({}),set:async()=>{}}}
+    };
+    globalThis.__jijianRuntimeListeners=listeners;
+  }, base);
+
+  await page.goto(`${base}/tests/fixtures/layout-matrix.html`);
+  await page.waitForFunction(() => document.documentElement.dataset.fixtureReady === "120");
+  await page.addStyleTag({url:`${base}/floating.css`});
+  await page.addScriptTag({url:`${base}/content.js`});
+  await page.waitForFunction(() => globalThis.__jijianRuntimeListeners.length > 0);
+  await page.evaluate(() => {
+    for(const listener of globalThis.__jijianRuntimeListeners)listener({action:"TOGGLE_PAGE_TRANSLATION"},{},()=>{});
+  });
+  await page.waitForFunction(() => document.querySelectorAll(".raccoon-translated-block,.raccoon-translated-inline,.raccoon-linked-card-translation").length > 80, null, {timeout:20000});
+  const layout = await page.evaluate(() => globalThis.runBilingualLayoutAudit());
+  if(layout.missing || layout.overlaps || layout.lowContrast || layout.overflow || layout.iconDrift || layout.squeezedRows || layout.richControlDamage || layout.richLinkedMissing || layout.hiddenTocMissing || layout.tocNumberDamage){
+    throw new Error(`布局矩阵失败：${JSON.stringify(layout)}`);
+  }
+
+  const hover = await page.evaluate(async () => {
+    const translations=Array.from(document.querySelectorAll(".raccoon-translated-block,.raccoon-translated-inline")).slice(0,2);
+    if(translations.length<2)return {error:"翻译段落不足"};
+    translations.forEach(node=>node.setAttribute("data-render-style","hover-reveal"));
+    const sourceFor=node=>document.querySelector(`[data-raccoon-id="${CSS.escape(node.dataset.raccoonSourceId||"")}"]`);
+    sourceFor(translations[0])?.dispatchEvent(new PointerEvent("pointerover",{bubbles:true}));
+    await new Promise(resolve=>setTimeout(resolve,30));
+    const first=translations.filter(node=>node.classList.contains("raccoon-hover-revealed")).length;
+    sourceFor(translations[1])?.dispatchEvent(new PointerEvent("pointerover",{bubbles:true}));
+    await new Promise(resolve=>setTimeout(resolve,30));
+    const second=translations.filter(node=>node.classList.contains("raccoon-hover-revealed")).length;
+    return {first,second,firstStill:translations[0].classList.contains("raccoon-hover-revealed")};
+  });
+  if(hover.error || hover.first!==1 || hover.second!==1 || hover.firstStill)throw new Error(`悬停配对失败：${JSON.stringify(hover)}`);
+
+  await page.evaluate(() => {
+    for(const listener of globalThis.__jijianRuntimeListeners)listener({action:"TOGGLE_READER_MODE"},{},()=>{});
+  });
+  await page.waitForSelector("#raccoon-reader-root");
+  const reader = await page.evaluate(() => {
+    const root=document.querySelector("#raccoon-reader-root");
+    const buttons=Array.from(root.querySelectorAll("[data-reader-surface]"));
+    const signatures=[];
+    for(const button of buttons){
+      button.click();
+      const card=root.querySelector(".reader-scroll-card"),pair=root.querySelector(".reader-paragraph-pair");
+      const cs=getComputedStyle(card),ps=pair?getComputedStyle(pair):null;
+      signatures.push([root.dataset.surface,cs.maxWidth,cs.backgroundColor,cs.borderRadius,cs.paddingLeft,ps?.borderBottomStyle||""].join("|"));
+    }
+    return {count:buttons.length,unique:new Set(signatures).size,outline:root.querySelectorAll(".reader-outline-item").length};
+  });
+  if(reader.count!==7 || reader.unique<6 || reader.outline<3)throw new Error(`阅读模式结构失败：${JSON.stringify(reader)}`);
+
+  await page.goto(`${base}/options.html`);
+  await page.waitForFunction(() => document.querySelectorAll("[data-preview-pair]").length === 3);
+  await page.evaluate(async () => {
+    document.querySelector('#render-style-card-grid [data-value="click-reveal"]')?.click();
+    document.querySelector('[data-preview-pair="paragraph-1"]')?.click();
+    await new Promise(resolve=>setTimeout(resolve,60));
+  });
+  const preview = await page.evaluate(() => Array.from(document.querySelectorAll("[data-preview-pair]")).map(pair => ({
+    id:pair.dataset.previewPair,
+    color:getComputedStyle(pair.querySelector(".demo-trans-h,.demo-trans-p")).color
+  })));
+  const visiblePreview=preview.filter(item=>!item.color.endsWith(", 0)")&&!item.color.endsWith(", 0.0)"));
+  if(visiblePreview.length!==1 || visiblePreview[0]?.id!=="paragraph-1"){
+    throw new Error(`设置预览未按段落显示：${JSON.stringify(preview)}`);
+  }
+  const blacklist=await page.evaluate(() => {
+    const buttons=Array.from(document.querySelectorAll(".blacklist-domain-list .domain-config-btn"));
+    buttons[0]?.click();buttons[1]?.click();
+    return {
+      rows:buttons.length,
+      openPanels:document.querySelectorAll(".blacklist-domain-list .domain-scope-panel:not([hidden])").length,
+      activeButtons:document.querySelectorAll(".blacklist-domain-list .domain-config-btn.active").length
+    };
+  });
+  if(blacklist.rows<2||blacklist.openPanels!==1||blacklist.activeButtons!==1)throw new Error(`黑名单设置面板协调失败：${JSON.stringify(blacklist)}`);
+  return {layout,hover,reader,preview,blacklist};
+}

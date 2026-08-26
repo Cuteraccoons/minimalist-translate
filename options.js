@@ -100,8 +100,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const liveTransH = document.getElementById("live-trans-h");
   const liveTransP = document.getElementById("live-trans-p");
   const livePreviewCard = document.querySelector(".preview-card-sticky");
-  let livePreviewHovering = false;
-  let livePreviewClickRevealed = false;
+  let livePreviewHoverPair = "";
+  const livePreviewClickRevealed = new Set();
 
   // 语言与交互
   const optTargetLang = document.getElementById("opt-target-lang");
@@ -382,7 +382,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   optClickRevealColor?.addEventListener("change", (e) => {
     currentSettings.clickRevealColor = e.target.value;
-    livePreviewClickRevealed = false;
+    livePreviewClickRevealed.clear();
     saveSetting({ clickRevealColor: e.target.value });
     updateLivePreview(currentSettings);
   });
@@ -566,7 +566,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }).join("");
     excludeDomainListEl.querySelectorAll(".domain-config-btn").forEach(btn => btn.addEventListener("click", () => {
       const row = btn.closest(".domain-row"); const panel = row?.querySelector(".domain-scope-panel");
-      if (!panel) return; panel.hidden = !panel.hidden; btn.classList.toggle("active", !panel.hidden);
+      if (!panel) return;
+      const opening=panel.hidden;
+      excludeDomainListEl.querySelectorAll(".domain-scope-panel").forEach(other=>{other.hidden=true;other.classList.remove("is-open");});
+      excludeDomainListEl.querySelectorAll(".domain-config-btn").forEach(other=>other.classList.remove("active"));
+      panel.hidden=!opening;panel.classList.toggle("is-open",opening);btn.classList.toggle("active",opening);
     }));
     excludeDomainListEl.querySelectorAll(".domain-remove-icon").forEach(btn => btn.addEventListener("click", async () => {
       const domain = btn.dataset.domain;
@@ -582,7 +586,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       rules[domain]={...getExcludeDomainRule(domain), [scope]:!!input.checked};
       currentSettings.excludeDomainRules=rules;
       await saveExcludeDomainRules(); renderExcludeDomainList();
-      const row = excludeDomainListEl.querySelector(`[data-domain-row="${CSS.escape(domain)}"]`); row?.querySelector('.domain-scope-panel')?.removeAttribute('hidden');
+      const row = excludeDomainListEl.querySelector(`[data-domain-row="${CSS.escape(domain)}"]`); const panel=row?.querySelector('.domain-scope-panel');panel?.removeAttribute('hidden');panel?.classList.add('is-open');row?.querySelector('.domain-config-btn')?.classList.add('active');
     }));
     excludeDomainListEl.querySelectorAll('.domain-reset-rule').forEach(btn => btn.addEventListener('click', async () => {
       const rules={...(currentSettings.excludeDomainRules||{})}; delete rules[btn.dataset.domain]; currentSettings.excludeDomainRules=rules;
@@ -1121,11 +1125,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderExcludeDomainList();
   }
 
-  livePreviewCard?.addEventListener("mouseenter", () => { livePreviewHovering = true; updateLivePreview(currentSettings); });
-  livePreviewCard?.addEventListener("mouseleave", () => { livePreviewHovering = false; updateLivePreview(currentSettings); });
-  livePreviewCard?.addEventListener("click", () => {
+  livePreviewCard?.addEventListener("mouseover", (event) => {
+    const pair = event.target?.closest?.("[data-preview-pair]");
+    const next = pair?.dataset.previewPair || "";
+    if (next === livePreviewHoverPair) return;
+    livePreviewHoverPair = next;
+    updateLivePreview(currentSettings);
+  });
+  livePreviewCard?.addEventListener("mouseleave", () => {
+    livePreviewHoverPair = "";
+    updateLivePreview(currentSettings);
+  });
+  livePreviewCard?.addEventListener("click", (event) => {
     if (activeTypographyRenderStyle() !== "click-reveal") return;
-    livePreviewClickRevealed = !livePreviewClickRevealed;
+    const pairId = event.target?.closest?.("[data-preview-pair]")?.dataset.previewPair;
+    if (!pairId) return;
+    if (livePreviewClickRevealed.has(pairId)) livePreviewClickRevealed.delete(pairId);
+    else livePreviewClickRevealed.add(pairId);
     updateLivePreview(currentSettings);
   });
 
@@ -1166,11 +1182,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     translatedEls.forEach(el => { if (el) setPreviewStyle(el, "font-family", previewFont); });
 
     translatedEls.forEach((el) => {
+      const pairId = el.closest?.("[data-preview-pair]")?.dataset.previewPair || "";
+      const pairHovered = pairId && pairId === livePreviewHoverPair;
       setPreviewStyle(el, "background-color", "transparent");
       setPreviewStyle(el, "border-bottom", "none");
       setPreviewStyle(el, "text-decoration", "none");
       setPreviewStyle(el, "border-left", "none");
-      setPreviewStyle(el, "padding-left", "4px");
+      setPreviewStyle(el, "padding-left", "0");
       setPreviewStyle(el, "opacity", "1");
       setPreviewStyle(el, "filter", "none");
 
@@ -1197,12 +1215,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         setPreviewStyle(el, "text-underline-offset", "3px");
         setPreviewStyle(el, "text-decoration-thickness", "1.4px");
       } else if (renderStyle === "hover-reveal") {
-        setPreviewStyle(el, "opacity", livePreviewHovering ? "1" : ".25");
+        setPreviewStyle(el, "opacity", pairHovered ? "1" : ".2");
       } else if (renderStyle === "blur-reveal") {
-        setPreviewStyle(el, "filter", livePreviewHovering ? "none" : "blur(2.35px)");
-        setPreviewStyle(el, "opacity", livePreviewHovering ? "1" : ".56");
+        setPreviewStyle(el, "filter", pairHovered ? "none" : "blur(5px)");
+        setPreviewStyle(el, "opacity", pairHovered ? "1" : ".74");
       } else if (renderStyle === "click-reveal") {
-        if (!livePreviewClickRevealed) {
+        if (!livePreviewClickRevealed.has(pairId)) {
           const revealColors = {charcoal:"#25282d",slate:"#46515f",navy:"#2f4057",forest:"#365247",plum:"#51415b",brown:"#5b4a3d"};
           setPreviewStyle(el, "background-color", revealColors[s.clickRevealColor || "charcoal"] || "#25282d");
           setPreviewStyle(el, "color", "transparent");

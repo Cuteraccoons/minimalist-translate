@@ -4,11 +4,20 @@
 (() => {
   const LOCAL_WORKER = new URL('vendor/tesseract/worker.min.js', location.href).href;
   const LOCAL_CORE = new URL('vendor/tesseract/tesseract-core-lstm.wasm.js', location.href).href;
+  const TESSDATA_CDN = 'https://cdn.jsdelivr.net/gh/naptha/tessdata@gh-pages/4.0.0_best_int';
   const TESSDATA_GITHUB = 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best_int';
+  const TESSDATA_PROJECT = 'https://tessdata.projectnaptha.com/4.0.0';
   let workerState = { key:'', promise:null };
   let currentRecognizeProgress = null;
 
   function post(type, payload={}) { parent.postMessage({source:'jijian-ocr-sandbox', type, ...payload}, '*'); }
+  function readableOcrError(error) {
+    const raw=String(error?.message||error||'').replace(/\s+/g,' ').trim();
+    if(!raw)return 'OCR 运行组件加载失败，请刷新页面后重试';
+    const looksLikeRuntimeCode=raw.length>260||/(?:WebAssembly|wasmBinary|function\s*\(|=>|\bvar\s+\w+|\breturn\s*\{|\.output\?\.length)/.test(raw);
+    if(looksLikeRuntimeCode)return 'OCR 运行组件加载失败，请刷新页面后重试';
+    return raw.slice(0,220);
+  }
   async function ensureLib() {
     if (!self.Tesseract) throw new Error('本地 OCR 运行组件加载失败');
     return self.Tesseract;
@@ -113,7 +122,7 @@
         }
         post('progress',{status:m.status||'',progress,id:self.__jijianActiveOcrId||''});
       },
-      errorHandler:err=>post('progress',{status:'ocr runtime warning',progress:0,id:self.__jijianActiveOcrId||'',detail:err?.message||String(err)})
+      errorHandler:err=>post('progress',{status:'ocr runtime warning',progress:0,id:self.__jijianActiveOcrId||'',detail:readableOcrError(err)})
     };
     if(langPath) opts.langPath=langPath;
     return opts;
@@ -121,23 +130,28 @@
 
   async function makeWorker(langs) {
     const T=await ensureLib();
-    const single=langs.length===1?langs[0]:'';
     const attempts=[
-      {langPath:null,label:'Project Naptha'},
-      ...(single?[{langPath:`https://unpkg.com/@tesseract.js-data/${single}/4.0.0_best_int`,label:'unpkg'}]:[]),
+      {langPath:TESSDATA_CDN,label:'jsDelivr'},
+      {langPath:TESSDATA_PROJECT,label:'Project Naptha'},
       {langPath:TESSDATA_GITHUB,label:'GitHub'}
     ];
     let lastErr=null;
     for(let i=0;i<attempts.length;i++){
       const attempt=attempts[i];
-      post('progress',{status:`loading language source ${i+1}/${attempts.length}`,progress:0,id:self.__jijianActiveOcrId||'',detail:attempt.label});
+      post('progress',{status:`loading language source ${i+1}/${attempts.length}`,progress:.03+i*.02,id:self.__jijianActiveOcrId||'',detail:attempt.label});
       try{
+        const controller=new AbortController();
+        const probeTimer=setTimeout(()=>controller.abort(),6500);
+        try{
+          const probe=await fetch(`${attempt.langPath}/${langs[0]}.traineddata.gz`,{method:'HEAD',cache:'no-store',signal:controller.signal});
+          if(!probe.ok)throw new Error(`模型源返回 ${probe.status}`);
+        }finally{clearTimeout(probeTimer);}
         return await T.createWorker(langs,1,makeWorkerOptions(attempt.langPath));
       }catch(err){
         lastErr=err;
       }
     }
-    throw new Error(`OCR 模型或运行组件下载失败：${lastErr?.message||'网络不可用'}`);
+    throw new Error(`OCR 模型或运行组件下载失败：${readableOcrError(lastErr||'网络不可用')}`);
   }
 
   function tsvToLines(tsv) {
@@ -215,7 +229,7 @@
       const lines=dedupeLines(allLines);
       const text=lines.length?lines.map(x=>x.text).join('\n'):texts.join('\n');
       post('result',{id:msg.id,text,confidence:confidences.length?confidences.reduce((a,b)=>a+b,0)/confidences.length:0,langKey:langKey(langs),imageWidth:prepared.originalWidth||0,imageHeight:prepared.originalHeight||0,processedWidth:prepared.processedWidth||0,processedHeight:prepared.processedHeight||0,lines});
-    }catch(e){post('error',{id:msg.id,error:e?.message||String(e)});}
+    }catch(e){post('error',{id:msg.id,error:readableOcrError(e)});}
     finally{currentRecognizeProgress=null;self.__jijianActiveOcrId='';}
   });
   post('ready');

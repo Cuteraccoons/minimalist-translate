@@ -1645,6 +1645,71 @@ input:checked + .switch-knob:before {
 .blacklist-add-card{border-top:0!important}
 .domain-default-title{font-size:14px!important;line-height:1.35!important;font-weight:680!important;color:#252c34!important;margin-bottom:5px!important}
 
+/* Live preview mirrors the webpage one paragraph at a time. */
+.demo-preview-pair{position:relative;min-width:0}
+.demo-preview-pair>.demo-orig-h,.demo-preview-pair>.demo-trans-h,
+.demo-preview-pair>.demo-orig-p,.demo-preview-pair>.demo-trans-p{
+  width:100%!important;margin-left:0!important;padding-left:0!important;text-align:left!important
+}
+
+/* Blacklist controls use quiet option tiles and a fixed action column. */
+.blacklist-default-card{align-items:flex-start!important}
+.blacklist-default-card .domain-default-chips{
+  display:grid!important;grid-template-columns:repeat(5,minmax(92px,1fr))!important;
+  width:min(570px,100%)!important;gap:7px!important
+}
+.blacklist-default-card .domain-default-chips label{display:block!important;min-width:0!important}
+.blacklist-default-card .domain-default-chips label span{
+  min-height:36px!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  gap:8px!important;padding:0 10px!important;border:1px solid #e2e6ea!important;border-radius:9px!important;
+  background:#f7f8f9!important;color:#66707b!important;font-size:12px!important;font-weight:600!important;
+  box-sizing:border-box!important;white-space:nowrap!important
+}
+.blacklist-default-card .domain-default-chips label span::before{
+  content:"";width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:#c7cdd4;
+  box-shadow:0 0 0 3px #eceff2
+}
+.blacklist-default-card .domain-default-chips label input:checked+span{
+  border-color:#bbc3cb!important;background:#fff!important;color:#242b33!important;
+  box-shadow:inset 0 0 0 1px #d1d7dd!important
+}
+.blacklist-default-card .domain-default-chips label input:checked+span::before{
+  background:#323a43;box-shadow:0 0 0 3px #e3e7ea
+}
+.blacklist-domain-list .domain-row{
+  box-shadow:none!important;border-radius:10px!important;transition:border-color .14s ease,background .14s ease!important
+}
+.blacklist-domain-list .domain-row:hover{
+  transform:none!important;box-shadow:none!important;border-color:#ccd3da!important;background:#fcfcfd!important
+}
+.blacklist-domain-list .domain-row-line{
+  width:100%!important;grid-template-columns:minmax(0,1fr) 86px 32px!important;
+  column-gap:8px!important;box-sizing:border-box!important
+}
+.blacklist-domain-list .domain-row-icon{display:none!important}
+.blacklist-domain-list .domain-config-btn{
+  width:86px!important;height:31px!important;justify-self:end!important;text-align:center!important;
+  border:1px solid #dde2e7!important;background:#f7f8f9!important;color:#56606b!important
+}
+.blacklist-domain-list .domain-config-btn.active{
+  border-color:#303842!important;background:#303842!important;color:#fff!important
+}
+.blacklist-domain-list .domain-remove-icon{width:32px!important;height:32px!important}
+.blacklist-domain-list .domain-scope-panel{
+  display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:1px 12px 13px!important;
+  border-top:0!important;background:transparent!important;transform-origin:top center
+}
+.blacklist-domain-list .domain-scope-panel.is-open{animation:domainScopePanelIn .16s cubic-bezier(.2,.8,.2,1) both}
+.blacklist-domain-list .domain-scope-panel[hidden]{display:none!important}
+@keyframes domainScopePanelIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:980px){
+  .blacklist-default-card .domain-default-chips{grid-template-columns:repeat(3,minmax(92px,1fr))!important;width:100%!important}
+}
+@media(max-width:620px){
+  .blacklist-default-card .domain-default-chips{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+
 .project-hero-card{grid-template-columns:74px minmax(0,1fr)!important;align-items:start!important;padding:25px 27px!important}
 .project-hero-copy .about-name{margin:1px 0 7px!important}
 .project-intro{max-width:760px;margin:0 0 14px;color:#616a74;font-size:13.5px;line-height:1.72}

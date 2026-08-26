@@ -4202,3 +4202,80 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
 /* Optical alignment in the compact dictionary rows. */
 .raccoon-dict-card .dict-brief-meaning{transform:translateY(1px)!important}
 .raccoon-selection-trigger .trigger-translate-brand-icon{width:16px!important;height:16px!important}
+
+/* Pair-scoped reveal: parent :hover must never uncover every translated child. */
+.raccoon-translated-block[data-render-style="hover-reveal"]:not(:hover):not(.raccoon-hover-revealed),
+.raccoon-translated-inline[data-render-style="hover-reveal"]:not(:hover):not(.raccoon-hover-revealed){
+  opacity:.2!important
+}
+.raccoon-translated-block[data-render-style="hover-reveal"].raccoon-hover-revealed,
+.raccoon-translated-inline[data-render-style="hover-reveal"].raccoon-hover-revealed{opacity:1!important}
+
+/* A translated horizontal tab may grow enough to keep a country or locale name
+   on one line. The tab strip itself scrolls instead of squeezing its siblings. */
+.raccoon-ui-translated.raccoon-ui-expand{
+  max-inline-size:min(360px,78vw)!important
+}
+
+/* Short subsection headings remain eligible for the outline and every level is
+   readable without flattening the hierarchy. */
+.reader-outline-item.level-1{font-size:13.5px!important;color:#343b44!important}
+.reader-outline-item.level-2{font-size:13px!important;color:#59626d!important}
+.reader-outline-item.level-3{font-size:12.5px!important;color:#737d88!important;opacity:.86!important}
+#raccoon-reader-root[data-theme="dark"] .reader-outline-item.level-1{color:#eef1f4!important}
+#raccoon-reader-root[data-theme="dark"] .reader-outline-item.level-2{color:#c4cad1!important}
+#raccoon-reader-root[data-theme="dark"] .reader-outline-item.level-3{color:#a6afb9!important}
+
+/* Distinct reading structures, not only width presets. */
+#raccoon-reader-root[data-surface="safari"]{background:#f5f5f7!important}
+#raccoon-reader-root[data-surface="safari"] .reader-scroll-area{padding-top:20px!important}
+#raccoon-reader-root[data-surface="safari"] .reader-scroll-card{
+  max-width:min(var(--reader-max-width,920px),780px)!important;background:transparent!important;
+  border:0!important;border-radius:0!important;box-shadow:none!important;
+  padding:42px clamp(28px,5vw,62px) 90px!important
+}
+#raccoon-reader-root[data-surface="safari"] .reader-title{
+  font-family:ui-serif,Georgia,"Songti SC",serif!important;font-weight:720!important;letter-spacing:-.025em!important
+}
+#raccoon-reader-root[data-surface="safari"] .reader-meta-bar{opacity:.56!important;margin-bottom:34px!important}
+
+#raccoon-reader-root[data-surface="forum"]{background:#e8e5dc!important;color:#292820!important}
+#raccoon-reader-root[data-surface="forum"] .reader-scroll-area{padding:24px 28px 90px!important}
+#raccoon-reader-root[data-surface="forum"] .reader-scroll-card{
+  max-width:min(var(--reader-max-width,920px),1040px)!important;background:#fbfaf5!important;
+  border:1px solid #c9c5b8!important;border-radius:2px!important;box-shadow:0 2px 8px rgba(56,52,40,.08)!important;
+  padding:0 34px 68px!important
+}
+#raccoon-reader-root[data-surface="forum"] .reader-title{
+  margin:0 -34px 12px!important;padding:24px 34px 18px!important;background:#ded9ca!important;
+  border-bottom:1px solid #c6c0ae!important;font-family:ui-serif,Georgia,"Songti SC",serif!important;font-size:29px!important
+}
+#raccoon-reader-root[data-surface="forum"] .reader-meta-bar{margin:0 -34px 22px!important;padding:10px 34px!important;background:#f2efe6!important}
+#raccoon-reader-root[data-surface="forum"] .reader-paragraph-pair:not([data-heading="true"]){
+  border-bottom:1px dotted rgba(74,70,56,.18)!important;padding-bottom:calc(var(--reader-paragraph-spacing,28px) * .72)!important
+}
+
+#raccoon-reader-root[data-surface="reddit"]{background:#dae0e6!important;color:#1a1a1b!important}
+#raccoon-reader-root[data-surface="reddit"] .reader-scroll-area{padding:22px 24px 90px!important}
+#raccoon-reader-root[data-surface="reddit"] .reader-scroll-card{
+  max-width:min(var(--reader-max-width,920px),880px)!important;background:#fff!important;
+  border:1px solid #ccc!important;border-radius:5px!important;box-shadow:none!important;padding:30px 34px 68px 58px!important
+}
+#raccoon-reader-root[data-surface="reddit"] .reader-title{font-size:27px!important;font-weight:650!important;letter-spacing:-.015em!important}
+#raccoon-reader-root[data-surface="reddit"] .reader-meta-bar{font-size:11px!important;margin-bottom:26px!important}
+#raccoon-reader-root[data-surface="reddit"] .reader-paragraph-pair{position:relative!important}
+#raccoon-reader-root[data-surface="reddit"] .reader-paragraph-pair:not([data-heading="true"])::before{
+  content:""!important;position:absolute!important;left:-30px!important;top:.45em!important;width:3px!important;height:calc(100% - .7em)!important;
+  border-radius:3px!important;background:#edeff1!important
+}
+#raccoon-reader-root[data-surface="reddit"] .reader-paragraph-pair[data-heading="true"]{border-top:1px solid #edeff1!important;padding-top:1em!important}
+
+#raccoon-reader-root[data-theme="dark"][data-surface="safari"],
+#raccoon-reader-root[data-theme="dark"][data-surface="forum"],
+#raccoon-reader-root[data-theme="dark"][data-surface="reddit"]{background:#0f1012!important;color:#eceef1!important}
+#raccoon-reader-root[data-theme="dark"][data-surface="safari"] .reader-scroll-card{background:transparent!important;border:0!important}
+#raccoon-reader-root[data-theme="dark"][data-surface="forum"] .reader-scroll-card,
+#raccoon-reader-root[data-theme="dark"][data-surface="reddit"] .reader-scroll-card{background:#191b1f!important;border-color:#30343a!important}
+#raccoon-reader-root[data-theme="dark"][data-surface="forum"] .reader-title,
+#raccoon-reader-root[data-theme="dark"][data-surface="forum"] .reader-meta-bar{background:#22252a!important;border-color:#34383f!important}
+#raccoon-reader-root[data-theme="dark"][data-surface="reddit"] .reader-paragraph-pair:not([data-heading="true"])::before{background:#34383f!important}

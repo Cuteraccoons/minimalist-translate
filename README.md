@@ -12,7 +12,7 @@ Minimalist Translate is an open-source Chrome extension for reading foreign-lang
 
 - **Bilingual page** adds the translation below the source text while preserving the page's original structure. Editorial link cards keep their source copy and place the translation inside the same link; compact tabs can use an in-place label with hover-to-original.
 - **Replace original** changes text nodes in place and keeps links, buttons, navigation, and tabs interactive.
-- **Immersive reader** extracts the article, removes duplicate headings, keeps safe links, and provides an outline and text-to-speech.
+- **Immersive reader** extracts the article, removes duplicate headings, keeps safe links, and provides a three-level outline, text-to-speech, and seven page structures including Safari-, classic-forum-, and Reddit-inspired views.
 - **Side-by-side view** creates an independent bilingual panel with synchronized navigation, adjustable width, and paragraph playback.
 
 ## Look up words without leaving the page
@@ -26,7 +26,7 @@ Minimalist Translate is an open-source Chrome extension for reading foreign-lang
 
 Image OCR runs in the browser with the Tesseract.js runtime bundled with the extension. The first use of a language downloads its model from a public model source and stores it in the browser cache. The original image is not sent to an OCR service; only recognized text is sent to the selected translation engine when translation is requested.
 
-The translated image stays in the original page position and can be switched back to the source image at any time.
+The translated image stays in the original page position. Recognized lines are written back with local alignment, neighbouring-line, and background-contrast safeguards, and the source image remains available at any time.
 
 ## Translation engines
 

@@ -29,7 +29,7 @@ const DEFAULT_SETTINGS = {
   // 沉浸阅读偏好持久化设置
   readerWidth: "920", // 默认宽敞舒适版面 (已记忆)
   readerTheme: "envelope", // envelope | white | dark | mint | mist | lavender | stone
-  readerSurface: "card", // card | flat | column | folio
+  readerSurface: "card", // card | flat | column | folio | safari | forum | reddit
   readerFont: "system",
   readerFontSize: "17.5",
   readerLineHeight: "1.82",

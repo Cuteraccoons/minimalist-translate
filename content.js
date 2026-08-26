@@ -125,6 +125,9 @@
   const inPlaceTranslationRecords = new Map();
   let inPlaceOriginalTextByNode = new WeakMap();
   let inPlaceTranslatedNodes = new WeakSet();
+  const translationRevealBySource = new WeakMap();
+  let activeTranslationReveal = null;
+  let translationRevealLeaveTimer = null;
 
 
   function matchedExcludedDomain() {
@@ -445,6 +448,39 @@
     const target = event.target?.closest?.('.raccoon-translated-block[data-render-style="click-reveal"], .raccoon-translated-inline[data-render-style="click-reveal"]');
     if (!target || event.target.closest('.raccoon-block-actions')) return;
     target.classList.toggle('raccoon-revealed');
+  }, true);
+
+  function revealTranslationForPointerNode(node) {
+    const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+    if (!element) return null;
+    const translated = element.closest?.('.raccoon-translated-block[data-render-style="hover-reveal"], .raccoon-translated-inline[data-render-style="hover-reveal"]');
+    if (translated) return translated;
+    for (let current = element, depth = 0; current && depth < 10; current = current.parentElement, depth += 1) {
+      const paired = translationRevealBySource.get(current);
+      if (paired?.isConnected && paired.getAttribute("data-render-style") === "hover-reveal") return paired;
+    }
+    return null;
+  }
+
+  document.addEventListener("pointerover", (event) => {
+    const translated = revealTranslationForPointerNode(event.target);
+    if (!translated) return;
+    clearTimeout(translationRevealLeaveTimer);
+    if (activeTranslationReveal && activeTranslationReveal !== translated) {
+      activeTranslationReveal.classList.remove("raccoon-hover-revealed");
+    }
+    activeTranslationReveal = translated;
+    translated.classList.add("raccoon-hover-revealed");
+  }, true);
+
+  document.addEventListener("pointerout", (event) => {
+    const translated = revealTranslationForPointerNode(event.target);
+    if (!translated || revealTranslationForPointerNode(event.relatedTarget) === translated) return;
+    clearTimeout(translationRevealLeaveTimer);
+    translationRevealLeaveTimer = setTimeout(() => {
+      translated.classList.remove("raccoon-hover-revealed");
+      if (activeTranslationReveal === translated) activeTranslationReveal = null;
+    }, 70);
   }, true);
 
   function domainMatchesList(host, list) {
@@ -862,7 +898,7 @@
     '#raccoon-sidebar-root', '#raccoon-reader-root', '[data-reader-translate-one]'
   ].join(',');
 
-  const TRANSLATABLE_BLOCK_SELECTOR = "p, h1, h2, h3, h4, h5, h6, li, blockquote, dt, dd, figcaption, td, th, [role='article']";
+  const TRANSLATABLE_BLOCK_SELECTOR = "p, h1, h2, h3, h4, h5, h6, [role='heading'], li, blockquote, dt, dd, figcaption, td, th, [role='article']";
 
   function queryScopedElements(container, selector) {
     const result = [];
@@ -903,7 +939,13 @@
       const semanticCount = control.querySelectorAll("p,h1,h2,h3,h4,h5,h6,article,section,figure,table,[role='article']").length;
       const hasMedia = !!control.querySelector("img,picture,video,canvas");
       const hasEditorialCopy = !!control.querySelector("strong,b") && control.children.length >= 2 && text.length >= 52;
-      return rect.height >= 58 && ((hasMedia && (semanticCount >= 1 || text.length >= 52)) || (semanticCount >= 3 && text.length >= 72) || hasEditorialCopy);
+      const hasEditorialHeading = !!control.querySelector("h1,h2,h3,h4,h5,h6,[role='heading']");
+      const stackedCopy = control.children.length >= 2 && rect.height >= 48 && text.length >= 30;
+      return rect.height >= 46 && (
+        (hasMedia && (semanticCount >= 1 || text.length >= 34)) ||
+        (semanticCount >= 2 && text.length >= 42) ||
+        hasEditorialCopy || hasEditorialHeading || stackedCopy
+      );
     } catch (_) {
       return false;
     }
@@ -1038,6 +1080,7 @@
 
   function isTranslationNoiseElement(el, rawText = "") {
     if (!el) return true;
+    if (isRichContentControl(el)) return false;
     // Interactive chrome is handled separately and translated in place. It is
     // not article prose and must never receive a second bilingual block.
     if (isUiChromeElement(el)) return true;
@@ -1601,7 +1644,7 @@
         const rect = el.getBoundingClientRect();
         const need = Math.ceil(Math.max(rect.width, el.scrollWidth || 0));
         if (need > rect.width + 3) {
-          el.style.setProperty('--raccoon-ui-min-width', `${Math.min(Math.max(need + 12, rect.width), 280)}px`);
+          el.style.setProperty('--raccoon-ui-min-width', `${Math.min(Math.max(need + 14, rect.width), 360)}px`);
           el.classList.add('raccoon-ui-expand');
           tablist?.classList?.add('raccoon-tablist-overflow');
         }
@@ -1638,6 +1681,7 @@
       positionExpandableUiTranslation(record, line);
       origEl.setAttribute('data-raccoon-ui-mode', 'bilingual');
     }
+    adaptTranslatedUiLayout(origEl);
     origEl.setAttribute('data-raccoon-translated', 'true');
     return true;
   }
@@ -1827,6 +1871,7 @@
       } catch (_) {}
     }
     refreshRenderedTranslationContrast(origEl, transNode);
+    translationRevealBySource.set(origEl, transNode);
   }
 
   function reRenderAllTranslatedBlocks() {
@@ -2473,7 +2518,7 @@
     if (!element) return;
     const span = document.createElement("span");
     span.className = "reader-translation-text";
-    span.textContent = String(text || "");
+    span.textContent = String(text || "").replace(/(?:\s*(?:\[\d{1,3}\]|［\d{1,3}］|\(\d{1,3}\)|（\d{1,3}）|[¹²³⁴⁵⁶⁷⁸⁹⁰]))+\s*$/u, "").trim();
     element.replaceChildren(span);
   }
 
@@ -2694,10 +2739,10 @@
       // wrapper. Keep its children, not both parent and child copies.
       if (node.tagName === "LI" && node.querySelector(":scope > p, :scope > blockquote, :scope > pre, :scope > div > p")) continue;
       const text = getHostOriginalText(node);
-      if (text.length < (node.tagName === "LI" ? 6 : 10)) continue;
+      const isHeading = readerHeadingLevel(node) > 0;
+      if (text.length < (isHeading ? 2 : (node.tagName === "LI" ? 6 : 10))) continue;
       if (seenText.has(text)) continue;
 
-      const isHeading = readerHeadingLevel(node) > 0;
       const linkText = Array.from(node.querySelectorAll?.("a") || []).reduce((n,a) => n + ((a.innerText || a.textContent || "").trim().length), 0);
       const linkDensity = text.length ? linkText / text.length : 0;
       // A recommendation heading after substantial article text is a strong end-of-article signal.
@@ -2800,7 +2845,7 @@
     });
 
     const savedTheme = currentSettings.readerTheme || "envelope";
-    const readerSurfaceValues = new Set(["card", "flat", "column", "folio"]);
+    const readerSurfaceValues = new Set(["card", "flat", "column", "folio", "safari", "forum", "reddit"]);
     const savedSurface = readerSurfaceValues.has(currentSettings.readerSurface) ? currentSettings.readerSurface : "card";
     const savedWidth = currentSettings.readerWidth || "920";
     const savedFont = currentSettings.readerFont || "system";
@@ -2853,7 +2898,7 @@
               <button type="button" class="reader-outline-toggle-btn" id="reader-btn-toggle-outline" title="折叠大纲" aria-label="折叠大纲"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14 6-6 6 6 6"/></svg></button>
             </div>
             ${headings.map(h => `
-              <div class="reader-outline-item level-${Math.max(1, Number(h.level.slice(1)) - 1)}" data-target-id="${h.id}" title="${escapeHtml(h.text)}">
+              <div class="reader-outline-item level-${Math.min(3, Math.max(1, Number(h.level.slice(1)) - 1))}" data-target-id="${h.id}" title="${escapeHtml(h.text)}">
                 <span class="reader-outline-label">${escapeHtml(h.text)}</span>
               </div>
             `).join("")}
@@ -2926,6 +2971,9 @@
             <button type="button" class="${savedSurface === 'flat' ? 'active' : ''}" data-reader-surface="flat"><b>铺开</b><span>直接融入背景</span></button>
             <button type="button" class="${savedSurface === 'column' ? 'active' : ''}" data-reader-surface="column"><b>专栏</b><span>窄栏聚焦正文</span></button>
             <button type="button" class="${savedSurface === 'folio' ? 'active' : ''}" data-reader-surface="folio"><b>书页</b><span>宽边舒展留白</span></button>
+            <button type="button" class="${savedSurface === 'safari' ? 'active' : ''}" data-reader-surface="safari"><b>Safari</b><span>纯净无边阅读</span></button>
+            <button type="button" class="${savedSurface === 'forum' ? 'active' : ''}" data-reader-surface="forum"><b>早期论坛</b><span>分帖式长文阅读</span></button>
+            <button type="button" class="${savedSurface === 'reddit' ? 'active' : ''}" data-reader-surface="reddit"><b>Reddit</b><span>讨论流式卡片</span></button>
           </div>
 
           <span class="drawer-section-label">字体</span>
@@ -3559,10 +3607,10 @@
     }
     imageTranslateTrigger.dataset.triggerSize = String(size);
     imageTranslateTrigger.style.setProperty("--jijian-image-trigger-size", `${size}px`);
-    imageTranslateTrigger.style.left = `${visibleRight - size - 8}px`;
+    imageTranslateTrigger.style.left = `${visibleRight - size - 12}px`;
     // Bottom-right avoids the close/menu controls that image viewers commonly
     // place in the top-right corner.
-    imageTranslateTrigger.style.top = `${visibleBottom - size - 8}px`;
+    imageTranslateTrigger.style.top = `${visibleBottom - size - 12}px`;
     setImageTranslateTriggerVisible(true);
   }
 
@@ -3705,20 +3753,24 @@
     return "";
   }
 
-  function resolveImageOcrLanguage() {
+  function resolveImageOcrLanguage(image = null) {
     const configured = JIJIAN_OCR_LANGUAGES[currentSettings.imageOcrLanguage] ? currentSettings.imageOcrLanguage : "auto";
     let key = configured;
     if (configured === "auto") {
-      const hinted = mapLanguageToOcrKey(currentSettings.sourceLang)
+      const nearbyText = String([
+        image?.getAttribute?.("alt"), image?.getAttribute?.("title"),
+        image?.closest?.("figure")?.querySelector?.("figcaption")?.innerText
+      ].filter(Boolean).join(" "));
+      const kana = (nearbyText.match(/[\u3040-\u30ff]/g) || []).length;
+      const han = (nearbyText.match(/[\u3400-\u9fff]/g) || []).length;
+      const latin = (nearbyText.match(/[A-Za-z]/g) || []).length;
+      const nearbyHint = kana >= 2 ? "jpn" : han >= 3 && han > latin * .45 ? "chi_sim" : latin >= 4 ? "eng" : "";
+      const hinted = nearbyHint || mapLanguageToOcrKey(currentSettings.sourceLang)
         || mapLanguageToOcrKey(document.documentElement?.lang)
         || "eng";
-      // Web images often mix English with the surrounding CJK language. The
-      // automatic mode therefore uses a compact bilingual preset for CJK pages
-      // instead of trusting the browser UI language or a single-script model.
-      key = hinted === "jpn" ? "eng+jpn"
-        : hinted === "chi_sim" ? "eng+chi_sim"
-        : hinted === "chi_tra" ? "eng+chi_tra"
-        : hinted;
+      // Automatic mode chooses one likely language so first use does not pull
+      // two large models. Mixed presets remain available as an explicit choice.
+      key = hinted;
     }
     const meta = JIJIAN_OCR_LANGUAGES[key] || JIJIAN_OCR_LANGUAGES.eng;
     return { key, label: meta.label, langs: [...meta.langs] };
@@ -3789,7 +3841,7 @@
       const pending = jijianOcrPending.get(data.id);
       if (!pending) return;
       if (data.type === "progress") {
-        pending.onProgress?.({ phase: "tesseract", status: data.status || "", percent: Math.round(Number(data.progress || 0) * 100) });
+        pending.onProgress?.({ phase: "tesseract", status: data.status || "", detail:data.detail || "", percent: Math.round(Number(data.progress || 0) * 100) });
         return;
       }
       jijianOcrPending.delete(data.id);
@@ -3862,8 +3914,8 @@
     return await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         jijianOcrPending.delete(id);
-        reject(new Error("本地 OCR 超过 90 秒，已自动停止"));
-      }, 90000);
+        reject(new Error("本地 OCR 超过 120 秒，已自动停止；请检查网络后重试或在设置中选择单一识别语言"));
+      }, 120000);
       jijianOcrPending.set(id, { resolve, reject, onProgress, timer, meta });
       frame.contentWindow.postMessage({ source:"jijian-translate", type:"recognize", id, dataUrl, langs:meta.langs }, "*");
     });
@@ -3996,6 +4048,13 @@
 
   function clampNumber(value, min, max) { return Math.max(min, Math.min(max, value)); }
 
+  function readableOcrError(error) {
+    const raw=String(error?.message||error||"").replace(/\s+/g," ").trim();
+    if(!raw)return "OCR 运行组件加载失败，请刷新页面后重试";
+    const looksLikeRuntimeCode=raw.length>260||/(?:WebAssembly|wasmBinary|function\s*\(|=>|\bvar\s+\w+|\breturn\s*\{|\.output\?\.length)/.test(raw);
+    return looksLikeRuntimeCode?"OCR 运行组件加载失败，请刷新页面后重试":raw.slice(0,220);
+  }
+
   function cleanOcrLineItems(ocr) {
     return (Array.isArray(ocr?.lines) ? ocr.lines : []).map((line,index) => ({
       index,
@@ -4020,7 +4079,7 @@
         const candidateCenter = (candidate.bbox.y0 + candidate.bbox.y1) / 2;
         const verticalMatch = Math.abs(centerY - candidateCenter) <= Math.max(height, candidateHeight) * .48;
         const horizontalGap = Math.max(0, box.x0 - candidate.bbox.x1, candidate.bbox.x0 - box.x1);
-        return verticalMatch && horizontalGap <= Math.max(height, candidateHeight) * 1.9;
+        return verticalMatch && horizontalGap <= Math.max(14, Math.max(height, candidateHeight) * 1.28);
       });
       if (!row) {
         rows.push({ ...item, bbox:{...box}, parts:[item] });
@@ -4081,8 +4140,30 @@
         const px=ctx.getImageData(clampNumber(Math.round(x),0,canvasWidth-1),clampNumber(Math.round(y),0,canvasHeight-1),1,1).data;
         rgb.push([px[0],px[1],px[2]]);
       }
-      return [0,1,2].map(channel=>rgb.map(value=>value[channel]).sort((a,b)=>a-b)[Math.floor(rgb.length/2)]);
-    } catch (_) { return [248,248,247]; }
+      const color=[0,1,2].map(channel=>rgb.map(value=>value[channel]).sort((a,b)=>a-b)[Math.floor(rgb.length/2)]);
+      const dispersion=rgb.reduce((sum,value)=>sum+Math.hypot(value[0]-color[0],value[1]-color[1],value[2]-color[2]),0)/Math.max(1,rgb.length);
+      return {color,dispersion};
+    } catch (_) { return {color:[248,248,247],dispersion:0}; }
+  }
+
+  function paintImageTranslationBackdrop(ctx, sourceCanvas, rect, sample) {
+    const [r,g,b]=sample.color;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(rect.x,rect.y,rect.width,rect.height);
+    ctx.clip();
+    if(sample.dispersion<24){
+      ctx.fillStyle=`rgb(${r} ${g} ${b})`;
+      ctx.fillRect(rect.x,rect.y,rect.width,rect.height);
+    }else{
+      const blur=Math.max(5,Math.min(16,Math.round(Math.min(rect.width,rect.height)*.22)));
+      ctx.filter=`blur(${blur}px)`;
+      ctx.drawImage(sourceCanvas,rect.x,rect.y,rect.width,rect.height,rect.x-blur,rect.y-blur,rect.width+blur*2,rect.height+blur*2);
+      ctx.filter="none";
+      ctx.fillStyle=`rgba(${r},${g},${b},.58)`;
+      ctx.fillRect(rect.x,rect.y,rect.width,rect.height);
+    }
+    ctx.restore();
   }
 
   function fitTranslatedText(ctx,text,rect,initialFont) {
@@ -4115,6 +4196,10 @@
     canvas.width=Math.max(1,image.naturalWidth||image.width); canvas.height=Math.max(1,image.naturalHeight||image.height);
     const ctx=canvas.getContext("2d",{alpha:false,willReadFrequently:true}); if(!ctx) throw new Error("无法创建译图画布");
     ctx.drawImage(image,0,0,canvas.width,canvas.height);
+    const sourceCanvas=document.createElement("canvas"); sourceCanvas.width=canvas.width; sourceCanvas.height=canvas.height;
+    const sourceCtx=sourceCanvas.getContext("2d",{alpha:false,willReadFrequently:true});
+    if(!sourceCtx)throw new Error("无法读取译图背景");
+    sourceCtx.drawImage(image,0,0,canvas.width,canvas.height);
 
     const sourceW=Math.max(1,Number(ocr?.imageWidth||canvas.width));
     const sourceH=Math.max(1,Number(ocr?.imageHeight||canvas.height));
@@ -4122,7 +4207,8 @@
     const items=Array.isArray(translation?.items)?translation.items:[];
 
     if(items.length){
-      for(const item of items){
+      for(let itemIndex=0;itemIndex<items.length;itemIndex++){
+        const item=items[itemIndex];
         const b=item.bbox||{};
         let x=clampNumber(Number(b.x0||0)*sx,0,canvas.width-1);
         let y=clampNumber(Number(b.y0||0)*sy,0,canvas.height-1);
@@ -4135,24 +4221,35 @@
         w=Math.min(canvas.width-x,w+horizontalPad*2);
         h=Math.min(canvas.height-y,h+pad*2);
         const initial=Math.max(11,Math.min(72,h*.72));
-        let rect={x,y,width:w,height:Math.min(canvas.height-y,Math.max(h,initial*1.28))};
+        const nextBox=items[itemIndex+1]?.bbox;
+        const nextTop=nextBox&&Number.isFinite(Number(nextBox.y0))?Number(nextBox.y0)*sy:canvas.height;
+        const rowLimit=nextTop>y+h*.62?Math.max(y+h,nextTop-Math.max(2,pad*.45)):canvas.height;
+        let rect={x,y,width:w,height:Math.min(rowLimit-y,Math.max(h,initial*1.28))};
         let fitted=fitTranslatedText(ctx,item.translated,rect,initial);
         if(fitted.lines.length*fitted.lineHeight>rect.height){
-          const grow=Math.min(canvas.height-rect.y,Math.max(rect.height,Math.min(h*1.85,fitted.lines.length*fitted.lineHeight+pad*2)));
+          const grow=Math.min(rowLimit-rect.y,Math.max(rect.height,Math.min(h*1.65,fitted.lines.length*fitted.lineHeight+pad*2)));
           rect={...rect,height:grow}; fitted=fitTranslatedText(ctx,item.translated,rect,initial);
         }
-        const [localR,localG,localB]=sampleCanvasBackground(ctx,rect,canvas.width,canvas.height);
+        const sample=sampleCanvasBackground(sourceCtx,rect,canvas.width,canvas.height);
+        const [localR,localG,localB]=sample.color;
         const useLightText=(localR*299+localG*587+localB*114)/1000<132;
-        ctx.fillStyle=`rgb(${localR} ${localG} ${localB})`;
-        ctx.fillRect(rect.x,rect.y,rect.width,rect.height);
+        paintImageTranslationBackdrop(ctx,sourceCanvas,rect,sample);
+        ctx.save();ctx.beginPath();ctx.rect(rect.x,rect.y,rect.width,rect.height);ctx.clip();
         ctx.fillStyle=useLightText?"#f8fafc":"#12161b";
+        if(sample.dispersion>=24){ctx.shadowColor=useLightText?"rgba(0,0,0,.32)":"rgba(255,255,255,.32)";ctx.shadowBlur=Math.max(1,Math.round(fitted.fontSize*.08));}
         ctx.textBaseline="top";
         ctx.font=`600 ${fitted.fontSize}px ${getImageTranslationFontCss()}`;
         const totalH=fitted.lines.length*fitted.lineHeight;
         const startY=rect.y+Math.max(0,(rect.height-totalH)/2);
+        const centerX=rect.x+rect.width/2;
+        const centered=Math.abs(centerX-canvas.width/2)<=canvas.width*.1 && rect.width<=canvas.width*.9;
+        const rightAligned=!centered&&rect.x+rect.width>=canvas.width*.92&&rect.x>canvas.width*.4;
+        ctx.textAlign=centered?"center":rightAligned?"right":"left";
+        const drawX=centered?centerX:rightAligned?rect.x+rect.width-pad:rect.x+pad;
         fitted.lines.forEach((line,i)=>{
-          ctx.fillText(line,rect.x+pad,startY+i*fitted.lineHeight,Math.max(8,rect.width-pad*2));
+          ctx.fillText(line,drawX,startY+i*fitted.lineHeight,Math.max(8,rect.width-pad*2));
         });
+        ctx.restore();
       }
     } else {
       // If the engine did not preserve line markers, still produce a usable
@@ -4237,7 +4334,7 @@
       positionImageOverlay(overlay,img);
 
       status.textContent="正在识别图片文字…"; setProgress(8,true);
-      const meta=resolveImageOcrLanguage();
+      const meta=resolveImageOcrLanguage(img);
       const consent=await ensureImageOcrConsent(overlay,status,result,meta); if(disposed)return;
       if(!consent?.allowed){cleanup();return;}
       status.textContent=consent.cached?`正在加载已缓存的${meta.label} OCR…`:`正在下载并准备${meta.label} OCR…`; setProgress(10,true);
@@ -4247,14 +4344,17 @@
         if(disposed)return;
         const s=String(state.status||"");
         const label=s==="preparing image"?"正在分析原图尺寸"
-          :s.startsWith("loading language source")?(consent.cached?"正在读取 OCR 模型缓存":"正在连接 OCR 模型源")
+          :s.startsWith("loading language source")?(consent.cached?"正在读取 OCR 模型缓存":`正在连接 OCR 模型源${state.detail?`（${state.detail}）`:""}`)
           :s==="loading tesseract core"?"正在加载 OCR 运行组件"
           :s==="loading language traineddata"?(consent.cached?`正在读取${meta.label}模型`:`正在下载${meta.label}模型`)
           :s==="initializing api"?"正在初始化 OCR"
           :s.startsWith("recognizing segment")?"正在分段识别长图"
           :"本地 OCR 识别中";
-        status.textContent=`${label}${state.percent?` · ${Math.round(state.percent)}%`:""}`;
-        setProgress(Math.max(10,Math.min(78,10+Number(state.percent||0)*.68)),!state.percent);
+        const stageFloor=s.startsWith("loading language source")?4:s==="loading tesseract core"?10:s==="loading language traineddata"?16:s==="initializing api"?72:s.startsWith("recognizing")?76:8;
+        const ocrPercent=Math.max(stageFloor,Math.min(100,Number(state.percent||0)));
+        const overall=Math.max(10,Math.min(78,10+ocrPercent*.68));
+        status.textContent=`${label} · ${Math.round(overall)}%`;
+        setProgress(overall,false);
       },meta);
       await markImageOcrModelReady(meta);
       overlay.classList.remove("is-ocr-downloading","is-recognizing");
@@ -4282,7 +4382,7 @@
       if(disposed)return;
       overlay.classList.remove("is-preparing","is-recognizing","is-ocr-downloading");
       overlay.classList.add("is-error","controls-visible"); setProgress(0,false); result.hidden=false;
-      result.innerHTML=`<strong>暂时无法翻译这张图片</strong><span>${escapeHtml(err?.message||String(err))}</span><small>OCR 在本机浏览器内运行；识别成功后的纯文本才交给你当前的翻译引擎。</small><div class="image-translate-error-actions"><button type="button" data-image-retry>重试</button><button type="button" data-image-close>关闭</button></div>`;
+      result.innerHTML=`<strong>暂时无法翻译这张图片</strong><span>${escapeHtml(readableOcrError(err))}</span><small>OCR 在本机浏览器内运行；识别成功后的纯文本才交给你当前的翻译引擎。</small><div class="image-translate-error-actions"><button type="button" data-image-retry>重试</button><button type="button" data-image-close>关闭</button></div>`;
       status.textContent="图片翻译不可用"; showControls(); positionImageOverlay(overlay,img);
       result.querySelector("[data-image-retry]")?.addEventListener("click",()=>{ cleanup(); setTimeout(()=>translateImageElement(img),30); });
       result.querySelector("[data-image-close]")?.addEventListener("click",cleanup);
