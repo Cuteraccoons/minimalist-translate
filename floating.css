@@ -1226,21 +1226,11 @@ h3 + .raccoon-translated-block {
 }
 
 .reader-drawer-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.3);
-  z-index: 140;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.22s ease;
+  display: none !important;
 }
 
 .reader-drawer-backdrop.open {
-  opacity: 1;
-  pointer-events: auto;
+  display: none !important;
 }
 
 .reader-settings-drawer {
@@ -1261,6 +1251,8 @@ h3 + .raccoon-translated-block {
   transform: translateX(100%);
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .reader-settings-drawer.open {
@@ -2377,7 +2369,7 @@ h3 + .raccoon-translated-block {
 .reader-tab-indicator{transition:transform .24s cubic-bezier(.2,.8,.2,1),width .24s cubic-bezier(.2,.8,.2,1)!important}
 #raccoon-reader-root .reader-scroll-card{transition:max-width .22s ease,transform .28s cubic-bezier(.2,.8,.2,1),margin .28s cubic-bezier(.2,.8,.2,1)!important}
 #raccoon-reader-root.reader-settings-open .reader-scroll-card{transform:translateX(-126px)}
-#raccoon-reader-root.reader-settings-open .reader-outline-panel{opacity:.52;transition:opacity .22s ease}
+#raccoon-reader-root.reader-settings-open .reader-outline-panel{opacity:1;transition:opacity .22s ease}
 .reader-structural-heading{font-weight:760!important;letter-spacing:-.012em!important;color:inherit!important}
 h1.reader-structural-heading{font-size:27px!important}h2.reader-structural-heading{font-size:23px!important}h3.reader-structural-heading{font-size:20px!important}h4.reader-structural-heading{font-size:18px!important}
 .reader-paragraph-pair{position:relative}

@@ -446,7 +446,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     saveSetting({ displayMode: val });
     updateButtonState(isTranslated, isTranslating, isSidebarOpen);
     updateLiveCardPreview();
-  });
+  }, { notifyOnActive:true });
 
   // 10. 引擎切换与弹窗内 API 配置
   selectEngine.addEventListener("change", (e) => {
@@ -1245,13 +1245,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     indicator.style.transform = `translateX(${targetX}px)`;
   }
 
-  function bindSegmentedControl(container, onChange) {
+  function bindSegmentedControl(container, onChange, { notifyOnActive = false } = {}) {
     if (!container) return;
     const items = container.querySelectorAll(".segment-item");
     syncSegmentIndicator(container);
     items.forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (btn.classList.contains('active')) return;
+        if (btn.classList.contains('active')) {
+          if (notifyOnActive) onChange(btn.getAttribute("data-value"));
+          return;
+        }
         items.forEach(i => i.classList.remove("active"));
         btn.classList.add("active");
         syncSegmentIndicator(container, true);

@@ -106,6 +106,7 @@
   let translationRunGeneration = 0;
   let isSidebarOpen = false;
   let isReaderOpen = false;
+  let activeReaderViewController = null;
   let blockCounter = 0;
   let totalBlocks = 0;
   let translatedBlocksCount = 0;
@@ -279,7 +280,21 @@
         if (canUseImageTranslationHere()) initImageTranslation();
         else teardownImageTranslation();
 
-        if (isPageTranslated && request.settings.displayMode && request.settings.displayMode !== prevMode) {
+        const displayModeChanged = request.settings.displayMode && request.settings.displayMode !== prevMode;
+        const displayModeRequested = Array.isArray(request.changedKeys)
+          ? request.changedKeys.includes("displayMode")
+          : displayModeChanged;
+        const readerViewForDisplayMode = request.settings.displayMode === "replace"
+          ? "trans"
+          : request.settings.displayMode === "bilingual"
+            ? "bilingual"
+            : "";
+        if (activeReaderRoot && displayModeRequested && readerViewForDisplayMode && activeReaderViewController) {
+          // Popup and Reader settings are two controls for the same presentation
+          // state. Keep the reader DOM alive and switch its own view instead of
+          // restoring/retranslating the host page behind it.
+          activeReaderViewController(readerViewForDisplayMode, { persistDisplayMode:false });
+        } else if (isPageTranslated && displayModeChanged) {
           // Translation strategies are structurally different: replacement edits
           // Text nodes, bilingual inserts prose blocks, sidebar builds a separate
           // document. Re-run from pristine host content instead of trying to morph
@@ -2952,7 +2967,10 @@
     root.style.setProperty("--reader-image-shadow", currentSettings.readerImageShadow === false ? "none" : "0 8px 24px rgba(0,0,0,.14)");
     root.setAttribute("data-theme", savedTheme);
     root.setAttribute("data-surface", savedSurface);
-    root.setAttribute("data-reader-view", isPageTranslated ? "bilingual" : "orig");
+    const initialReaderView = isPageTranslated
+      ? (currentSettings.displayMode === "replace" ? "trans" : "bilingual")
+      : "orig";
+    root.setAttribute("data-reader-view", initialReaderView);
     root.setAttribute("data-writing-mode", effectiveWritingMode);
     root.setAttribute("data-reader-lang", inferDictionaryLanguageHint(title));
     root.setAttribute("data-reader-render-style", savedRenderStyle);
@@ -3003,7 +3021,7 @@
             <div class="reader-meta-bar">
               <span class="reader-meta-source">来源: ${escapeHtml(window.location.hostname)}</span>
               <span class="reader-meta-sep reader-meta-main-sep">·</span>
-              <span class="reader-meta-mode" id="reader-mode-status-text">${isPageTranslated ? "双语对照精排" : "纯净原文阅读"}</span>
+              <span class="reader-meta-mode" id="reader-mode-status-text">${initialReaderView === "trans" ? "纯中文精排阅读" : initialReaderView === "bilingual" ? "双语对照精排" : "纯净原文阅读"}</span>
               <span class="reader-progress-meta"><span class="reader-meta-sep">·</span><span class="reader-pct-badge" id="reader-progress-pct-badge">已读 0%</span></span>
             </div>
             <div class="reader-content" id="reader-content">
@@ -3038,7 +3056,7 @@
           </main>
         </div>
 
-        <div class="reader-drawer-backdrop" id="reader-drawer-backdrop"></div>
+        <div class="reader-drawer-backdrop" id="reader-drawer-backdrop" aria-hidden="true"></div>
 
         <aside class="reader-settings-drawer" id="reader-settings-drawer">
           <div class="drawer-header-row">
@@ -3049,9 +3067,9 @@
           <span class="drawer-section-label">阅读呈现模式</span>
           <div class="reader-mode-tabs">
             <span class="reader-tab-indicator" aria-hidden="true"></span>
-            <button type="button" class="reader-mode-btn ${!isPageTranslated ? 'active' : ''}" data-mode="orig">原文</button>
-            <button type="button" class="reader-mode-btn ${isPageTranslated ? 'active' : ''}" data-mode="bilingual">双语</button>
-            <button type="button" class="reader-mode-btn" data-mode="trans">纯中文</button>
+            <button type="button" class="reader-mode-btn ${initialReaderView === 'orig' ? 'active' : ''}" data-mode="orig">原文</button>
+            <button type="button" class="reader-mode-btn ${initialReaderView === 'bilingual' ? 'active' : ''}" data-mode="bilingual">双语</button>
+            <button type="button" class="reader-mode-btn ${initialReaderView === 'trans' ? 'active' : ''}" data-mode="trans">纯中文</button>
           </div>
 
           <span class="drawer-section-label">阅读主题</span>
@@ -3177,7 +3195,6 @@
     });
 
     const settingsDrawer = root.querySelector("#reader-settings-drawer");
-    const drawerBackdrop = root.querySelector("#reader-drawer-backdrop");
     const scrollArea = root.querySelector("#reader-scroll-area");
     const cardElement = root.querySelector("#reader-scroll-card");
     const readerAdvancedToggle = root.querySelector("#reader-advanced-toggle");
@@ -3275,19 +3292,16 @@
 
     const openDrawer = () => {
       settingsDrawer.classList.add("open");
-      drawerBackdrop.classList.add("open");
       root.classList.add("reader-settings-open");
     };
 
     const closeDrawer = () => {
       settingsDrawer.classList.remove("open");
-      drawerBackdrop.classList.remove("open");
       root.classList.remove("reader-settings-open");
     };
 
     root.querySelector("#reader-btn-open-settings").addEventListener("click", openDrawer);
     root.querySelector("#drawer-btn-close").addEventListener("click", closeDrawer);
-    drawerBackdrop.addEventListener("click", closeDrawer);
 
     const progressToggle = root.querySelector("#reader-toggle-progress");
     const metaToggle = root.querySelector("#reader-toggle-meta");
@@ -3336,32 +3350,44 @@
       }
     }, { passive: true });
 
+    const applyReaderViewMode = (requestedMode, { persistDisplayMode = false } = {}) => {
+      if (!root?.isConnected) return;
+      const mode = ["orig", "bilingual", "trans"].includes(requestedMode) ? requestedMode : "orig";
+      root.querySelectorAll(".reader-mode-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-mode") === mode);
+      });
+      syncReaderTabIndicator(readerModeTabs, ".reader-mode-btn");
+      root.setAttribute("data-reader-view", mode);
+
+      const statusText = root.querySelector("#reader-mode-status-text");
+      if (mode === "orig") {
+        if (statusText) statusText.textContent = "纯净原文阅读";
+      } else if (mode === "bilingual") {
+        if (statusText) statusText.textContent = "双语对照精排";
+        requestReaderTranslation();
+      } else {
+        if (statusText) statusText.textContent = "纯中文精排阅读";
+        requestReaderTranslation();
+        const titleEl = root.querySelector(".reader-title");
+        sendDictionaryRuntimeMessage({action:"TRANSLATE_SINGLE_BLOCK",text:title,sl:"auto",tl:currentSettings.targetLang || "zh-CN"}, res => {
+          if (titleEl && res?.success && res.text && res.text.trim().length < 180 && root.getAttribute("data-reader-view") === "trans") titleEl.textContent = res.text.trim();
+        });
+      }
+      if (mode === "orig" || mode === "bilingual") {
+        const titleEl = root.querySelector(".reader-title");
+        if (titleEl) titleEl.textContent = title;
+      }
+
+      if (persistDisplayMode && mode !== "orig") {
+        const displayMode = mode === "trans" ? "replace" : "bilingual";
+        currentSettings.displayMode = displayMode;
+        chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ displayMode } }).catch(() => {});
+      }
+    };
+
     root.querySelectorAll(".reader-mode-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        root.querySelectorAll(".reader-mode-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        syncReaderTabIndicator(readerModeTabs, ".reader-mode-btn");
-        const mode = btn.getAttribute("data-mode");
-        root.setAttribute("data-reader-view", mode);
-
-        const statusText = root.querySelector("#reader-mode-status-text");
-        if (mode === "orig") {
-          if (statusText) statusText.textContent = "纯净原文阅读";
-        } else if (mode === "bilingual") {
-          if (statusText) statusText.textContent = "双语对照精排";
-          requestReaderTranslation();
-        } else if (mode === "trans") {
-          if (statusText) statusText.textContent = "纯中文精排阅读";
-          requestReaderTranslation();
-          const titleEl = root.querySelector(".reader-title");
-          sendDictionaryRuntimeMessage({action:"TRANSLATE_SINGLE_BLOCK",text:title,sl:"auto",tl:currentSettings.targetLang || "zh-CN"}, res => {
-            if (titleEl && res?.success && res.text && res.text.trim().length < 180 && root.getAttribute("data-reader-view") === "trans") titleEl.textContent = res.text.trim();
-          });
-        }
-        if (mode === "orig" || mode === "bilingual") {
-          const titleEl = root.querySelector(".reader-title");
-          if (titleEl) titleEl.textContent = title;
-        }
+        applyReaderViewMode(btn.getAttribute("data-mode"), { persistDisplayMode:true });
       });
     });
 
@@ -3635,7 +3661,9 @@
       });
     };
 
-    if (isPageTranslated) {
+    activeReaderViewController = applyReaderViewMode;
+
+    if (initialReaderView !== "orig") {
       requestReaderTranslation();
     }
   }
@@ -3652,6 +3680,7 @@
       readerRoot.remove();
       readerRoot = null;
     }
+    activeReaderViewController = null;
     isReaderOpen = false;
   }
 

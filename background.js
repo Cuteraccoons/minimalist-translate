@@ -2518,12 +2518,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       try {
         await saveSettingsByStorage(request.settings || {});
         const contentSettings = settingsForContentScript(await loadStoredSettings({ migrate:false }));
+        const changedKeys = Object.keys(request.settings || {});
         const tabs = await chrome.tabs.query({}).catch(() => []);
         for (const tab of tabs) {
           if (tab.id) {
             chrome.tabs.sendMessage(tab.id, {
               action: "SETTINGS_UPDATED",
-              settings: contentSettings
+              settings: contentSettings,
+              changedKeys
             }).catch(() => {});
           }
         }
