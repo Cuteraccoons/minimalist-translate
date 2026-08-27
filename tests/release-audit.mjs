@@ -139,6 +139,9 @@ if (!read('options.js').includes('function syncImageOcrUi()')) fail('settings ea
 if (!read('background.js').includes('SEARCH_ENGINE_BLACKLIST_RULE') || !read('background.js').includes('image: false')) fail('search-engine blacklist does not preserve image translation');
 if (!read('floating.css').includes('is-ocr-downloading')) fail('single-surface OCR download progress state missing');
 if (!content.includes('无法解码这张图片') || !read('floating.css').includes('.is-recognizing .image-translate-scan')) fail('SVG OCR decode fallback or scan-state gate missing');
+if (!read('options.js').includes('class="domain-row-actions"') || !read('options.js').includes('class="domain-remove-btn"') || read('options.js').includes('class="domain-remove-icon"')) fail('blacklist actions still use the ambiguous close icon');
+if (!read('options.css').includes('.blacklist-domain-list .domain-row{\n  display:block!important') || !read('options.css').includes('position:static!important')) fail('blacklist feature controls do not expand as a second row');
+if (!read('options.css').includes('#local-dict-list .local-dict-row:first-child') || !read('options.css').includes('border-top:1px solid #e7eaee!important')) fail('first local dictionary entry can lose its rounded top edge');
 if (!process.exitCode) pass('settings startup / search-engine / OCR prompt safeguards');
 
 

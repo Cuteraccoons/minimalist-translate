@@ -115,10 +115,13 @@ async page => {
     return {
       rows:buttons.length,
       openPanels:document.querySelectorAll(".blacklist-domain-list .domain-scope-panel:not([hidden])").length,
-      activeButtons:document.querySelectorAll(".blacklist-domain-list .domain-config-btn.active").length
+      activeButtons:document.querySelectorAll(".blacklist-domain-list .domain-config-btn.active").length,
+      expandedRows:document.querySelectorAll(".blacklist-domain-list .domain-row.is-config-open").length,
+      explicitRemove:document.querySelectorAll(".blacklist-domain-list .domain-remove-btn").length,
+      panelFlow:buttons[1] ? getComputedStyle(buttons[1].closest(".domain-row").querySelector(".domain-scope-panel")).position : ""
     };
   });
-  if(blacklist.rows<2||blacklist.openPanels!==1||blacklist.activeButtons!==1)throw new Error(`黑名单设置面板协调失败：${JSON.stringify(blacklist)}`);
+  if(blacklist.rows<2||blacklist.openPanels!==1||blacklist.activeButtons!==1||blacklist.expandedRows!==1||blacklist.explicitRemove!==blacklist.rows||blacklist.panelFlow!=="static")throw new Error(`黑名单设置面板协调失败：${JSON.stringify(blacklist)}`);
   await page.goto(`${base}/popup.html`);
   await page.waitForFunction(()=>document.querySelector("#site-image-translation-domain")?.textContent==="127.0.0.1");
   await page.click("#site-image-translation-toggle");

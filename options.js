@@ -556,10 +556,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         </label>`).join("");
       return `<div class="domain-row" data-domain-row="${escapeHtml(domain)}">
         <div class="domain-row-line">
-          <div class="domain-row-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></div>
           <div class="domain-row-copy"><strong>${escapeHtml(domain)}</strong><span>${custom ? `自定义 · 停用 ${disabledCount} 项` : `使用默认 · 停用 ${disabledCount} 项`}</span></div>
-          <button type="button" class="domain-config-btn" data-domain="${escapeHtml(domain)}">功能设置</button>
-          <button type="button" class="domain-remove-icon" data-domain="${escapeHtml(domain)}" aria-label="移除 ${escapeHtml(domain)}" title="移除"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+          <div class="domain-row-actions">
+            <button type="button" class="domain-config-btn" data-domain="${escapeHtml(domain)}" aria-expanded="false">功能设置</button>
+            <button type="button" class="domain-remove-btn" data-domain="${escapeHtml(domain)}" aria-label="从黑名单移除 ${escapeHtml(domain)}">移除</button>
+          </div>
         </div>
         <div class="domain-scope-panel" hidden>${chips}<button type="button" class="domain-reset-rule" data-domain="${escapeHtml(domain)}">恢复默认</button></div>
       </div>`;
@@ -568,11 +569,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       const row = btn.closest(".domain-row"); const panel = row?.querySelector(".domain-scope-panel");
       if (!panel) return;
       const opening=panel.hidden;
-      excludeDomainListEl.querySelectorAll(".domain-scope-panel").forEach(other=>{other.hidden=true;other.classList.remove("is-open");});
-      excludeDomainListEl.querySelectorAll(".domain-config-btn").forEach(other=>other.classList.remove("active"));
-      panel.hidden=!opening;panel.classList.toggle("is-open",opening);btn.classList.toggle("active",opening);
+      excludeDomainListEl.querySelectorAll(".domain-scope-panel").forEach(other=>{other.hidden=true;other.classList.remove("is-open");other.closest(".domain-row")?.classList.remove("is-config-open");});
+      excludeDomainListEl.querySelectorAll(".domain-config-btn").forEach(other=>{other.classList.remove("active");other.setAttribute("aria-expanded","false");});
+      panel.hidden=!opening;
+      panel.classList.toggle("is-open",opening);
+      row?.classList.toggle("is-config-open",opening);
+      btn.classList.toggle("active",opening);
+      btn.setAttribute("aria-expanded", opening ? "true" : "false");
     }));
-    excludeDomainListEl.querySelectorAll(".domain-remove-icon").forEach(btn => btn.addEventListener("click", async () => {
+    excludeDomainListEl.querySelectorAll(".domain-remove-btn").forEach(btn => btn.addEventListener("click", async () => {
       const domain = btn.dataset.domain;
       if (!confirm(`确定将「${domain}」从网站黑名单移除吗？`)) return;
       currentSettings.excludeDomainList = (currentSettings.excludeDomainList || []).filter(x => x !== domain);
@@ -586,7 +591,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       rules[domain]={...getExcludeDomainRule(domain), [scope]:!!input.checked};
       currentSettings.excludeDomainRules=rules;
       await saveExcludeDomainRules(); renderExcludeDomainList();
-      const row = excludeDomainListEl.querySelector(`[data-domain-row="${CSS.escape(domain)}"]`); const panel=row?.querySelector('.domain-scope-panel');panel?.removeAttribute('hidden');panel?.classList.add('is-open');row?.querySelector('.domain-config-btn')?.classList.add('active');
+      const row = excludeDomainListEl.querySelector(`[data-domain-row="${CSS.escape(domain)}"]`);
+      const panel=row?.querySelector('.domain-scope-panel');
+      const configBtn=row?.querySelector('.domain-config-btn');
+      panel?.removeAttribute('hidden');
+      panel?.classList.add('is-open');
+      row?.classList.add('is-config-open');
+      configBtn?.classList.add('active');
+      configBtn?.setAttribute('aria-expanded','true');
     }));
     excludeDomainListEl.querySelectorAll('.domain-reset-rule').forEach(btn => btn.addEventListener('click', async () => {
       const rules={...(currentSettings.excludeDomainRules||{})}; delete rules[btn.dataset.domain]; currentSettings.excludeDomainRules=rules;
