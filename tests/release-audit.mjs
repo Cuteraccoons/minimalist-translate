@@ -202,7 +202,7 @@ if (!read('options.html').includes('id="dictionary-ai-preferences"') || !read('o
 for (const key of ['dictionaryAiAnswerStyle','dictionaryAiEmojiLevel','dictionaryAiLayout','dictionaryAiExplanationDepth','dictionaryAiStoryMode','dictionaryAiPosition','dictionaryAiConceptRigor']) {
   if (!backgroundJs.includes(key)) fail(`dictionary AI prompt preference missing: ${key}`);
 }
-if (!read('floating.css').includes('background:#edf7f1!important') || !read('floating.css').includes('box-shadow:none!important')) fail('dictionary AI answer bubbles are not using the flat green treatment');
+if (!read('floating.css').includes('background:#285846!important') || !read('floating.css').includes('-webkit-text-fill-color:#fff!important') || !read('floating.css').includes('box-shadow:none!important')) fail('dictionary AI answer bubbles are not using the flat dark-green inverse treatment');
 if (!content.includes('focusNewAiTurnOnce') || !read('floating.css').includes('overflow-anchor:none')) fail('stable dictionary AI answer viewport missing');
 if (content.includes('confirmReaderShortcut') || !content.includes('isEditableShortcutEvent(e)') || !content.includes('toggleReaderMode();')) fail('direct reader shortcut or editable-field guard missing');
 if (!content.includes('function showInputReplaceCard') || !content.includes('inputReplaceTargetLang: "en"') || !content.includes('insertReplacementText')) fail('selected input replacement translation missing');
