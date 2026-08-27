@@ -222,6 +222,7 @@ if (!popupJs.includes('function closePopupMenus') || !read('options.js').include
 if (!popupJs.includes('radial-gradient(circle at center') || !read('popup.html').includes('color-wheel-dot')) fail('follow-page colour icon is not a colour wheel');
 if (!read('popup.css').includes('.api-quick-drawer.is-connected') || !read('popup.css').includes('border-bottom:1px solid #dfe5e1!important')) fail('connected API drawer bottom/side border missing');
 if (!read('popup.css').includes('.site-image-translation-card{margin:0!important}') || !read('popup.html').includes('image-translate-spark')) fail('site image translation card spacing or icon treatment regressed');
+if (!read('popup.css').includes('#btn-open-local-dict.local-dict-link') || !read('floating.css').includes('.dict-local-tab[aria-selected="true"]') || !content.includes('dict-local-launch-choice ${i===0?\'active\':\'\'}')) fail('local dictionary actions are not aligned black inverse controls');
 if (!popupJs.includes('wrap.classList.toggle("is-standard"') || !read('popup.css').includes('.popup-select.is-standard')) fail('dictionary engine selector does not adapt width by option length');
 if (!popupJs.includes("!['native','classic'].includes(btn.dataset.value)")) fail('popup replacement style choices are not limited to two');
 if (!read('options.js').includes('function activeTypographyRenderStyle')) fail('settings replacement typography mode is not independent');

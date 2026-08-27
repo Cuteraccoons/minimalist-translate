@@ -6945,7 +6945,7 @@
 
     if (!currentSettings.localDictionaryPriority) {
       wrap.classList.add("dict-local-launcher-wrap");
-      wrap.innerHTML = `<div class="dict-local-launcher"><span class="dict-local-launcher-label">本地词典</span><div class="dict-local-launcher-buttons">${localEntries.slice(0,5).map((entry,i)=>`<button type="button" data-local-launch-index="${i}">${escapeHtml(entry.dictionaryName || `词典 ${i+1}`)}</button>`).join("")}</div>${localEntries.length>5?`<button type="button" class="dict-local-launch-more" data-local-launch-index="0">+${localEntries.length-5}</button>`:""}</div>`;
+      wrap.innerHTML = `<div class="dict-local-launcher"><span class="dict-local-launcher-label">本地词典</span><div class="dict-local-launcher-buttons">${localEntries.slice(0,5).map((entry,i)=>`<button type="button" class="dict-local-launch-choice ${i===0?'active':''}" data-local-launch-index="${i}" aria-current="${i===0?'true':'false'}">${escapeHtml(entry.dictionaryName || `词典 ${i+1}`)}</button>`).join("")}</div>${localEntries.length>5?`<button type="button" class="dict-local-launch-more" data-local-launch-index="0">+${localEntries.length-5}</button>`:""}</div>`;
       contentEl.appendChild(wrap);
       wrap.querySelectorAll("[data-local-launch-index]").forEach(btn => btn.addEventListener("click", () => openLocalDictionaryPage(contentEl, localEntries, Number(btn.dataset.localLaunchIndex || 0))));
       return;

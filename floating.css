@@ -4264,3 +4264,32 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
 #raccoon-reader-root .reader-figcaption :is(.reader-orig-p,.reader-trans-p){font-size:13px!important;line-height:1.58!important;color:#747e89!important;text-align:center!important}
 #raccoon-reader-root[data-theme="dark"] .reader-blockquote{background:rgba(166,186,209,.08);border-left-color:#8ea6c0}
 #raccoon-reader-root[data-theme="dark"] .reader-figcaption :is(.reader-orig-p,.reader-trans-p){color:#aeb7c1!important}
+
+/* Local dictionary selection is a real state, not a quiet grey action.
+   Lock the title and 30px controls to one centreline after legacy overrides. */
+.raccoon-dict-card .dict-local-priority-head{
+  display:grid!important;grid-template-columns:max-content minmax(0,1fr) max-content!important;
+  align-items:center!important;min-height:30px!important;column-gap:10px!important
+}
+.raccoon-dict-card .dict-local-main-title,
+.raccoon-dict-card .dict-local-launcher-label{
+  display:inline-flex!important;align-items:center!important;align-self:center!important;
+  min-height:30px!important;height:30px!important;margin:0!important;padding:0!important;
+  line-height:1!important;white-space:nowrap!important
+}
+.raccoon-dict-card .dict-local-tabs,
+.raccoon-dict-card .dict-local-launcher-buttons{
+  align-self:center!important;align-items:center!important;min-height:30px!important;margin:0!important;padding:0!important
+}
+.raccoon-dict-card .dict-local-tab,
+.raccoon-dict-card .dict-local-launch-choice{
+  display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  height:30px!important;min-height:30px!important;padding:0 10px!important;line-height:1!important
+}
+.raccoon-dict-card .dict-local-tab.active,
+.raccoon-dict-card .dict-local-tab[aria-selected="true"],
+.raccoon-dict-card .dict-local-launch-choice.active,
+.raccoon-dict-card .dict-local-launch-choice[aria-current="true"]{
+  border-color:#17191c!important;background:#17191c!important;color:#fff!important;
+  -webkit-text-fill-color:#fff!important;box-shadow:none!important;font-weight:700!important
+}
