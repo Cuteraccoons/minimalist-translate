@@ -102,6 +102,8 @@ if (content.includes('reader-toggle-divider') || !content.includes('data-reader-
 if (!read('floating.css').includes('.reader-outline-item.level-3{opacity:.72!important') || !read('floating.css').includes('border-bottom:0!important;padding-bottom:0!important;margin-bottom:28px!important')) fail('reader outline hierarchy or metadata separator regressed');
 if (!content.includes('activeReaderViewController(readerViewForDisplayMode') || !content.includes('persistDisplayMode:true') || !read('background.js').includes('changedKeys') || !read('popup.js').includes('{ notifyOnActive:true }')) fail('popup and reader presentation controls are not synchronized');
 if (!read('floating.css').includes('.reader-drawer-backdrop {\n  display: none !important;') || !read('floating.css').includes('overscroll-behavior: contain;\n  scrollbar-gutter: stable;')) fail('reader settings drawer still blocks or scroll-captures the article');
+if (content.includes('has-orig-highlight') || content.includes('"MARK","CODE"') || read('floating.css').includes('.raccoon-translated-block.has-orig-highlight')) fail('clean translation still copies a host highlight across the whole translated block');
+if (!content.includes('for (let index = 0; index < uncachedItems.length; index += 6)') || !content.includes('翻译请求等待时间过长')) fail('direct reader translation is not progressive or timeout-safe');
 if (!process.exitCode) pass('DOM-preserving translation safeguards');
 
 const sandbox = read('ocr-sandbox.html');

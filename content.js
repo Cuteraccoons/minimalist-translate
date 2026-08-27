@@ -882,11 +882,21 @@
 
   function sendBatchWithIds(items, engineOverride = null) {
     return new Promise((resolve) => {
+      let settled = false;
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        resolve(value);
+      };
+      const timeoutId = setTimeout(() => {
+        finish({ success:false, error:"翻译请求等待时间过长，请稍后重试" });
+      }, 45000);
       // 扩展更新/重载后，旧页面里的 content script 可能暂时失去 runtime 上下文。
       // sendMessage 在这种情况下会同步抛错，不能只依赖 callback 里的 lastError。
       try {
         if (!chrome?.runtime?.id) {
-          resolve({ success: false, error: "扩展运行上下文暂不可用，请刷新页面后重试。" });
+          finish({ success: false, error: "扩展运行上下文暂不可用，请刷新页面后重试。" });
           return;
         }
         chrome.runtime.sendMessage(
@@ -900,14 +910,14 @@
           (res) => {
             const runtimeError = chrome.runtime.lastError;
             if (runtimeError) {
-              resolve({ success: false, error: runtimeError.message || "翻译消息通道暂不可用" });
+              finish({ success: false, error: runtimeError.message || "翻译消息通道暂不可用" });
             } else {
-              resolve(res || { success: false, error: "翻译服务未返回结果" });
+              finish(res || { success: false, error: "翻译服务未返回结果" });
             }
           }
         );
       } catch (err) {
-        resolve({ success: false, error: err?.message || String(err) });
+        finish({ success: false, error: err?.message || String(err) });
       }
     });
   }
@@ -1419,11 +1429,19 @@
     if (!origEl || !transNode || currentSettings.renderStyle !== "native") return;
     try {
       const cs = window.getComputedStyle(origEl);
-      const copy = ["font-size", "line-height", "font-weight", "letter-spacing", "text-align", "text-transform", "font-variant", "word-spacing"];
+      const copy = ["line-height", "font-weight", "letter-spacing", "text-align", "text-transform", "font-variant", "word-spacing"];
       copy.forEach(prop => {
         const value = cs.getPropertyValue(prop);
         if (value) transNode.style.setProperty(prop, value, "important");
       });
+      const sourceSize = parseFloat(cs.fontSize || "");
+      if (Number.isFinite(sourceSize) && sourceSize > 0) {
+        const proseLike = /^(?:P|DIV|BLOCKQUOTE|DT|DD|LI)$/.test(String(origEl.tagName || "").toUpperCase());
+        // CJK glyphs often look optically smaller in the host's fallback font.
+        // Keep the source scale, with a restrained readability correction for prose.
+        const readableSize = proseLike ? Math.max(14.5, sourceSize + .75) : sourceSize;
+        transNode.style.setProperty("font-size", `${Math.round(readableSize * 100) / 100}px`, "important");
+      }
       // Reference mode keeps the host font, while colour still obeys the same
       // minimum-contrast rule as every other translation style.
       transNode.style.setProperty("font-family", cs.fontFamily || "inherit", "important");
@@ -1832,11 +1850,6 @@
       transNode.style.setProperty("font-family", fontFam, "important");
     }
     applySourceTypographyScale(origEl, transNode);
-
-    const origHighlights = origEl.querySelectorAll("mark, [style*='background']");
-    if (origHighlights.length > 0) {
-      transNode.classList.add("has-orig-highlight");
-    }
 
     const translationTextNode = document.createElement("span");
     translationTextNode.className = "raccoon-translation-text";
@@ -2870,7 +2883,10 @@
       }
     } catch (_) {}
     clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-    const allowed = new Set(["A","STRONG","B","EM","I","U","S","MARK","CODE","KBD","SAMP","SUB","SUP","RUBY","RT","RP","BR","SPAN","SMALL","Q"]);
+    // Reader clean-up keeps semantic structure but deliberately drops MARK.
+    // A host highlight covers a source glyph range; copying it to an entire
+    // translated paragraph invents a relationship that cannot be aligned.
+    const allowed = new Set(["A","STRONG","B","EM","I","U","S","CODE","KBD","SAMP","SUB","SUP","RUBY","RT","RP","BR","SPAN","SMALL","Q"]);
     Array.from(clone.querySelectorAll?.("*") || []).reverse().forEach(node => {
       const tag = node.tagName;
       if (["SCRIPT","STYLE","NOSCRIPT","IFRAME","OBJECT","EMBED"].includes(tag)) { node.remove(); return; }
@@ -3613,6 +3629,7 @@
           const matchedTrans = translationByOriginal.get(raw) || "";
 
           const pairEl = root.querySelector(`[data-para-id="r_${idx}"] .reader-trans-p`);
+          if (pairEl?.dataset.loaded === "true") return;
           if (matchedTrans && pairEl) {
             setReaderTranslationText(pairEl, matchedTrans);
             pairEl.dataset.loaded = "true";
@@ -3623,31 +3640,59 @@
 
         if (uncachedItems.length === 0 || !root?.isConnected) return;
 
-        const transRes = await sendBatchWithIds(uncachedItems);
-        if (!root?.isConnected) return;
-
-        if (transRes?.success && Array.isArray(transRes.data)) {
-          let failedReaderItems = 0;
-          transRes.data.forEach(item => {
-            if (!item?.id) return;
-            const pairEl = root.querySelector(`[data-para-id="${item.id}"] .reader-trans-p`);
-            if (pairEl && item.text && !item.error) {
-              setReaderTranslationText(pairEl, item.text);
-              pairEl.dataset.loaded = "true";
-              const pair = pairEl.closest(".reader-paragraph-pair");
-              if (root.getAttribute("data-reader-view") === "trans" && pair?.dataset.heading === "true") {
-                const titleEl = root.querySelector(".reader-title");
-                if (titleEl && item.text.trim().length < 180) titleEl.textContent = item.text.trim();
-              }
-            } else if (pairEl) failedReaderItems++;
-          });
-          if (failedReaderItems) hasTriggeredTranslation = false;
-          return;
+        // A reader opened before webpage translation has no paragraph cache.
+        // Render small batches as they finish instead of leaving the whole
+        // article on “正在同步” until one giant request completes.
+        const chunks = [];
+        for (let index = 0; index < uncachedItems.length; index += 6) {
+          chunks.push(uncachedItems.slice(index, index + 6));
         }
+        let nextChunk = 0;
+        let completed = 0;
+        let failedReaderItems = 0;
+        const updateProgress = () => {
+          const statusText = root.querySelector("#reader-mode-status-text");
+          if (!statusText || !root?.isConnected) return;
+          const view = root.getAttribute("data-reader-view");
+          const label = view === "trans" ? "纯中文精排阅读" : "双语对照精排";
+          statusText.textContent = completed < uncachedItems.length ? `${label} · ${completed}/${uncachedItems.length}` : label;
+        };
+        updateProgress();
 
-        // Keep failures contained and allow a later reader-mode transition to retry supplementation.
-        hasTriggeredTranslation = false;
-        console.warn("Jijian reader translation skipped:", transRes?.error || "unknown translation error");
+        const worker = async () => {
+          while (root?.isConnected && nextChunk < chunks.length) {
+            const chunk = chunks[nextChunk++];
+            const transRes = await sendBatchWithIds(chunk);
+            if (!root?.isConnected) return;
+            const returned = new Set();
+            if (transRes?.success && Array.isArray(transRes.data)) {
+              transRes.data.forEach(item => {
+                if (!item?.id) return;
+                returned.add(item.id);
+                const pairEl = root.querySelector(`[data-para-id="${item.id}"] .reader-trans-p`);
+                if (pairEl && item.text && !item.error) {
+                  setReaderTranslationText(pairEl, item.text);
+                  pairEl.dataset.loaded = "true";
+                  const pair = pairEl.closest(".reader-paragraph-pair");
+                  if (root.getAttribute("data-reader-view") === "trans" && pair?.dataset.heading === "true") {
+                    const titleEl = root.querySelector(".reader-title");
+                    if (titleEl && item.text.trim().length < 180) titleEl.textContent = item.text.trim();
+                  }
+                } else if (pairEl) failedReaderItems++;
+              });
+            }
+            failedReaderItems += chunk.filter(item => !returned.has(item.id)).length;
+            completed += chunk.length;
+            updateProgress();
+          }
+        };
+        await Promise.all(Array.from({ length:Math.min(2, chunks.length) }, () => worker()));
+        if (!root?.isConnected) return;
+        if (failedReaderItems) {
+          hasTriggeredTranslation = false;
+          const statusText = root.querySelector("#reader-mode-status-text");
+          if (statusText) statusText.textContent = `${root.getAttribute("data-reader-view") === "trans" ? "纯中文精排阅读" : "双语对照精排"} · ${failedReaderItems} 段待重试`;
+        }
       } catch (err) {
         hasTriggeredTranslation = false;
         console.warn("Jijian reader translation failed safely:", err);

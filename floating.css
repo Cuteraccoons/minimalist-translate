@@ -118,14 +118,6 @@ h3 + .raccoon-translated-block {
   opacity: 1 !important;
 }
 
-.raccoon-translated-block.has-orig-highlight,
-[data-raccoon-translated="true"].has-orig-highlight {
-  background: linear-gradient(120deg, rgba(254, 240, 138, 0.65) 0%, rgba(254, 240, 138, 0.65) 100%) !important;
-  border-radius: 4px !important;
-  box-decoration-break: clone !important;
-  -webkit-box-decoration-break: clone !important;
-}
-
 /* ==========================================================================
    2. 舒适高清晰度苹果悬浮操作胶囊 (Apple Action Capsule)
    ========================================================================== */
