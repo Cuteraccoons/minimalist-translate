@@ -679,7 +679,11 @@ async function lookupChineseMoedict(word) {
       const strip = (v) => String(v || "").replace(/<[^>]+>/g, "").replace(/`[^`]*~/g, "").replace(/\s+/g, " ").trim();
       const asList = (v) => (Array.isArray(v) ? v : (v ? [v] : [])).map(strip).filter(Boolean);
       for (const het of heteronyms.slice(0, 8)) {
-        const reading = strip(het?.bopomofo2 || het?.pinyin || "");
+        // `bopomofo2` is a convenience romanisation of the Zhuyin field and is
+        // not always valid Hanyu Pinyin (for example 行 may become “shíng”).
+        // Prefer the dictionary's explicit pinyin value and keep bopomofo2 only
+        // as a compatibility fallback for older entries.
+        const reading = strip(het?.pinyin || het?.bopomofo2 || "");
         if (reading && !readings.includes(reading)) readings.push(reading);
         for (const def of (Array.isArray(het?.definitions) ? het.definitions : []).slice(0, 10)) {
           const text = strip(def?.def);

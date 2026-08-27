@@ -906,14 +906,13 @@ input:checked + .switch-knob:before {
 
 .site-image-translation-card{
   width:100%;min-height:56px;margin:8px 0 7px;padding:9px 11px;display:grid;
-  grid-template-columns:34px minmax(0,1fr) auto 34px;align-items:center;gap:9px;
+  grid-template-columns:minmax(0,1fr) auto 34px;align-items:center;gap:9px;
   border:1px solid var(--separator);border-radius:11px;background:#fff;color:var(--label-primary);
   font:inherit;text-align:left;cursor:pointer;box-shadow:none;transition:border-color .16s ease,background .16s ease
 }
 .site-image-translation-card:hover{border-color:#c8ced5;background:#fbfcfd}.site-image-translation-card:disabled{opacity:.5;cursor:default}
-.site-image-translation-icon{width:32px;height:32px;display:grid;place-items:center;border-radius:8px;background:#f2f5f7;color:#4c5966}.site-image-translation-icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .site-image-translation-copy{min-width:0;display:flex;flex-direction:column;gap:2px}.site-image-translation-copy strong{font-size:13px;font-weight:680}.site-image-translation-copy small{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--label-tertiary);font-size:10.5px}
-.site-image-translation-state{font-size:11px;font-weight:650;color:#54606c;white-space:nowrap}.site-image-translation-switch{position:relative;width:34px;height:20px;border-radius:999px;background:#252a30;transition:background .17s ease}.site-image-translation-switch i{position:absolute;top:2px;left:16px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .17s ease}.site-image-translation-card.is-disabled .site-image-translation-switch{background:#d9dde2}.site-image-translation-card.is-disabled .site-image-translation-switch i{left:2px}.site-image-translation-card.is-disabled .site-image-translation-state{color:#939aa3}.site-image-translation-card.is-disabled .site-image-translation-icon{color:#9098a1;background:#f5f6f7}
+.site-image-translation-state{font-size:11px;font-weight:650;color:#54606c;white-space:nowrap}.site-image-translation-switch{position:relative;width:34px;height:20px;border-radius:999px;background:#252a30;transition:background .17s ease}.site-image-translation-switch i{position:absolute;top:2px;left:16px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .17s ease}.site-image-translation-card.is-disabled .site-image-translation-switch{background:#d9dde2}.site-image-translation-card.is-disabled .site-image-translation-switch i{left:2px}.site-image-translation-card.is-disabled .site-image-translation-state{color:#939aa3}
 .underline-tab-item.active { border-bottom-color: transparent; }
 
 /* 收藏入口：图标略放大，图标与文字距离收紧。 */
@@ -1398,18 +1397,6 @@ input:checked + .switch-knob:before {
 /* This is a peer of the other Popup card groups; the parent flex gap supplies
    its spacing. Avoid stacking another margin on top of that gap. */
 .site-image-translation-card{margin:0!important}
-.site-image-translation-icon{
-  width:32px!important;height:32px!important;border:1px solid #dce7f1!important;border-radius:9px!important;
-  background:linear-gradient(145deg,#eef6fc,#f4f1fb)!important;color:#456b8e!important;box-shadow:none!important
-}
-.site-image-translation-icon svg{width:18px!important;height:18px!important;stroke-width:1.65!important}
-.site-image-translation-icon .image-translate-frame{stroke:#456b8e!important}
-.site-image-translation-icon .image-translate-spark{stroke:#806aa5!important;stroke-width:1.8!important}
-.site-image-translation-card.is-disabled .site-image-translation-icon{
-  border-color:#e5e8eb!important;background:#f5f6f7!important;color:#939aa3!important
-}
-.site-image-translation-card.is-disabled .site-image-translation-icon .image-translate-frame,
-.site-image-translation-card.is-disabled .site-image-translation-icon .image-translate-spark{stroke:#939aa3!important}
 
 /* 1.0 project and appreciation — selected editorial direction 01. */
 .app-footer{margin:5px 0 1px!important;padding:0!important;border:0!important}

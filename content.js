@@ -6318,10 +6318,21 @@
       if (voices && voices.length > 0) {
         const primary = bcpLang.split("-")[0].toLowerCase();
         const accent = String(currentSettings.preferredVoiceAccent || "us").toLowerCase();
-        const candidates = voices.filter(v => String(v.lang || "").toLowerCase().startsWith(primary));
+        const requestedLocale = bcpLang.toLowerCase().replace(/_/g,"-");
+        const candidates = voices.filter(v => {
+          const voiceLocale=String(v.lang || "").toLowerCase().replace(/_/g,"-");
+          const voiceName=String(v.name || "").toLowerCase();
+          if(primary === "zh") {
+            if(!/^(?:zh|cmn)(?:-|$)/.test(voiceLocale)) return false;
+            if(requestedLocale === "zh-cn" && (/(?:tw|hk|mo|hant|yue)/.test(voiceLocale) || /cantonese|hong kong|taiwan/.test(voiceName))) return false;
+            if(requestedLocale === "zh-tw" && /(?:cn|sg|hans)/.test(voiceLocale)) return false;
+            return true;
+          }
+          return voiceLocale.startsWith(primary);
+        });
         const scoreVoice = (v) => {
           const name = String(v.name || "").toLowerCase();
-          const lang = String(v.lang || "").toLowerCase();
+          const lang = String(v.lang || "").toLowerCase().replace(/_/g,"-");
           let score = 0;
           if (name.includes("natural")) score += 16;
           if (name.includes("microsoft")) score += 9;
@@ -6331,7 +6342,16 @@
           if (primary === "en") {
             if (accent === "uk" && /(gb|uk)/.test(lang)) score += 8;
             if (accent !== "uk" && /(us)/.test(lang)) score += 8;
-          } else if (lang === bcpLang.toLowerCase()) score += 5;
+          } else if (primary === "zh") {
+            if (lang === requestedLocale) score += 36;
+            if (requestedLocale === "zh-cn") {
+              if (/^(?:zh|cmn)-(?:cn|sg|hans)(?:-|$)/.test(lang)) score += 24;
+              if (/(?:tw|hk|mo|hant|yue)/.test(lang) || /cantonese|hong kong|taiwan/.test(name)) score -= 48;
+            } else if (requestedLocale === "zh-tw") {
+              if (/^(?:zh|cmn)-(?:tw|hant)(?:-|$)/.test(lang)) score += 24;
+              if (/(?:cn|sg|hans)/.test(lang)) score -= 24;
+            }
+          } else if (lang === requestedLocale) score += 12;
           return score;
         };
         candidates.sort((a,b) => scoreVoice(b) - scoreVoice(a));
