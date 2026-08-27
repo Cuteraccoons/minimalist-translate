@@ -1383,6 +1383,34 @@ input:checked + .switch-knob:before {
   border-radius:9px!important;background:#f7faf8!important;box-sizing:border-box!important
 }
 
+/* Keep the connected provider drawer visually attached to its parent card while
+   restoring the side and bottom strokes that its rounded background covered. */
+.api-quick-drawer.is-connected{
+  padding:0 11px 9px!important;border-top:1px solid #e7e9ec!important;
+  border-right:1px solid #dfe5e1!important;border-bottom:1px solid #dfe5e1!important;border-left:1px solid #dfe5e1!important;
+  border-radius:0 0 10px 10px!important;background:#fff!important;background-clip:border-box!important;overflow:hidden!important
+}
+.api-quick-drawer.is-connected .api-connected-summary{
+  min-height:39px!important;margin:8px 0 0!important;border:1px solid #dbe8df!important;border-radius:8px!important;
+  background:#f6faf7!important;box-shadow:none!important
+}
+
+/* This is a peer of the other Popup card groups; the parent flex gap supplies
+   its spacing. Avoid stacking another margin on top of that gap. */
+.site-image-translation-card{margin:0!important}
+.site-image-translation-icon{
+  width:32px!important;height:32px!important;border:1px solid #dce7f1!important;border-radius:9px!important;
+  background:linear-gradient(145deg,#eef6fc,#f4f1fb)!important;color:#456b8e!important;box-shadow:none!important
+}
+.site-image-translation-icon svg{width:18px!important;height:18px!important;stroke-width:1.65!important}
+.site-image-translation-icon .image-translate-frame{stroke:#456b8e!important}
+.site-image-translation-icon .image-translate-spark{stroke:#806aa5!important;stroke-width:1.8!important}
+.site-image-translation-card.is-disabled .site-image-translation-icon{
+  border-color:#e5e8eb!important;background:#f5f6f7!important;color:#939aa3!important
+}
+.site-image-translation-card.is-disabled .site-image-translation-icon .image-translate-frame,
+.site-image-translation-card.is-disabled .site-image-translation-icon .image-translate-spark{stroke:#939aa3!important}
+
 /* 1.0 project and appreciation — selected editorial direction 01. */
 .app-footer{margin:5px 0 1px!important;padding:0!important;border:0!important}
 .popup-tail-choice{
