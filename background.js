@@ -71,6 +71,7 @@ const DEFAULT_SETTINGS = {
   dictionaryAiStoryMode: "as-needed", // off | as-needed | story-first
   dictionaryAiPosition: "first", // first | last
   dictionaryAiConceptRigor: true,
+  dictionaryAiCustomPrompt: "",
   localDictionaryPriority: false,
   dictionaryAiMode: "manual", // Retained for settings-schema compatibility.
   enableImageTranslation: true, // 图片角落显示本机识字翻译入口
@@ -138,6 +139,7 @@ const LOCAL_ONLY_SETTING_KEYS = Object.freeze([
   "deepseekApiKey", "deepseekBaseUrl", "deepseekModel",
   "deeplAuthKey", "deeplApiType",
   "openaiApiKey", "openaiBaseUrl", "openaiModel", "openaiCustomPrompt",
+  "dictionaryAiCustomPrompt",
   "claudeApiKey", "claudeBaseUrl", "claudeModel",
   "geminiApiKey", "geminiModel",
   "ollamaBaseUrl", "ollamaModel",
@@ -1369,6 +1371,73 @@ async function lookupDictionary(text, sl = "auto", tl = "zh-CN") {
   setCache(cacheKey, result); schedulePersistCache(); return result;
 }
 
+const DICTIONARY_AI_PROMPT_VERSION = "dict-ai-v2";
+
+function looksLikeDictionaryPrompt(value) {
+  return /(?:词义|释义|词性|读音|原形|例句|语境|语法|搭配|lexicograph|dictionary|definition|meaning|part of speech|example|context|grammar)/i.test(String(value || ""));
+}
+
+function resolveDictionaryCustomPrompt(settings) {
+  const explicit = String(settings?.dictionaryAiCustomPrompt || "").trim();
+  if (explicit) return explicit.slice(0, 4000);
+
+  // Earlier builds exposed only the OpenAI translation prompt field. Preserve a
+  // dictionary-oriented prompt entered there, but never feed a normal
+  // "translate and output only" instruction into dictionary answers.
+  const legacy = String(settings?.openaiCustomPrompt || "").trim();
+  const defaultTranslationPrompt = String(DEFAULT_SETTINGS.openaiCustomPrompt || "").trim();
+  return legacy && legacy !== defaultTranslationPrompt && looksLikeDictionaryPrompt(legacy)
+    ? legacy.slice(0, 4000)
+    : "";
+}
+
+function shortStableHash(value) {
+  let hash = 2166136261;
+  const text = String(value || "");
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function resolveDictionaryAiEngine(settings) {
+  const usable = (name) => {
+    if (name === "deepseek") return !!settings?.deepseekApiKey;
+    if (name === "openai") return !!settings?.openaiApiKey;
+    if (name === "claude") return !!settings?.claudeApiKey;
+    if (name === "gemini") return !!settings?.geminiApiKey;
+    if (name === "custom") return !!(settings?.customBaseUrl && settings?.customApiKey);
+    return false;
+  };
+  const selected = settings?.translationEngine || "";
+  if (usable(selected)) return selected;
+  return ["deepseek", "openai", "claude", "gemini", "custom"].find(usable) || "fallback";
+}
+
+function dictionaryAiCacheSignature(settings) {
+  const engine = resolveDictionaryAiEngine(settings);
+  const models = {
+    deepseek: settings?.deepseekModel,
+    openai: settings?.openaiModel,
+    claude: settings?.claudeModel,
+    gemini: settings?.geminiModel,
+    custom: settings?.customModel
+  };
+  return shortStableHash(JSON.stringify([
+    DICTIONARY_AI_PROMPT_VERSION,
+    engine,
+    models[engine] || "",
+    settings?.dictionaryAiAnswerStyle,
+    settings?.dictionaryAiEmojiLevel,
+    settings?.dictionaryAiLayout,
+    settings?.dictionaryAiExplanationDepth,
+    settings?.dictionaryAiStoryMode,
+    settings?.dictionaryAiConceptRigor,
+    resolveDictionaryCustomPrompt(settings)
+  ]));
+}
+
 /**
  * Configurable AI dictionary analysis (DeepSeek / OpenAI / Claude / Gemini)
  */
@@ -1382,7 +1451,7 @@ async function lookupAIDeepDictionary(word, settings, langHint = "auto", context
     ? `You are a concise language-reading assistant for a Chinese-speaking learner.
 Selected text: “${word}”.${contextSection}
 The learner asks: “${String(question || "请解释这段内容").slice(0, 500)}”
-Answer the question directly in Chinese. When useful, quote only short fragments of the selected text. Explain meaning, grammar, syntax or nuance only as needed. If the answer naturally contains distinct parts, use 1–3 short Markdown headings; do not force a fixed template. Do not add generic study advice or invented sources.`
+Answer the question directly and thoroughly in Chinese. Preserve useful distinctions instead of collapsing the answer into one basic definition. When useful, quote only short fragments of the selected text and include natural examples with Chinese translations. Explain meaning, grammar, syntax, nuance and collocations to the depth requested by the learner. Use short Markdown headings whenever the answer contains distinct parts. Do not add generic study advice or invented sources.`
     : mode === "word_json"
     ? `You are a professional lexicographer for a Chinese-speaking learner.
 Analyze the selected word or short phrase: “${word}”.${contextSection}
@@ -1451,9 +1520,9 @@ Use clean Markdown and this order:
 2. **读音 / 原形 / 词性**: for Japanese, give kana reading, dictionary form and POS when relevant; for English, give IPA and POS when useful.
 3. **常用义**: give up to 5 useful senses when they genuinely differ, concise Chinese first and English gloss second.
 4. **语感与搭配**: only details that help distinguish usage.
-5. **例句**: 2–3 natural examples with Chinese translations.
+5. **例句**: 3 natural examples covering different useful senses or patterns, each with a Chinese translation.
 
-Avoid redundant headings, long introductions, and invented dictionary-source claims.`
+Do not reduce the response to a single basic gloss: complete every applicable section above. Avoid redundant headings, long introductions, and invented dictionary-source claims.`
     : `You are a concise bilingual lexicographer helping a Chinese-speaking language learner.
 Explain the standalone ${languageName} word or phrase “${word}” without pretending that webpage context is available.
 Use clean Markdown and this order:
@@ -1461,8 +1530,8 @@ Use clean Markdown and this order:
 2. **读音 / 原形 / 词性**: give the useful dictionary form and pronunciation information.
 3. **常用义**: give up to 5 genuinely useful senses, Chinese first and an English gloss when useful.
 4. **语感与搭配**: only distinctions and common collocations that help actual use.
-5. **例句**: 2–3 natural examples with Chinese translations.
-Avoid redundant headings, long introductions, invented context, and invented dictionary-source claims.`;
+5. **例句**: 3 natural examples covering different useful senses or patterns, each with a Chinese translation.
+Do not reduce the response to a single basic gloss: complete every applicable section above. Avoid redundant headings, long introductions, invented context, and invented dictionary-source claims.`;
 
   const preferenceInstructions = [
     s.dictionaryAiAnswerStyle === "professional"
@@ -1494,28 +1563,19 @@ Avoid redundant headings, long introductions, invented context, and invented dic
       ? "For professional concepts, separate established facts from interpretation, state uncertainty, and never claim live web search or cite a source you did not actually access."
       : "Do not fabricate facts, searches or sources."
   ].join("\n- ");
-  const prompt = mode === "word_json" ? basePrompt : `${basePrompt}\n\nUser response preferences:\n- ${preferenceInstructions}`;
+  const customDictionaryPrompt = resolveDictionaryCustomPrompt(s);
+  const customPromptSection = customDictionaryPrompt
+    ? `\n\nUser's custom dictionary instructions (honor these unless they conflict with the requested output format or factual accuracy):\n---\n${customDictionaryPrompt}\n---`
+    : "";
+  const prompt = mode === "word_json"
+    ? `${basePrompt}${customPromptSection}`
+    : `${basePrompt}\n\nUser response preferences:\n- ${preferenceInstructions}${customPromptSection}`;
   const responseMaxTokens = mode === "word_json"
-    ? 1100
+    ? 1500
     : s.dictionaryAiExplanationDepth === "deep"
-      ? 1500
-      : s.dictionaryAiExplanationDepth === "simple" ? 650 : 1000;
-  let engine = s.translationEngine || "deepseek";
-  const usableAiEngine = (name) => {
-    if (name === "deepseek") return !!s.deepseekApiKey;
-    if (name === "openai") return !!s.openaiApiKey;
-    if (name === "claude") return !!s.claudeApiKey;
-    if (name === "gemini") return !!s.geminiApiKey;
-    if (name === "custom") return !!(s.customBaseUrl && s.customApiKey);
-    return false;
-  };
-  if (!usableAiEngine(engine)) {
-    if (s.deepseekApiKey) engine = "deepseek";
-    else if (s.openaiApiKey) engine = "openai";
-    else if (s.claudeApiKey) engine = "claude";
-    else if (s.geminiApiKey) engine = "gemini";
-    else if (s.customBaseUrl && s.customApiKey) engine = "custom";
-  }
+      ? 2000
+      : s.dictionaryAiExplanationDepth === "simple" ? 900 : 1500;
+  const engine = resolveDictionaryAiEngine(s);
 
   if (engine === "deepseek" && s.deepseekApiKey) {
     let baseUrl = (s.deepseekBaseUrl || "https://api.deepseek.com/v1").replace(/\/+$/, "");
@@ -2162,18 +2222,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (action === "LOOKUP_AI_DEEP_DICT") {
-    const aiRequestKey = `dict-ai-response::${JSON.stringify([request.text || "", request.sl || "auto", request.context || "", request.mode || "word", request.question || ""])}`;
-    const cachedAiResponse = getCache(aiRequestKey);
-    if (typeof cachedAiResponse === "string" && cachedAiResponse) {
-      sendResponse({ success:true, markdown:cachedAiResponse, cached:true });
-      return false;
-    }
-    lookupAIDeepDictionary(request.text, request.settings, request.sl || "auto", request.context || "", request.mode || "word", request.question || "")
-      .then(markdown => {
+    (async () => {
+      try {
+        // Content scripts only receive a sanitized settings snapshot. Provider
+        // credentials and prompt preferences must be loaded in this trusted
+        // service worker instead of being accepted from request.settings.
+        const storedSettings = await loadStoredSettings();
+        const aiRequestKey = `${DICTIONARY_AI_PROMPT_VERSION}:${dictionaryAiCacheSignature(storedSettings)}::${JSON.stringify([request.text || "", request.sl || "auto", request.context || "", request.mode || "word", request.question || ""])}`;
+        const cachedAiResponse = getCache(aiRequestKey);
+        if (typeof cachedAiResponse === "string" && cachedAiResponse) {
+          sendResponse({ success:true, markdown:cachedAiResponse, cached:true });
+          return;
+        }
+        const markdown = await lookupAIDeepDictionary(request.text, storedSettings, request.sl || "auto", request.context || "", request.mode || "word", request.question || "");
         if (markdown) { setCache(aiRequestKey, markdown); schedulePersistCache(); }
-        sendResponse({ success: true, markdown: markdown });
-      })
-      .catch(err => sendResponse({ success: false, error: err.message }));
+        sendResponse({ success:true, markdown });
+      } catch (err) {
+        sendResponse({ success:false, error:err.message });
+      }
+    })();
     return true;
   }
 

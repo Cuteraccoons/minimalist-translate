@@ -3955,8 +3955,8 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
 
 .raccoon-dict-card .dict-ai-result{padding:3px 0 6px!important}
 .dict-ai-followup-answer{
-  display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:9px!important;
-  margin:14px 0 0!important;padding:0!important;border:0!important;background:transparent!important
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:13px!important;
+  margin:19px 0 0!important;padding:0!important;border:0!important;background:transparent!important
 }
 .dict-ai-followup-question{
   align-self:flex-start!important;box-sizing:border-box!important;max-width:68%!important;margin:0!important;padding:7px 10px!important;
@@ -3973,15 +3973,15 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
   align-self:stretch!important;width:100%!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;
   border-radius:0!important;background:transparent!important;box-shadow:none!important
 }
-.dict-ai-response-stack{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:8px!important;width:100%!important}
+.dict-ai-response-stack{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:12px!important;width:100%!important}
 .dict-ai-answer-bubble{
-  box-sizing:border-box!important;width:auto!important;max-width:79%!important;padding:10px 12px!important;border:1px solid #e2e6ea!important;
-  border-radius:10px 10px 3px 10px!important;background:#fff!important;box-shadow:0 2px 7px rgba(15,23,42,.045)!important;color:#46505c!important
+  box-sizing:border-box!important;width:auto!important;max-width:82%!important;padding:11px 13px!important;border:1px solid #cfe4d7!important;
+  border-radius:10px 10px 3px 10px!important;background:#edf7f1!important;box-shadow:none!important;color:#365046!important
 }
-.dict-ai-section-label{margin:0 0 7px!important;color:#313a44!important;font-size:12.5px!important;line-height:1.4!important;font-weight:740!important}
-.dict-ai-answer-bubble .dict-ai-paragraph{margin:4px 0!important}
+.dict-ai-section-label{margin:0 0 8px!important;color:#244638!important;font-size:12.5px!important;line-height:1.4!important;font-weight:750!important}
+.dict-ai-answer-bubble .dict-ai-paragraph{margin:5px 0!important}
 .dict-ai-answer-bubble .dict-ai-list{
-  margin:5px 0 7px!important;padding-left:19px!important;list-style-position:outside!important
+  margin:7px 0 9px!important;padding-left:19px!important;list-style-position:outside!important
 }
 .dict-ai-answer-bubble .dict-ai-list .dict-ai-list{margin:3px 0 3px!important;padding-left:18px!important}
 .dict-ai-answer-bubble .dict-ai-list li{display:list-item!important;margin:3px 0!important;padding-left:2px!important}
@@ -3989,7 +3989,7 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
 .dict-ai-answer-bubble .dict-ai-ul .dict-ai-ul{list-style-type:circle!important}
 .dict-ai-answer-bubble .dict-ai-ol{list-style-type:decimal!important}
 .dict-ai-answer-bubble .dict-ai-ol .dict-ai-ol{list-style-type:lower-alpha!important}
-.dict-ai-answer-bubble .dict-ai-list li::marker{color:#7e8792!important;font-weight:650!important}
+.dict-ai-answer-bubble .dict-ai-list li::marker{color:#608b74!important;font-weight:650!important}
 .dict-ai-answer-bubble .dict-ai-quote{
   margin:7px 0!important;padding:5px 0 5px 10px!important;border-left:2px solid #cbd3dc!important;
   color:#68727d!important;font-size:13px!important;line-height:1.58!important

@@ -183,7 +183,9 @@ for (const direction of ['n','e','s','w','nw','ne','se','sw']) {
   if (!content.includes(`data-resize="${direction}"`)) fail(`dictionary resize direction missing: ${direction}`);
 }
 if (!read('floating.css').includes('.dict-resize-handle::before,.dict-resize-handle::after{display:none')) fail('dictionary resize handles still expose a visible corner mark');
-if (!content.includes('dict-ai-answer-bubble') || !content.includes('settings:currentSettings')) fail('dictionary AI chat state/config refresh missing');
+if (!content.includes('dict-ai-answer-bubble') || content.includes('LOOKUP_AI_DEEP_DICT",text,context:selectionContext,sl:languageHint,mode:requestMode,question:q,settings:currentSettings')) fail('dictionary AI chat state or trusted settings boundary regressed');
+if (!backgroundJs.includes('const storedSettings = await loadStoredSettings()') || !backgroundJs.includes('dictionaryAiCacheSignature(storedSettings)')) fail('dictionary AI requests do not load trusted provider settings or invalidate stale prompt caches');
+if (!backgroundJs.includes('dictionaryAiCustomPrompt') || !read('options.html').includes('opt-dictionary-ai-custom-prompt')) fail('dedicated dictionary AI prompt setting missing');
 if (content.includes('id="dict-btn-ai"') || !content.includes('dict-ai-context-shortcut') || !content.includes('dict-ai-send')) fail('dictionary AI composer shortcuts missing');
 if (!content.includes('此处义、读音、原形、词性、常用义、语感与搭配') || !content.includes('function renderDictionaryAiBubbleSections')) fail('full context lookup prompt or sectioned AI bubbles missing');
 if (!content.includes('dict-ai-input-shell') || content.includes('submitQuestion(contextPresetQuestion)')) fail('context shortcut must fill the composer before explicit send');
@@ -200,6 +202,7 @@ if (!read('options.html').includes('id="dictionary-ai-preferences"') || !read('o
 for (const key of ['dictionaryAiAnswerStyle','dictionaryAiEmojiLevel','dictionaryAiLayout','dictionaryAiExplanationDepth','dictionaryAiStoryMode','dictionaryAiPosition','dictionaryAiConceptRigor']) {
   if (!backgroundJs.includes(key)) fail(`dictionary AI prompt preference missing: ${key}`);
 }
+if (!read('floating.css').includes('background:#edf7f1!important') || !read('floating.css').includes('box-shadow:none!important')) fail('dictionary AI answer bubbles are not using the flat green treatment');
 if (!content.includes('focusNewAiTurnOnce') || !read('floating.css').includes('overflow-anchor:none')) fail('stable dictionary AI answer viewport missing');
 if (content.includes('confirmReaderShortcut') || !content.includes('isEditableShortcutEvent(e)') || !content.includes('toggleReaderMode();')) fail('direct reader shortcut or editable-field guard missing');
 if (!content.includes('function showInputReplaceCard') || !content.includes('inputReplaceTargetLang: "en"') || !content.includes('insertReplacementText')) fail('selected input replacement translation missing');

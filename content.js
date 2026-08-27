@@ -5743,7 +5743,7 @@
     const aiCacheSource = `${aiAnalysisMode}|${languageHint}|${text}|${selectionContext.slice(0,1200)}`;
     let aiCacheHash = 5381;
     for (let i = 0; i < aiCacheSource.length; i++) aiCacheHash = ((aiCacheHash << 5) + aiCacheHash) ^ aiCacheSource.charCodeAt(i);
-    const aiCacheKey = `${aiAnalysisMode}:${(aiCacheHash >>> 0).toString(36)}`;
+    const aiCacheKey = `v2:${aiAnalysisMode}:${(aiCacheHash >>> 0).toString(36)}`;
 
     function persistAiCacheRecord() {
       sendDictionaryRuntimeMessage({ action:"SET_DICTIONARY_AI_CACHE", key:aiCacheKey, data:aiCacheRecord }, () => {});
@@ -5851,7 +5851,7 @@
         const answerBody = appendFlatAiFollowup(q, "", true);
         focusNewAiTurnOnce(answerBody);
         const requestMode = usesContextPreset ? aiAnalysisMode : "ask_context";
-        sendDictionaryRuntimeMessage({action:"LOOKUP_AI_DEEP_DICT",text,context:selectionContext,sl:languageHint,mode:requestMode,question:q,settings:currentSettings}, res => {
+        sendDictionaryRuntimeMessage({action:"LOOKUP_AI_DEEP_DICT",text,context:selectionContext,sl:languageHint,mode:requestMode,question:q}, res => {
           aiQuestionPending = Math.max(0,aiQuestionPending-1);
           aiResultEl.style.display = "block";
           input.disabled = false; sendButton.disabled = false; contextButton.disabled = false; input.value = "";
@@ -5991,7 +5991,7 @@
         contentEl.innerHTML = `<div class="dict-error">已选择 AI 查词，但尚未配置可用的 AI API。可在偏好设置中切回“标准词典”或完成 API 配置。</div>`;
       } else {
         loadingEl.textContent = "AI 正在按词典格式整理…";
-        sendDictionaryRuntimeMessage({ action:"LOOKUP_AI_DEEP_DICT", text, context:selectionContext, sl:languageHint, mode:"word_json", settings:currentSettings }, (aiRes) => {
+        sendDictionaryRuntimeMessage({ action:"LOOKUP_AI_DEEP_DICT", text, context:selectionContext, sl:languageHint, mode:"word_json" }, (aiRes) => {
           if (!aiRes?.success || !renderAiDictionaryJson(aiRes.markdown)) {
             loadingEl.style.display = "none"; contentEl.style.display = "block";
             contentEl.innerHTML = `<div class="dict-error">AI 查词暂时没有返回有效的词典结构，请重试或切回标准词典。</div>`;
@@ -7048,24 +7048,10 @@
     flush();
     if(!sections.length)sections.push({title:"",lines:[String(markdown||"")]});
 
-    const sectionEmoji=title=>{
-      if(currentSettings.dictionaryAiEmojiLevel === "none")return "";
-      if(/[\p{Extended_Pictographic}]/u.test(title))return "";
-      if(/此处义|核心义|含义|释义/.test(title))return "🧭";
-      if(/读音|原形|词性|发音/.test(title))return "🔤";
-      if(/常用义|义项/.test(title))return "📚";
-      if(/语感|搭配|用法|辨析/.test(title))return "✨";
-      if(/例句|示例/.test(title))return "💬";
-      if(/结构|句子/.test(title))return "🧩";
-      if(/语法/.test(title))return "🧠";
-      if(/关键词|重点/.test(title))return "🔎";
-      return "•";
-    };
     return `<div class="dict-ai-response-stack">${sections.map(section=>{
       const title=section.title.trim();
-      const icon=title?sectionEmoji(title):"";
       const body=renderDictionaryAiMarkdown(section.lines.join("\n").trim());
-      return `<div class="dict-ai-answer-bubble">${title?`<div class="dict-ai-section-label">${icon?`${icon} `:""}${escapeHtml(title)}</div>`:""}${body}</div>`;
+      return `<div class="dict-ai-answer-bubble">${title?`<div class="dict-ai-section-label">${escapeHtml(title)}</div>`:""}${body}</div>`;
     }).join("")}</div>`;
   }
 

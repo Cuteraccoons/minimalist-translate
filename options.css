@@ -1841,9 +1841,12 @@ input:checked + .switch-knob:before {
 .dictionary-ai-preferences .card-row+.card-row{border-top:1px solid rgba(17,24,39,.065)}
 .dictionary-ai-preferences .jijian-select{width:164px;min-width:164px;max-width:164px}
 .dictionary-ai-preferences .row-desc{max-width:520px}
+.dictionary-ai-preferences .dictionary-ai-prompt-row{align-items:flex-start!important;gap:18px!important}
+.dictionary-ai-prompt-input{width:min(420px,52%)!important;min-height:92px!important;resize:vertical!important;background:#fff!important;line-height:1.55!important}
 .jijian-select-trigger:disabled{cursor:not-allowed!important;background:#f3f4f5!important;color:#999fa7!important;border-color:#e4e6e9!important}
 @media (max-width:760px){
   .dictionary-ai-preferences .card-row{align-items:flex-start!important;flex-direction:column!important;gap:8px!important}
   .dictionary-ai-preferences .jijian-select{width:100%;min-width:0;max-width:none}
+  .dictionary-ai-prompt-input{width:100%!important}
   .dictionary-ai-preferences-head{align-items:flex-start;flex-direction:column;gap:2px}
 }

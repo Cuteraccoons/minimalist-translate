@@ -120,6 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const optDictionaryAiStoryMode = document.getElementById("opt-dictionary-ai-story-mode");
   const optDictionaryAiPosition = document.getElementById("opt-dictionary-ai-position");
   const optDictionaryAiConceptRigor = document.getElementById("opt-dictionary-ai-concept-rigor");
+  const optDictionaryAiCustomPrompt = document.getElementById("opt-dictionary-ai-custom-prompt");
   const optEnableHover = document.getElementById("opt-enable-hover");
   const optEnableParagraphActions = document.getElementById("opt-enable-paragraph-actions");
   const optModifierKey = document.getElementById("opt-modifier-key");
@@ -479,6 +480,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     [optDictionaryAiPosition, "dictionaryAiPosition"]
   ].forEach(([control, key]) => control?.addEventListener("change", (e) => saveSetting({ [key]: e.target.value })));
   optDictionaryAiConceptRigor?.addEventListener("change", (e) => saveSetting({ dictionaryAiConceptRigor:e.target.checked }));
+  optDictionaryAiCustomPrompt?.addEventListener("input", (e) => saveSetting({ dictionaryAiCustomPrompt:e.target.value.trim() }));
   if (optEnableHover) optEnableHover.addEventListener("change", (e) => saveSetting({ enableParagraphHoverTranslate: e.target.checked }));
   if (optEnableParagraphActions) optEnableParagraphActions.addEventListener("change", (e) => saveSetting({ enableParagraphActions: e.target.checked }));
   optModifierKey.addEventListener("change", (e) => saveSetting({ selectionModifierKey: e.target.value }));
@@ -1086,6 +1088,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (optDictionaryAiStoryMode) optDictionaryAiStoryMode.value = s.dictionaryAiStoryMode || "as-needed";
     if (optDictionaryAiPosition) optDictionaryAiPosition.value = s.dictionaryAiPosition || "first";
     if (optDictionaryAiConceptRigor) optDictionaryAiConceptRigor.checked = s.dictionaryAiConceptRigor !== false;
+    if (optDictionaryAiCustomPrompt) optDictionaryAiCustomPrompt.value = s.dictionaryAiCustomPrompt || "";
     syncDictionaryAiPreferencesUi();
     if (optEnableHover) optEnableHover.checked = s.enableParagraphHoverTranslate !== false;
     if (optEnableParagraphActions) optEnableParagraphActions.checked = s.enableParagraphActions !== false;
