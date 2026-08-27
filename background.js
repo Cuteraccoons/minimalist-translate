@@ -2165,7 +2165,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const { action } = request;
 
   if (action === "OPEN_OPTIONS_PAGE") {
-    chrome.runtime.openOptionsPage().then(() => sendResponse({ success:true })).catch(err => sendResponse({ success:false, error:err?.message || "无法打开设置" }));
+    const allowedTabs=new Set(["tab-api","tab-typography","tab-interaction","tab-local-dict","tab-vocab","tab-highlights","tab-auto-translate","tab-rules","tab-backup","tab-about"]);
+    const targetTab=allowedTabs.has(String(request.tab||"")) ? String(request.tab) : "";
+    const opening=targetTab
+      ? chrome.tabs.create({url:chrome.runtime.getURL(`options.html?tab=${encodeURIComponent(targetTab)}#${encodeURIComponent(targetTab)}`)})
+      : chrome.runtime.openOptionsPage();
+    opening.then(() => sendResponse({ success:true })).catch(err => sendResponse({ success:false, error:err?.message || "无法打开设置" }));
     return true;
   }
 

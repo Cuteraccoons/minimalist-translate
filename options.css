@@ -1775,16 +1775,17 @@ input:checked + .switch-knob:before {
    outline itself; no status dot or oversized empty tile is needed. */
 .blacklist-default-card{
   display:grid!important;
-  grid-template-columns:minmax(190px,260px) minmax(0,1fr)!important;
+  grid-template-columns:minmax(360px,1fr) auto!important;
   align-items:center!important;
   gap:14px 22px!important;
   padding:14px 16px!important;
 }
 .blacklist-default-card .domain-default-copy{min-width:0!important}
+.blacklist-default-card .domain-default-hint{white-space:nowrap!important}
 .blacklist-default-card .domain-default-chips{
   display:flex!important;
   flex-wrap:wrap!important;
-  justify-content:flex-start!important;
+  justify-content:flex-end!important;
   align-items:center!important;
   width:auto!important;
   gap:7px!important;
@@ -1940,7 +1941,139 @@ input:checked + .switch-knob:before {
 
 @media(max-width:900px){
   .blacklist-default-card{grid-template-columns:1fr!important}
+  .blacklist-default-card .domain-default-hint{white-space:normal!important}
+  .blacklist-default-card .domain-default-chips{justify-content:flex-start!important}
   .blacklist-domain-list .domain-row-line{align-items:flex-start!important;flex-direction:column!important;gap:8px!important}
   .blacklist-domain-list .domain-row-actions{width:100%!important;justify-content:flex-start!important}
   .blacklist-domain-list .domain-reset-rule{margin-left:0!important}
+}
+
+/* Local dictionary configuration uses one calm accent and explicit status
+   surfaces, so importing, testing and reauthorizing are visually distinct. */
+#tab-local-dict .local-dict-test-card{
+  border-color:#dce6e2!important;
+  background:#f7faf9!important;
+  box-shadow:none!important;
+}
+#tab-local-dict .local-dict-test-head{
+  padding:16px 17px 8px!important;
+  background:transparent!important;
+}
+#tab-local-dict .local-dict-test-row{
+  grid-template-columns:minmax(0,1fr) auto auto!important;
+  padding:7px 16px 10px!important;
+  gap:8px!important;
+  background:transparent!important;
+}
+#tab-local-dict .local-dict-test-row .apple-input{
+  height:38px!important;
+  border-color:#d9e3df!important;
+  border-radius:8px!important;
+  background:#fff!important;
+}
+#tab-local-dict #btn-test-local-dict{
+  height:38px!important;
+  border-color:#285846!important;
+  background:#285846!important;
+  color:#fff!important;
+}
+#tab-local-dict #btn-test-local-dict:hover{background:#214a3b!important;border-color:#214a3b!important}
+#tab-local-dict .local-dict-reauthorize{
+  height:38px!important;
+  border-color:#ccd9d4!important;
+  background:#fff!important;
+  color:#486158!important;
+}
+#tab-local-dict .local-dict-test-status{
+  min-height:36px!important;
+  margin:0 16px 14px!important;
+  padding:8px 10px!important;
+  display:flex!important;
+  align-items:center!important;
+  border:1px solid #e1e8e5!important;
+  border-radius:8px!important;
+  background:#fff!important;
+  color:#68766f!important;
+  box-sizing:border-box!important;
+}
+#tab-local-dict .local-dict-test-status.success{border-color:#cfe1d8!important;background:#f0f7f3!important;color:#35634f!important}
+#tab-local-dict .local-dict-test-status.warn{border-color:#eadfc8!important;background:#fff9ed!important;color:#795f30!important}
+#tab-local-dict .local-dict-test-status.error{border-color:#ead4d2!important;background:#fff4f3!important;color:#8d4742!important}
+#tab-local-dict .local-dict-card{
+  border-color:#e0e6e3!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+#tab-local-dict #btn-add-local-dict-folder{
+  border-color:#285846!important;
+  background:#285846!important;
+  color:#fff!important;
+}
+#tab-local-dict #btn-add-local-dict-files{
+  border-color:#d5dfdb!important;
+  background:#f7faf9!important;
+  color:#40584e!important;
+}
+#tab-local-dict .local-dict-import-note{
+  border:1px solid #e1e8e5!important;
+  background:#f7faf9!important;
+  color:#66756e!important;
+}
+#tab-local-dict .local-dict-row{
+  border-color:#e1e7e4!important;
+  background:#fcfdfd!important;
+}
+
+/* Highlighters use the same toolbar + independent record-card rhythm as the
+   vocabulary library instead of one large ruled sheet. */
+#tab-highlights .highlight-manager-card{
+  padding:0!important;
+  overflow:visible!important;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+#tab-highlights .highlight-toolbar{
+  min-height:62px!important;
+  margin:0 0 11px!important;
+  padding:11px 12px!important;
+  border:1px solid #e3e7eb!important;
+  border-radius:11px!important;
+  background:#fff!important;
+  box-shadow:0 2px 0 #e1e5e9!important;
+  box-sizing:border-box!important;
+}
+#tab-highlights .highlight-toolbar .apple-input{
+  height:38px!important;
+  border-color:#dfe4e8!important;
+  border-radius:8px!important;
+  background:#f8f9fa!important;
+}
+#tab-highlights .highlight-manager-list{
+  max-height:680px!important;
+  padding:2px 2px 12px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:9px!important;
+  overflow:auto!important;
+  background:transparent!important;
+}
+#tab-highlights .highlight-manager-item{
+  min-height:78px!important;
+  margin:0!important;
+  padding:13px 46px 13px 15px!important;
+  border:1px solid #e1e5e9!important;
+  border-radius:10px!important;
+  background:#fff!important;
+  box-shadow:0 2px 0 #e0e4e8!important;
+  box-sizing:border-box!important;
+}
+#tab-highlights .highlight-manager-item:last-child{border-bottom:1px solid #e1e5e9!important}
+#tab-highlights .highlight-delete{right:9px!important;top:10px!important}
+
+@media(max-width:760px){
+  #tab-local-dict .local-dict-test-row{grid-template-columns:1fr!important}
+  #tab-local-dict .local-dict-test-row .test-btn{width:100%!important}
+  #tab-highlights .highlight-toolbar{align-items:stretch!important;flex-direction:column!important}
+  #tab-highlights .highlight-export-actions{display:flex!important;flex-wrap:wrap!important}
 }

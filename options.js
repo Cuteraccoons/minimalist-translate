@@ -1438,7 +1438,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     return {ok:remaining.length===0,checked:items.length,failed:remaining,remaining:remaining.length,granted:granted?target.label:""};
   }
-  async function inspectMdxHandle(handle) {
+  async function inspectMdxHandle(handle, { deepCheck = false } = {}) {
     try {
       const file = await handle.getFile();
       const head = await file.slice(0,4).arrayBuffer();
@@ -1461,11 +1461,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         try {
           if (window.JiJianMDict?.MDictLite) {
-            const reader = await new window.JiJianMDict.MDictLite(file, "mdx").init();
-            const sampleWord = (reader.keyIndex || []).map(x => String(x?.firstWord || "").trim()).find(Boolean) || "";
-            if (sampleWord) {
-              const sampleResult = await reader.lookup(sampleWord);
-              if (!Array.isArray(sampleResult) || !sampleResult.length) throw new Error("索引可解析，但词条记录读取失败");
+            // Large MDX files can take several seconds to build their index. The
+            // import action only performs a quick header check so the picker never
+            // appears frozen; the explicit lookup test performs the real read.
+            if (deepCheck) {
+              const reader = await new window.JiJianMDict.MDictLite(file, "mdx").init();
+              const sampleWord = (reader.keyIndex || []).map(x => String(x?.firstWord || "").trim()).find(Boolean) || "";
+              if (sampleWord) {
+                const sampleResult = await reader.lookup(sampleWord);
+                if (!Array.isArray(sampleResult) || !sampleResult.length) throw new Error("索引可解析，但词条记录读取失败");
+              }
             }
             parserReady=true;
           } else {
@@ -1584,11 +1589,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function localDictionaryImportError(error, fallback) {
+    const name=String(error?.name||"");
+    if(name === "AbortError") return "";
+    if(name === "NotAllowedError" || name === "SecurityError") return "没有取得文件读取权限，请重新选择并允许读取。";
+    if(name === "NotFoundError") return "所选词典文件已经移动或不存在，请重新选择。";
+    const message=String(error?.message||"").replace(/^Error:\s*/,"").trim();
+    return message ? `${fallback}：${message.slice(0,120)}` : fallback;
+  }
+
   btnAddLocalDictFiles?.addEventListener("click", async () => {
-    if (!window.showOpenFilePicker) { if(localDictStatus) localDictStatus.textContent="当前浏览器不支持直接读取本地词典文件"; return; }
+    if (!window.showOpenFilePicker) { setLocalDictTestStatus("当前浏览器不支持直接读取本地词典文件。请使用最新版 Chrome。", "error"); return; }
+    btnAddLocalDictFiles.disabled=true;
     try {
-      const handles=await window.showOpenFilePicker({multiple:true,types:[{description:"MDict 词典与样式",accept:{"application/octet-stream":[".mdx",".mdd"],"text/css":[".css"]}}]});
+      const handles=await window.showOpenFilePicker({id:"jijian-local-dictionary-files",multiple:true,types:[{description:"MDict 词典与样式",accept:{"application/octet-stream":[".mdx",".mdd"],"text/css":[".css"]}}]});
       if(!handles?.length) return;
+      setLocalDictTestStatus(`正在接入 ${handles.length} 个词典文件…`);
       const stored=await chrome.storage.local.get("jijianLocalDictionaryMeta").catch(()=>({}));
       const meta=stored.jijianLocalDictionaryMeta||{};
       const existing=Array.isArray(meta.dictionaries)?meta.dictionaries:[];
@@ -1601,7 +1617,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const previous=byBase.get(base); const row=previous||{name:base,mdxName:"",mddName:"",cssName:"",source:"file",enabled:true};
         const key=`file:${base}:${ext}`; await putLocalHandle(key,h); row[`${ext}Name`]=name; row[`${ext}HandleKey`]=key; row.source="file";
         if(ext === "mdx") {
-          const info=await inspectMdxHandle(h);
+          const info=await inspectMdxHandle(h, {deepCheck:false});
           if(info.displayName) row.displayName=info.displayName;
           if(info.description) row.description=info.description;
           row.engineVersion=info.engineVersion||"";
@@ -1615,8 +1631,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       const folderDicts=existing.filter(x=>x.source !== "file");
       const folderNames=new Set(folderDicts.map(x=>x.name));
       const dictionaries=[...folderDicts,...imported.filter(x=>!folderNames.has(x.name))].sort((a,b)=>a.name.localeCompare(b.name));
-      const next={...meta,dictionaries,updatedAt:Date.now()}; await chrome.storage.local.set({jijianLocalDictionaryMeta:next}); renderLocalDictionaries(next); if(localDictStatus) localDictStatus.textContent=`已接入 ${imported.length} 本本地词典`;
-    } catch(err){ if(err?.name!=="AbortError" && localDictStatus) localDictStatus.textContent="无法读取所选 MDX / MDD / CSS 文件"; }
+      const next={...meta,dictionaries,updatedAt:Date.now()};
+      await chrome.storage.local.set({jijianLocalDictionaryMeta:next});
+      renderLocalDictionaries(next);
+      if(localDictStatus) localDictStatus.textContent=`已接入 ${imported.length} 本本地词典`;
+      setLocalDictTestStatus(imported.length ? `文件接入完成。可在上方输入单词测试。` : "没有找到可用的 MDX 文件；MDD 与 CSS 需要和对应 MDX 一起使用。", imported.length ? "success" : "warn");
+    } catch(err){
+      const message=localDictionaryImportError(err,"无法读取所选 MDX / MDD / CSS 文件");
+      if(message) setLocalDictTestStatus(message,"error");
+    } finally {
+      btnAddLocalDictFiles.disabled=false;
+    }
   });
 
   function setLocalDictTestStatus(text, tone="") {
@@ -1682,28 +1707,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   localDictTestInput?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); testLocalDictionaryLookup(); } });
 
   btnAddLocalDictFolder?.addEventListener("click", async () => {
-    if (!window.showDirectoryPicker) { if(localDictStatus) localDictStatus.textContent="当前浏览器不支持文件夹授权"; return; }
+    if (!window.showDirectoryPicker) { setLocalDictTestStatus("当前浏览器不支持文件夹授权。请使用最新版 Chrome。", "error"); return; }
+    btnAddLocalDictFolder.disabled=true;
     try {
-      const handle=await window.showDirectoryPicker({mode:"read"});
-      // Persist the selection *before* asking for the follow-up read permission. If
-      // Chromium leaves the handle in `prompt`, the user can recover it with one
-      // click instead of choosing the same folder repeatedly.
+      const handle=await window.showDirectoryPicker({id:"jijian-local-dictionaries",mode:"read"});
+      // Permission must be checked immediately after the picker resolves. Extra
+      // storage work before requestPermission can consume Chromium's user gesture.
+      const granted=await requestLocalReadPermission(handle);
+      // Persist the selected handle even when Chromium leaves it in `prompt`, so
+      // the user can recover access later without choosing the folder again.
       await putLocalDirectoryHandle(handle);
       const stored=await chrome.storage.local.get("jijianLocalDictionaryMeta").catch(()=>({}));
       const remembered={...(stored.jijianLocalDictionaryMeta||{}),folderName:handle.name,folderHandleSavedAt:Date.now(),updatedAt:Date.now()};
       await chrome.storage.local.set({jijianLocalDictionaryMeta:remembered});
       renderLocalDictionaries(remembered);
-      const granted=await requestLocalReadPermission(handle);
       if(!granted){
         if(localDictStatus) localDictStatus.textContent=`${handle.name} · 已记录 · 待恢复读取授权`;
-        setLocalDictTestStatus("文件夹已经保存，不需要重新导入。点击“重新授权”完成读取许可。", "warn");
+        setLocalDictTestStatus("文件夹已经保存，不需要重新导入。点击“继续授权”完成读取许可。", "warn");
         return;
       }
       if(localDictStatus) localDictStatus.textContent="正在扫描…";
+      setLocalDictTestStatus(`正在扫描“${handle.name}”中的 MDX / MDD / CSS…`);
       const dictionaries=await scanLocalDictionaryFolder(handle);
       renderLocalDictionaries({folderName:handle.name,dictionaries});
-      setLocalDictTestStatus(`文件夹“${handle.name}”已授权。可直接在上方测试查词。`, "success");
-    } catch(err){ if(err?.name!=="AbortError" && localDictStatus) localDictStatus.textContent="无法读取该文件夹"; }
+      setLocalDictTestStatus(dictionaries.length ? `文件夹“${handle.name}”已接入 ${dictionaries.filter(x=>x.source==="folder").length} 本词典。` : `文件夹“${handle.name}”中没有找到 MDX 文件。`, dictionaries.length ? "success" : "warn");
+    } catch(err){
+      const message=localDictionaryImportError(err,"无法读取该词典文件夹");
+      if(message) setLocalDictTestStatus(message,"error");
+    } finally {
+      btnAddLocalDictFolder.disabled=false;
+    }
   });
 
   btnRemoveLocalDictFolder?.addEventListener("click", async () => {

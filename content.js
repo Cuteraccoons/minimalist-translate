@@ -6875,11 +6875,12 @@
     if (entries.length) return;
     const enabledCount = Number(data?.localDictionaryEnabledCount || 0);
     const errors = Array.isArray(data?.localDictionaryErrors) ? data.localDictionaryErrors : [];
-    if (!enabledCount) return;
     const note = document.createElement("div");
     note.className = "dict-local-status-note";
-    if (data?.localDictionaryPermission === false) {
-      note.innerHTML = `<span>本地词典读取权限已失效，请在设置里点“重新授权”</span><button type="button" data-open-local-dict>去设置</button>`;
+    if (!enabledCount) {
+      note.innerHTML = `<span>还没有配置本地词典</span><button type="button" data-open-local-dict>去配置</button>`;
+    } else if (data?.localDictionaryPermission === false) {
+      note.innerHTML = `<span>本地词典读取权限已失效，请在设置里点“继续授权”</span><button type="button" data-open-local-dict>去设置</button>`;
     } else if (errors.length) {
       const first = errors[0];
       note.innerHTML = `<span>${escapeHtml(first.dictionaryName || "本地词典")}：${escapeHtml(first.message || "读取失败")}</span><button type="button" data-open-local-dict>检查词典</button>`;
@@ -6889,7 +6890,7 @@
     const anchor = contentEl.querySelector(".dict-brief-section, .dict-cross-section, .dict-form-note");
     if (anchor) anchor.insertAdjacentElement("afterend", note); else contentEl.prepend(note);
     note.querySelector("[data-open-local-dict]")?.addEventListener("click", () => {
-      try { chrome.runtime.sendMessage({ action:"OPEN_OPTIONS_PAGE" }).catch(()=>{}); } catch (_) {}
+      try { chrome.runtime.sendMessage({ action:"OPEN_OPTIONS_PAGE", tab:"tab-local-dict" }).catch(()=>{}); } catch (_) {}
     });
   }
 
