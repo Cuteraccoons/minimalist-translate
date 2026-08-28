@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "极简翻译 | 双语网页翻译与沉浸阅读",
   "short_name": "极简翻译",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "极简、清晰的双语网页翻译与沉浸阅读。支持词典查词、可配置 AI 查词、精确高亮与多语言本地 OCR 图片翻译。",
   "permissions": [
     "storage",
