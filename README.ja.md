@@ -6,6 +6,8 @@
   <img src="./assets/readme/ja/hero.png" width="100%" alt="極簡翻訳を、静かに開かれた二言語の本として表現したイラスト。">
 </p>
 
+> **公開状況：** Chrome ウェブストア版は現在審査中です。公開までは、[Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest) からダウンロードしてローカル環境へインストールできます。
+
 極簡翻訳は、外国語の Web ページを元の構造に近い状態で読むためのオープンソース Chrome 拡張機能です。リンク、タブ、ボタン、レイアウトの関係をできるだけ保ちながら、対訳表示、リーダー表示、辞書検索、ローカル画像 OCR を追加します。
 
 ## ページに合わせて読み方を選ぶ

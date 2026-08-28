@@ -6,6 +6,8 @@
   <img src="./assets/readme/zh-CN/hero.png" width="100%" alt="极简翻译：以一本平静摊开的双语书呈现原网页阅读、查词与图片 OCR。">
 </p>
 
+> **发布状态：** Chrome Web Store 版本正在审核中。商店版本上线前，可以从 [Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest) 下载并在本地安装。
+
 极简翻译是一款面向外文网页阅读的开源 Chrome 扩展。它不会把网页变成另一份割裂的翻译文档，而是在尽量保留链接、Tab、按钮与原有排版关系的前提下，加入双语阅读、沉浸阅读、本地词典与本机图片 OCR。
 
 ## 选择适合当前网页的阅读方式

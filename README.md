@@ -6,6 +6,8 @@
   <img src="./assets/readme/en/hero.png" width="100%" alt="Minimalist Translate, illustrated as a calm open bilingual book for reading foreign webpages in place.">
 </p>
 
+> **Release status:** The Chrome Web Store listing is currently under review. Until it becomes available, install the extension from [Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest).
+
 Minimalist Translate is an open-source Chrome extension for reading foreign-language webpages without turning them into a separate translation document. It keeps links, tabs, buttons, and page structure usable while adding bilingual reading, focused reader views, dictionary lookup, and on-device image OCR.
 
 ## Read in the view that fits the page
