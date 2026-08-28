@@ -115,6 +115,7 @@
   const pendingMutationTranslationRoots = new Set();
   let interactionRefreshHandler = null;
   let interactionRefreshTimer = null;
+  let interactionRefreshFollowupTimer = null;
   let routeWatchTimer = null;
   let lastObservedTranslationUrl = location.href;
 
@@ -724,7 +725,10 @@
       // colour can technically pass AA and still become faint after a host
       // applies opacity or anti-aliasing, so prose and compact UI translations
       // use a stronger floor than explicit clean-style accent colours.
-      const binaryAdaptiveColor = renderStyle === "native" || transNode.classList?.contains("raccoon-ui-translated") || transNode.classList?.contains("raccoon-ui-translation-line");
+      const binaryAdaptiveColor = renderStyle === "native" ||
+        transNode.classList?.contains("raccoon-ui-translated") ||
+        transNode.classList?.contains("raccoon-ui-translation-line") ||
+        transNode.classList?.contains("raccoon-component-translated");
       const minimumContrast = binaryAdaptiveColor ? 7 : 4.5;
       const candidateAlpha = Number(candidate?.a ?? 1);
       const readable = !binaryAdaptiveColor && candidateAlpha >= .92 && contrastRatio(candidateLuminance, surface) >= minimumContrast
@@ -1029,12 +1033,20 @@
 
   const INTERACTIVE_UI_SELECTOR = [
     '[role="tab"]', '[role="menuitem"]', '[role="option"]', '[role="button"]',
-    'button', 'summary', '[aria-haspopup]', '[aria-controls]'
+    'button', 'summary', '[aria-haspopup]', '[aria-controls]',
+    'footer a', 'footer button', '[role="contentinfo"] a', '[role="contentinfo"] button'
+  ].join(',');
+
+  const DYNAMIC_UI_SURFACE_SELECTOR = [
+    '[role="menu"]', '[role="listbox"]', '[data-radix-popper-content-wrapper]',
+    '[data-floating-ui-portal]', '.dropdown-menu', '.mega-menu', '.popover',
+    '[class*="dropdown-menu"]', '[class*="mega-menu"]', '[class*="popover"]'
   ].join(',');
 
   const UI_CHROME_ANCESTOR_SELECTOR = [
     'nav', 'header', '[role="navigation"]', '[role="tablist"]', '[role="toolbar"]', '[role="menu"]',
-    '.navbar', '.nav-bar', '.tab-bar', '.tabs', '.tablist', '.toolbar', '.breadcrumb'
+    'footer', '[role="contentinfo"]', '.navbar', '.nav-bar', '.tab-bar', '.tabs', '.tablist', '.toolbar', '.breadcrumb',
+    DYNAMIC_UI_SURFACE_SELECTOR
   ].join(',');
 
   const TRANSLATION_EXTENSION_SELECTOR = [
@@ -1103,7 +1115,7 @@
     // can be replaced in place without changing article prose. A large link
     // card is content (Medium recommendations are a common example), not UI:
     // its original title must stay visible and receive a linked translation.
-    return !!el.closest?.(".infobox,.sidebar,.navbox,.vertical-navbox,.metadata,.ambox");
+    return !!el.closest?.(`.infobox,.sidebar,.navbox,.vertical-navbox,.metadata,.ambox,footer,[role="contentinfo"],${DYNAMIC_UI_SURFACE_SELECTOR}`);
   }
 
   function isArticleProseLink(el) {
@@ -1201,6 +1213,7 @@
     const control = el?.closest?.("a,button,summary,[role='tab'],[role='menuitem'],[role='option'],[role='button']") || el;
     if (!control) return true;
     if (isStructuredTocControl(control)) return true;
+    if (control.closest?.(`footer,[role="contentinfo"],${DYNAMIC_UI_SURFACE_SELECTOR}`)) return true;
     if (control.matches?.("button,summary,[role='tab'],[role='menuitem'],[role='option'],[role='button'],[aria-haspopup],[aria-controls]")) return true;
     if (control.closest?.("header,[role='tablist'],[role='toolbar'],[role='menu'],.tab-bar,.tabs,.tablist,.toolbar,.breadcrumb")) return true;
     if (hasStickyOrFixedContext(control)) return true;
@@ -1394,7 +1407,7 @@
   function collectCompactComponentTextUnits(container = document.body) {
     const units = [];
     const seenNodes = new Set();
-    const roots = queryScopedElements(container, ".infobox,.sidebar,.navbox,.vertical-navbox,.metadata,.ambox");
+    const roots = queryScopedElements(container, `.infobox,.sidebar,.navbox,.vertical-navbox,.metadata,.ambox,footer,[role="contentinfo"],${DYNAMIC_UI_SURFACE_SELECTOR}`);
     const compactRoots = Array.from(new Set(roots)).filter(root => !roots.some(other => other !== root && other.contains?.(root)));
 
     compactRoots.forEach(root => {
@@ -1798,11 +1811,13 @@
     const node = unit?.textNode;
     if (!node?.parentNode || !isVisibleTranslationElement(node.parentElement)) return false;
     const raw = unit.rawText ?? node.nodeValue ?? "";
+    const sourceStyle = getComputedStyle(node.parentElement);
     if (!inPlaceOriginalTextByNode.has(node)) inPlaceOriginalTextByNode.set(node, raw);
     const record = rememberInPlaceRecord(unit.id, node.parentElement, [node], "component-text", String(translatedText || "").trim());
     setCompactUiLabel(record, false);
     bindCompactUiOriginalPreview(record);
     node.parentElement.classList.add("raccoon-component-translated");
+    applyAdaptiveTranslationColor(node.parentElement,node.parentElement,sourceStyle.color,sourceStyle);
     return true;
   }
 
@@ -4793,10 +4808,14 @@
     pendingMutationTranslationRoots.clear();
     if (interactionRefreshHandler) {
       document.removeEventListener('click', interactionRefreshHandler, true);
+      document.removeEventListener('pointerover', interactionRefreshHandler, true);
+      document.removeEventListener('focusin', interactionRefreshHandler, true);
       interactionRefreshHandler = null;
     }
     clearTimeout(interactionRefreshTimer);
     interactionRefreshTimer = null;
+    clearTimeout(interactionRefreshFollowupTimer);
+    interactionRefreshFollowupTimer = null;
     clearInterval(routeWatchTimer);
     routeWatchTimer = null;
     if (!preserveTranslationSession) setTabTranslationSession(false);
@@ -4860,7 +4879,7 @@
   function mutationTranslationScope(node) {
     const el = node?.nodeType === Node.TEXT_NODE ? node.parentElement : node;
     if (!el?.isConnected || isExtensionOwnedElement(el)) return null;
-    const scopedSelector = `${TRANSLATABLE_BLOCK_SELECTOR}, ${INTERACTIVE_UI_SELECTOR}`;
+    const scopedSelector = `${TRANSLATABLE_BLOCK_SELECTOR}, ${INTERACTIVE_UI_SELECTOR}, ${DYNAMIC_UI_SURFACE_SELECTOR}, footer, [role="contentinfo"]`;
     if (el.matches?.(scopedSelector) || el.querySelector?.(scopedSelector)) return el;
     return el.closest?.(scopedSelector) || el.parentElement || null;
   }
@@ -4901,6 +4920,20 @@
     mutationObserver = new MutationObserver((mutations) => {
       if (!isPageTranslated || isTranslating) return;
       mutations.forEach(mutation => {
+        if (mutation.type === 'attributes') {
+          const target = mutation.target;
+          if (target?.classList?.contains('raccoon-component-translated') ||
+              target?.classList?.contains('raccoon-ui-translated') ||
+              target?.classList?.contains('raccoon-replaced-text')) return;
+          const explicitVisibilityState = ['hidden', 'aria-hidden', 'data-state', 'open'].includes(mutation.attributeName);
+          const dynamicSurface = target?.matches?.(DYNAMIC_UI_SURFACE_SELECTOR) ||
+            target?.closest?.(`nav,header,footer,[role="navigation"],[role="contentinfo"],${DYNAMIC_UI_SURFACE_SELECTOR}`) ||
+            (explicitVisibilityState && target?.querySelector?.(INTERACTIVE_UI_SELECTOR));
+          if (!dynamicSurface) return;
+          const scope = mutationTranslationScope(target);
+          if (scope && isVisibleTranslationElement(scope)) pendingMutationTranslationRoots.add(scope);
+          return;
+        }
         mutation.addedNodes?.forEach(node => {
           const scope = mutationTranslationScope(node);
           if (scope) pendingMutationTranslationRoots.add(scope);
@@ -4914,14 +4947,32 @@
       scheduleMutationTranslationRefresh();
     });
 
-    mutationObserver.observe(document.body, { childList: true, subtree: true });
+    mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'hidden', 'aria-hidden', 'data-state', 'open']
+    });
 
     // Some sites keep tab/menu content mounted and only toggle CSS classes. A
     // DOM observer sees no added nodes in that case. After an interaction, make
     // one cheap pass for newly visible labels/text that have never been handled.
     if (!interactionRefreshHandler) {
-      interactionRefreshHandler = () => scheduleVisibleTranslationRefresh(90);
+      interactionRefreshHandler = event => {
+        const target = event.target?.nodeType === Node.ELEMENT_NODE ? event.target : event.target?.parentElement;
+        if (!target) return;
+        const interactionSurface = target.closest?.(
+          `[aria-haspopup],nav,header,footer,[role="navigation"],[role="contentinfo"],${DYNAMIC_UI_SURFACE_SELECTOR}`
+        );
+        if (!interactionSurface && event.type !== 'click') return;
+        if (event.type === 'pointerover' && event.relatedTarget && interactionSurface?.contains?.(event.relatedTarget)) return;
+        scheduleVisibleTranslationRefresh(event.type === 'pointerover' ? 70 : 90);
+        clearTimeout(interactionRefreshFollowupTimer);
+        interactionRefreshFollowupTimer = setTimeout(() => scheduleVisibleTranslationRefresh(0), 260);
+      };
       document.addEventListener('click', interactionRefreshHandler, true);
+      document.addEventListener('pointerover', interactionRefreshHandler, true);
+      document.addEventListener('focusin', interactionRefreshHandler, true);
     }
 
     // Content scripts run in an isolated JS world, so patching the page's

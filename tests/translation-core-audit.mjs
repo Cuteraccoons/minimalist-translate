@@ -48,6 +48,10 @@ if (!content.includes('const placeBehind = (background) =>') || !content.include
 if (!content.includes('const offset = preferredGap') || content.includes('preferredGap - hostBottom')) fail('negative bilingual overlap spacing remains');
 if (!content.includes('const allowHiddenToc') || !content.includes("(!allowHiddenToc && !isVisibleTranslationElement(liveElement))")) fail('hidden source response guard or structured-TOC exception missing');
 if (!content.includes('function isRichContentControl') || !content.includes('function collectCompactComponentTextUnits')) fail('rich-card/component translation boundary missing');
+if (!content.includes('const DYNAMIC_UI_SURFACE_SELECTOR') || !content.includes('footer,[role="contentinfo"]') || !content.includes('raccoon-component-translated')) fail('footer or dynamic menu translation boundary missing');
+if (!content.includes("document.addEventListener('pointerover', interactionRefreshHandler, true)") || !content.includes("document.addEventListener('focusin', interactionRefreshHandler, true)")) fail('hover/focus menu translation refresh missing');
+if (!content.includes('attributes: true') || !content.includes("'aria-hidden', 'data-state', 'open'")) fail('visibility-state mutation translation refresh missing');
+if (!css.includes('.raccoon-component-translated[data-raccoon-ui-showing="translation"]')) fail('compact footer/menu contrast safeguard missing');
 if (!content.includes('raccoon-linked-card-translation') || !content.includes('textHost.appendChild(transNode)')) fail('linked editorial-card translation safeguard missing');
 if (!content.includes('function buildImageTranslationLayout') || !content.includes('textAlign:item.alignment||inferred')) fail('OCR bounded alignment layout missing');
 if (!content.includes('cloneWalker.currentNode.nodeValue = originalTextForNode')) fail('reader original-text restoration missing');

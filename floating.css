@@ -4318,3 +4318,8 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
   color:var(--raccoon-local-text-color,currentColor)!important;
   -webkit-text-fill-color:currentColor!important;opacity:1!important
 }
+.raccoon-component-translated[data-raccoon-ui-showing="translation"]{
+  color:var(--raccoon-local-text-color,currentColor)!important;
+  -webkit-text-fill-color:currentColor!important;opacity:1!important;
+  mix-blend-mode:normal!important;text-shadow:none!important
+}
