@@ -42,7 +42,7 @@ Google 翻訳は基本エンジンとして利用できます。次のサービ�
 
 ## ローカルインストール
 
-1. 最新のリリースパッケージをダウンロードして展開します。
+1. [Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest) から最新パッケージをダウンロードして展開します。
 2. Chrome で `chrome://extensions/` を開きます。
 3. **デベロッパー モード**を有効にします。
 4. **パッケージ化されていない拡張機能を読み込む**を選び、`Jijian-Translate` フォルダーを指定します。

@@ -42,7 +42,7 @@ Google 翻译可直接作为基础引擎使用。下列服务需要用户自行�
 
 ## 本地安装
 
-1. 下载并解压最新发布包。
+1. 从 [Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest) 下载并解压最新发布包。
 2. 在 Chrome 地址栏打开 `chrome://extensions/`。
 3. 开启右上角的「开发者模式」。
 4. 点击「加载已解压的扩展程序」，选择 `Jijian-Translate` 文件夹。

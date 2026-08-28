@@ -42,7 +42,7 @@ Google Translate can be used as the basic engine. The following integrations req
 
 ## Install locally
 
-1. Download and extract the latest release package.
+1. Download and extract the latest package from [Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest).
 2. Open `chrome://extensions/` in Chrome.
 3. Enable **Developer mode**.
 4. Choose **Load unpacked** and select the `Jijian-Translate` folder.
