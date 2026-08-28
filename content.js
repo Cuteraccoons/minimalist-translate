@@ -556,6 +556,10 @@
 
   function parsedCssColor(value) {
     const normalized = String(value || "").trim();
+    if (!normalized || /^(?:inherit|currentcolor|initial|unset)$/i.test(normalized)) return null;
+    if (/^transparent$/i.test(normalized)) return { r:0, g:0, b:0, a:0 };
+    if (/^black$/i.test(normalized)) return { r:0, g:0, b:0, a:1 };
+    if (/^white$/i.test(normalized)) return { r:255, g:255, b:255, a:1 };
     const hex = normalized.match(/^#([\da-f]{3,8})$/i)?.[1];
     if (hex) {
       const expanded = hex.length === 3 || hex.length === 4
@@ -570,9 +574,68 @@
         };
       }
     }
-    const numbers = normalized.match(/[\d.]+/g)?.map(Number) || [];
-    if (numbers.length < 3) return null;
-    return { r:numbers[0], g:numbers[1], b:numbers[2], a:numbers.length > 3 ? numbers[3] : 1 };
+
+    const alphaValue = raw => {
+      const token=String(raw ?? "1").trim();
+      const valueNumber=parseFloat(token);
+      return Math.max(0,Math.min(1,token.endsWith("%")?valueNumber/100:valueNumber));
+    };
+    const rgbMatch=normalized.match(/^rgba?\(\s*([^)]*)\)$/i);
+    if(rgbMatch){
+      const [channels,alphaRaw]=rgbMatch[1].split("/").map(part=>part.trim());
+      const tokens=channels.replace(/,/g," ").split(/\s+/).filter(Boolean);
+      if(tokens.length>=3){
+        const channel=token=>Math.max(0,Math.min(255,token.endsWith("%")?parseFloat(token)*2.55:parseFloat(token)));
+        return {r:channel(tokens[0]),g:channel(tokens[1]),b:channel(tokens[2]),a:alphaValue(alphaRaw ?? tokens[3])};
+      }
+    }
+
+    const hslMatch=normalized.match(/^hsla?\(\s*([^)]*)\)$/i);
+    if(hslMatch){
+      const [channels,alphaRaw]=hslMatch[1].split("/").map(part=>part.trim());
+      const tokens=channels.replace(/,/g," ").split(/\s+/).filter(Boolean);
+      if(tokens.length>=3){
+        const h=((parseFloat(tokens[0])%360)+360)%360/360;
+        const s=Math.max(0,Math.min(1,parseFloat(tokens[1])/100));
+        const l=Math.max(0,Math.min(1,parseFloat(tokens[2])/100));
+        const hue=(p,q,t)=>{let x=t;if(x<0)x+=1;if(x>1)x-=1;if(x<1/6)return p+(q-p)*6*x;if(x<1/2)return q;if(x<2/3)return p+(q-p)*(2/3-x)*6;return p;};
+        const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q;
+        const rgb=s===0?[l,l,l]:[hue(p,q,h+1/3),hue(p,q,h),hue(p,q,h-1/3)];
+        return {r:rgb[0]*255,g:rgb[1]*255,b:rgb[2]*255,a:alphaValue(alphaRaw ?? tokens[3])};
+      }
+    }
+
+    const okMatch=normalized.match(/^ok(lch|lab)\(\s*([^)]*)\)$/i);
+    if(okMatch){
+      const [channels,alphaRaw]=okMatch[2].split("/").map(part=>part.trim());
+      const tokens=channels.split(/\s+/).filter(Boolean);
+      if(tokens.length>=3){
+        const L=Math.max(0,Math.min(1,tokens[0].endsWith("%")?parseFloat(tokens[0])/100:parseFloat(tokens[0])));
+        let a=0,b=0;
+        if(okMatch[1].toLowerCase()==="lch"){
+          const chroma=parseFloat(tokens[1]);
+          const hue=parseFloat(tokens[2])*Math.PI/180;
+          a=chroma*Math.cos(hue);b=chroma*Math.sin(hue);
+        }else{
+          a=parseFloat(tokens[1]);b=parseFloat(tokens[2]);
+        }
+        const l_=L+.3963377774*a+.2158037573*b;
+        const m_=L-.1055613458*a-.0638541728*b;
+        const s_=L-.0894841775*a-1.291485548*b;
+        const ll=l_**3,mm=m_**3,ss=s_**3;
+        const linear=[4.0767416621*ll-3.3077115913*mm+.2309699292*ss,-1.2684380046*ll+2.6097574011*mm-.3413193965*ss,-.0041960863*ll-.7034186147*mm+1.707614701*ss];
+        const encode=x=>255*Math.max(0,Math.min(1,x<=.0031308?12.92*x:1.055*(Math.max(0,x)**(1/2.4))-.055));
+        return {r:encode(linear[0]),g:encode(linear[1]),b:encode(linear[2]),a:alphaValue(alphaRaw)};
+      }
+    }
+
+    const colorMatch=normalized.match(/^color\(\s*(?:srgb|display-p3)\s+([^)]*)\)$/i);
+    if(colorMatch){
+      const [channels,alphaRaw]=colorMatch[1].split("/").map(part=>part.trim());
+      const tokens=channels.split(/\s+/).filter(Boolean).map(Number);
+      if(tokens.length>=3)return {r:Math.max(0,Math.min(1,tokens[0]))*255,g:Math.max(0,Math.min(1,tokens[1]))*255,b:Math.max(0,Math.min(1,tokens[2]))*255,a:alphaValue(alphaRaw)};
+    }
+    return null;
   }
 
   function cssColorLuminance(color) {
@@ -661,9 +724,10 @@
       // colour can technically pass AA and still become faint after a host
       // applies opacity or anti-aliasing, so prose and compact UI translations
       // use a stronger floor than explicit clean-style accent colours.
-      const minimumContrast = renderStyle === "native" || transNode.classList?.contains("raccoon-ui-translated") || transNode.classList?.contains("raccoon-ui-translation-line") ? 7 : 4.5;
+      const binaryAdaptiveColor = renderStyle === "native" || transNode.classList?.contains("raccoon-ui-translated") || transNode.classList?.contains("raccoon-ui-translation-line");
+      const minimumContrast = binaryAdaptiveColor ? 7 : 4.5;
       const candidateAlpha = Number(candidate?.a ?? 1);
-      const readable = candidateAlpha >= .92 && contrastRatio(candidateLuminance, surface) >= minimumContrast
+      const readable = !binaryAdaptiveColor && candidateAlpha >= .92 && contrastRatio(candidateLuminance, surface) >= minimumContrast
         ? String(preferredColor || cs.color || "").trim()
         : (surface < .42 ? "#f5f7fa" : "#111827");
       transNode.style.setProperty("--raccoon-local-text-color", readable || (surface < .42 ? "#f5f7fa" : "#111827"));
@@ -808,69 +872,82 @@
 
     updateFloatingPillStatus("loading", `0/${totalBlocks}`);
 
-    const CHUNK_SIZE = 12;
+    const FIRST_CHUNK_SIZE = 6;
+    const CHUNK_SIZE = 8;
     const chunks = [];
-    for (let i = 0; i < blocks.length; i += CHUNK_SIZE) {
+    if(blocks.length)chunks.push(blocks.slice(0,FIRST_CHUNK_SIZE).map(b=>({id:b.id,text:b.text})));
+    for (let i = FIRST_CHUNK_SIZE; i < blocks.length; i += CHUNK_SIZE) {
       chunks.push(blocks.slice(i, i + CHUNK_SIZE).map(b => ({ id: b.id, text: b.text })));
     }
 
-    const activeEngine = engineOverride || currentSettings.translationEngine || "google";
-    // Google batches are translated as independent units in the service worker
-    // to preserve exact paragraph mapping. Two outer workers keep at most twelve
-    // requests in flight instead of creating a thirty-request burst.
-    const CONCURRENCY = activeEngine === "google" ? 2 : 3;
+    // Two outer workers keep API pressure bounded. Responses may finish in any
+    // order, but DOM commits are buffered and released strictly from the current
+    // viewport downward so later sections never appear before the lead content.
+    const CONCURRENCY = 2;
     let nextChunkIdx = 0;
+    let nextCommitIdx = 0;
+    const completedChunks = new Map();
+
+    const markChunkFailed = chunk => {
+      chunk.forEach(requestItem => {
+        const meta = blockById.get(requestItem.id);
+        if (!meta) return;
+        meta.element?.removeAttribute?.('data-raccoon-id');
+        failedBlocks.push(meta);
+      });
+    };
+
+    const commitChunk = (chunk,res) => {
+      if (res && res.success && Array.isArray(res.data)) {
+        res.data.forEach(item => {
+          const meta = blockById.get(item.id);
+          const blockEl = meta?.element || document.querySelector(`[data-raccoon-id="${item.id}"]`);
+          if (blockEl && item.text && !item.error) {
+            const liveElement = meta?.kind === 'replace-text' ? meta.textNode?.parentElement : blockEl;
+            const allowHiddenToc = meta?.kind === 'ui-inplace' && isStructuredTocControl(blockEl);
+            if (!liveElement || (!allowHiddenToc && !isVisibleTranslationElement(liveElement))) {
+              blockEl.removeAttribute?.('data-raccoon-id');
+              return;
+            }
+            const origText = sourceTextById.get(item.id) || getHostOriginalText(blockEl);
+            if (meta?.kind !== 'replace-text' && meta?.kind !== 'component-text' && meta?.kind !== 'ui-inplace') {
+              paragraphMap.set(item.id, { origText: origText, transText: item.text, el: blockEl });
+            }
+            if (runMode === "sidebar") renderSidebarItem(item.id, blockEl, origText, item.text);
+            else renderTranslationNode(blockEl, item.text, meta || { id:item.id, kind:'content-block', element:blockEl });
+            translatedBlocksCount++;
+          } else if (meta) {
+            meta.element?.removeAttribute?.('data-raccoon-id');
+            failedBlocks.push(meta);
+          }
+        });
+        updateFloatingPillStatus("loading", `${translatedBlocksCount}/${totalBlocks}`);
+      } else markChunkFailed(chunk);
+    };
+
+    const flushCompletedChunks = () => {
+      while(completedChunks.has(nextCommitIdx)){
+        const completed=completedChunks.get(nextCommitIdx);
+        completedChunks.delete(nextCommitIdx++);
+        commitChunk(completed.chunk,completed.response);
+      }
+    };
 
     async function pipelineWorker() {
       while (runId === translationRunGeneration && nextChunkIdx < chunks.length) {
-        const chunk = chunks[nextChunkIdx++];
+        const chunkIndex=nextChunkIdx++;
+        const chunk = chunks[chunkIndex];
         if (!chunk) break;
-
-        const markChunkFailed = () => {
-          chunk.forEach(requestItem => {
-            const meta = blockById.get(requestItem.id);
-            if (!meta) return;
-            meta.element?.removeAttribute?.('data-raccoon-id');
-            failedBlocks.push(meta);
-          });
-        };
-
+        let response;
         try {
-          const res = await sendBatchWithIds(chunk, engineOverride);
+          response = await sendBatchWithIds(chunk, engineOverride);
           if (runId !== translationRunGeneration) return;
-          if (res && res.success && Array.isArray(res.data)) {
-            res.data.forEach(item => {
-              const meta = blockById.get(item.id);
-              const blockEl = meta?.element || document.querySelector(`[data-raccoon-id="${item.id}"]`);
-              if (blockEl && item.text && !item.error) {
-                const liveElement = meta?.kind === 'replace-text' ? meta.textNode?.parentElement : blockEl;
-                const allowHiddenToc = meta?.kind === 'ui-inplace' && isStructuredTocControl(blockEl);
-                if (!liveElement || (!allowHiddenToc && !isVisibleTranslationElement(liveElement))) {
-                  blockEl.removeAttribute?.('data-raccoon-id');
-                  return;
-                }
-                const origText = sourceTextById.get(item.id) || getHostOriginalText(blockEl);
-                if (meta?.kind !== 'replace-text' && meta?.kind !== 'component-text' && meta?.kind !== 'ui-inplace') {
-                  paragraphMap.set(item.id, { origText: origText, transText: item.text, el: blockEl });
-                }
-
-                if (runMode === "sidebar") {
-                  renderSidebarItem(item.id, blockEl, origText, item.text);
-                } else {
-                  renderTranslationNode(blockEl, item.text, meta || { id:item.id, kind:'content-block', element:blockEl });
-                }
-                translatedBlocksCount++;
-              } else if (meta) {
-                meta.element?.removeAttribute?.('data-raccoon-id');
-                failedBlocks.push(meta);
-              }
-            });
-            updateFloatingPillStatus("loading", `${translatedBlocksCount}/${totalBlocks}`);
-          } else markChunkFailed();
         } catch (err) {
           console.warn("Pipeline chunk error:", err);
-          markChunkFailed();
+          response={success:false,error:err?.message||String(err)};
         }
+        completedChunks.set(chunkIndex,{chunk,response});
+        flushCompletedChunks();
       }
     }
 
@@ -4324,6 +4401,21 @@
             });
           }
         }
+        const unresolved=lines.map((line,i)=>({line,id:`ocr-line-${i}`})).filter(item=>!byId.get(item.id)).slice(0,24);
+        if(unresolved.length){
+          let cursor=0;
+          const recoverWorker=async()=>{
+            while(cursor<unresolved.length){
+              const target=unresolved[cursor++];
+              const single=await new Promise(resolve=>sendDictionaryRuntimeMessage({
+                action:"TRANSLATE_SINGLE_BLOCK",text:target.line.text,sl:"auto",tl:targetLang
+              },resolve));
+              const text=String(single?.text||"").trim();
+              if(single?.success&&text)byId.set(target.id,text);
+            }
+          };
+          await Promise.all(Array.from({length:Math.min(2,unresolved.length)},()=>recoverWorker()));
+        }
         const items=lines.map((line,i)=>({...line,translated:byId.get(`ocr-line-${i}`)||""})).filter(x=>x.translated);
         if(items.length)return { translatedText:items.map(x=>x.translated).join("\n"), items, structured:true };
       }
@@ -4372,7 +4464,7 @@
       ctx.filter="none";
       // Keep texture continuity, but make the sampled veil opaque enough to
       // remove the original glyphs instead of merely tinting them.
-      ctx.fillStyle=`rgba(${r},${g},${b},.88)`;
+      ctx.fillStyle=`rgba(${r},${g},${b},.94)`;
       ctx.fillRect(rect.x,rect.y,rect.width,rect.height);
     }
     ctx.restore();

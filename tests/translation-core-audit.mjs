@@ -38,7 +38,7 @@ if (!content.includes("rememberInlineStyles(record, ['position', 'padding-bottom
 if (!content.includes('function setTranslationBadgeSafely')) fail('badge messaging context guard missing');
 if (!background.includes('const TRANSLATION_CACHE_NAMESPACE = "trans:v3"') || !background.includes('const BUNDLE_SIZE = engine === "google" ? 1 : 8')) fail('paragraph-safe Google translation mapping missing');
 if (!background.includes('Array.from(memoryCache.entries()).slice(-3000)')) fail('recent translation cache entries are not persisted');
-if (!content.includes('const CONCURRENCY = activeEngine === "google" ? 2 : 3')) fail('Google translation request fan-out is unbounded');
+if (!content.includes('const CONCURRENCY = 2') || !content.includes('const completedChunks = new Map()') || !content.includes('flushCompletedChunks')) fail('translation request fan-out or ordered commit buffer missing');
 if (!content.includes("sidebarPreviousDisplayMode || 'bilingual'") || !content.includes('function requestSidebarClose()')) fail('temporary sidebar mode restoration missing');
 if (!content.includes('translationRunGeneration') || !content.includes('runId !== translationRunGeneration')) fail('stale async translation run cancellation missing');
 if (!content.includes('function refreshRenderedTranslationContrast') || !content.includes('applyAdaptiveTranslationColor(transNode, transNode')) fail('post-insertion contrast recalculation missing');
@@ -79,7 +79,7 @@ if (!css.includes('.dict-word-title.is-fade-clipped')) fail('passage title fade 
 if (!css.includes('max-height:calc(4.44em + 1px)')) fail('passage title complete-line height missing');
 if (!layoutMatrix.includes('const TOTAL_CASES = 120') || !layoutMatrix.includes('dataset.surfaceTone') || !layoutMatrix.includes('window.runBilingualLayoutAudit') || !layoutMatrix.includes('window.runReplacementLayoutAudit')) fail('120-case layout matrix fixture missing');
 if (!content.includes('function prioritizeTranslationBlocks')) fail('viewport-first translation ordering missing');
-if (!content.includes('const CHUNK_SIZE = 12')) fail('front/background translation batch size alignment missing');
+if (!content.includes('const FIRST_CHUNK_SIZE = 6') || !content.includes('const CHUNK_SIZE = 8')) fail('viewport-first translation batch sizing missing');
 if (!content.includes('function scheduleMutationTranslationRefresh')) fail('scoped dynamic-content translation refresh missing');
 if (!content.includes('readerContainerCache')) fail('reader container cache missing');
 if (!background.includes('await persistentCacheReady')) fail('persistent translation cache readiness safeguard missing');
@@ -94,6 +94,18 @@ function extractFunction(source, name) {
     if (source[i] === '}' && --depth === 0) return source.slice(start, i + 1);
   }
   return '';
+}
+
+const parsedColorSource = extractFunction(content, 'parsedCssColor');
+const luminanceSource = extractFunction(content, 'cssColorLuminance');
+if (!parsedColorSource || !luminanceSource) {
+  fail('CSS colour parser or luminance helper missing');
+} else {
+  const parseColour = Function(`${parsedColorSource}; return parsedCssColor;`)();
+  const luminance = Function(`${luminanceSource}; return cssColorLuminance;`)();
+  const paleOklch = luminance(parseColour('oklch(0.98 0.01 95)'));
+  const darkOklch = luminance(parseColour('oklch(0.22 0.01 95)'));
+  if (!(paleOklch > .85) || !(darkOklch < .08)) fail('OKLCH colours are misread as RGB channel numbers');
 }
 
 const punctuationSource = extractFunction(background, 'normalizeTranslationPunctuation');
