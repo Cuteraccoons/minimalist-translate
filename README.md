@@ -64,6 +64,10 @@ See the [privacy notice](PRIVACY.md) for the complete service and permission bou
 
 Bug reports, compatibility examples, documentation improvements, and focused code contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Please report security issues through the process in [SECURITY.md](SECURITY.md), not through a public issue.
 
+## Acknowledgements
+
+OpenAI Codex was used as an assistive tool during development and code review.
+
 ## License
 
 Minimalist Translate is released under the [Apache License 2.0](LICENSE). Third-party components remain subject to their own licenses and notices; see [NOTICE](NOTICE) and the notice files under `vendor/`.

@@ -64,6 +64,10 @@ Chrome は ZIP ファイルを直接読み込めません。ローカル版を�
 
 Bug 報告、互換性の事例、ドキュメント改善、範囲の明確なコード貢献を歓迎します。Pull Request を作成する前に [CONTRIBUTING.md](CONTRIBUTING.md) を確認してください。セキュリティ上の問題は公開 Issue ではなく、[SECURITY.md](SECURITY.md) の手順で報告してください。
 
+## 謝辞
+
+開発とコードレビューでは、補助ツールとして OpenAI Codex を使用しました。
+
 ## ライセンス
 
 極簡翻訳は [Apache License 2.0](LICENSE) で公開されています。第三者コンポーネントにはそれぞれのライセンスと通知が適用されます。詳細は [NOTICE](NOTICE) と `vendor/` 配下の通知ファイルを参照してください。

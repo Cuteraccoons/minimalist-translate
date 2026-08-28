@@ -64,6 +64,10 @@ Chrome 不能直接加载 ZIP 文件。更新本地安装时，用新文件覆�
 
 欢迎提交 Bug、网页兼容案例、文档改进与边界清晰的代码贡献。提交 Pull Request 前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请按照 [SECURITY.md](SECURITY.md) 中的方式反馈，不要在公开 Issue 中披露可被利用的细节。
 
+## 致谢
+
+开发与代码审查过程中使用了 OpenAI Codex 作为辅助工具。
+
 ## 开源许可
 
 极简翻译基于 [Apache License 2.0](LICENSE) 开源。第三方组件继续适用各自的许可证与声明，详见 [NOTICE](NOTICE) 与 `vendor/` 目录中的许可文件。
