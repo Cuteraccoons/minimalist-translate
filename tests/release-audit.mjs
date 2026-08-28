@@ -189,7 +189,8 @@ if (!read('floating.css').includes('var(--raccoon-bg-color,rgba(253,224,71,.43))
 if (!content.includes('style.backgroundImage && style.backgroundImage !== "none"') || !content.includes('dataset.raccoonSurface')) fail('gradient/dark surface diagnostics missing');
 if (!read('floating.css').includes('opacity:.2!important') || !read('floating.css').includes('transition:opacity .18s ease!important')) fail('hover reveal is indistinguishable from clean text');
 if (!read('floating.css').includes('[data-render-style="blur-reveal"]>.raccoon-translation-text') || !read('floating.css').includes('[data-render-style="click-reveal"]:not(.raccoon-revealed) .raccoon-block-actions')) fail('concealment text/action safeguards missing');
-if (!backgroundJs.includes('enableParagraphActions: true') || !content.includes('raccoon-paragraph-actions-disabled')) fail('paragraph action toolbar preference missing');
+if (!backgroundJs.includes('enableParagraphActions: false') || !content.includes('enableParagraphActions: false') || !content.includes('raccoon-paragraph-actions-disabled')) fail('paragraph action toolbar default or preference missing');
+if (!content.includes('<path d="M4 7h16"/><path d="M9 7V4h6v3"/>')) fail('saved-highlight delete control lacks a recognizable trash icon');
 if (content.includes('speechSynthesis.cancel()') || content.includes('speechSynthesis.onvoiceschanged =')) fail('speech synthesis can interrupt other page audio');
 if (/\bWebSocket\b/.test(content) || /\bWebSocket\b/.test(backgroundJs)) fail('unexpected WebSocket integration present');
 if (content.includes('TextDetector') || !backgroundJs.includes('jijianImageOcrReadyV1') || !content.includes('GET_IMAGE_OCR_READY_MAP')) fail('image OCR must use the verified local model path');

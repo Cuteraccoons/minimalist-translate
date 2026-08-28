@@ -66,7 +66,7 @@
     underlineStyle: "solid",
     highlightStyle: "soft-marker",
     enableParagraphHoverTranslate: true,
-    enableParagraphActions: true,
+    enableParagraphActions: false,
     dictTriggerMode: "both", // "both" | "double_click" | "selection" | "none"
     dictTriggerLastMode: "both",
     dictionaryLookupMode: "standard",
@@ -5220,7 +5220,7 @@
     btn.className = "raccoon-highlight-hover-delete";
     btn.title = "删除高亮";
     btn.setAttribute("aria-label", "删除高亮");
-    btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 15 8-8 6 6-7 7H7l-2-2a2.1 2.1 0 0 1 0-3Z"/><path d="m11 20 8-8"/></svg>`;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="m7 7 1 13h8l1-13"/><path d="M10 11v5M14 11v5"/></svg>`;
     btn.style.display = "none";
     document.documentElement.appendChild(btn);
     highlightHoverDeleteBtn = btn;

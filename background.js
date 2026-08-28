@@ -59,7 +59,7 @@ const DEFAULT_SETTINGS = {
 
   // 交互与智能检测
   enableParagraphHoverTranslate: true,
-  enableParagraphActions: true,
+  enableParagraphActions: false,
   dictTriggerMode: "both", // "both" | "double_click" | "selection" | "none"
   dictTriggerLastMode: "both",
   dictionaryLookupMode: "standard", // standard | ai
