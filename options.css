@@ -406,6 +406,7 @@ body {
 .test-result.success { color: var(--apple-green); }
 .test-result.error { color: var(--apple-red); }
 .test-result.loading { color: var(--apple-orange); }
+.test-result.warning { color: #8a6500; }
 
 .apple-slider {
   accent-color: var(--apple-blue);

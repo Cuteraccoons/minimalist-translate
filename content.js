@@ -103,6 +103,9 @@
 
   let isPageTranslated = false;
   let isTranslating = false;
+  let isIncrementalTranslating = false;
+  let incrementalTotalBlocks = 0;
+  let incrementalCompletedBlocks = 0;
   let translationRunGeneration = 0;
   let isSidebarOpen = false;
   let isReaderOpen = false;
@@ -843,7 +846,9 @@
     const runMode = currentSettings.displayMode;
     setTabTranslationSession(true);
     isTranslating = true;
-    updateFloatingPillStatus("loading", "翻译中...");
+    totalBlocks = 0;
+    translatedBlocksCount = 0;
+    updateFloatingPillStatus("loading", "正在翻译");
     setTranslationBadgeSafely("translating");
 
     const collectedBlocks = collectTranslatableBlocks();
@@ -857,7 +862,6 @@
     const blockById = new Map(blocks.map(block => [block.id, block]));
     const failedBlocks = [];
     totalBlocks = blocks.length;
-    translatedBlocksCount = 0;
 
     if (totalBlocks === 0) {
       isTranslating = false;
@@ -874,7 +878,7 @@
       openSidebar();
     }
 
-    updateFloatingPillStatus("loading", `0/${totalBlocks}`);
+    updateFloatingPillStatus("loading", `正在翻译 · 0/${totalBlocks}`);
 
     const FIRST_CHUNK_SIZE = 6;
     const CHUNK_SIZE = 8;
@@ -925,7 +929,7 @@
             failedBlocks.push(meta);
           }
         });
-        updateFloatingPillStatus("loading", `${translatedBlocksCount}/${totalBlocks}`);
+        updateFloatingPillStatus("loading", `正在翻译 · ${translatedBlocksCount}/${totalBlocks}`);
       } else markChunkFailed(chunk);
     };
 
@@ -4822,6 +4826,9 @@
 
     isPageTranslated = false;
     isTranslating = false;
+    isIncrementalTranslating = false;
+    incrementalTotalBlocks = 0;
+    incrementalCompletedBlocks = 0;
     totalBlocks = 0;
     translatedBlocksCount = 0;
 
@@ -4830,11 +4837,15 @@
   }
 
   async function translateIncrementalBlocks(newBlocks) {
-    if (!Array.isArray(newBlocks) || newBlocks.length === 0 || !isPageTranslated || isTranslating) return;
+    if (!Array.isArray(newBlocks) || newBlocks.length === 0 || !isPageTranslated || isTranslating || isIncrementalTranslating) return;
+    isIncrementalTranslating = true;
     const items = newBlocks.map(b => ({ id: b.id, text: b.text }));
+    incrementalTotalBlocks = items.length;
+    incrementalCompletedBlocks = 0;
     const sourceTextById = new Map(newBlocks.map(b => [b.id, b.text]));
     const blockById = new Map(newBlocks.map(b => [b.id, b]));
     let failedCount = 0;
+    updateFloatingPillStatus('loading', `正在翻译 · 0/${items.length}`);
     try {
       const res = await sendBatchWithIds(items);
       if (res && res.success && Array.isArray(res.data)) {
@@ -4860,15 +4871,26 @@
             failedCount++;
           }
         });
+        const completedCount = Math.max(0, items.length - failedCount);
+        incrementalCompletedBlocks = completedCount;
+        updateFloatingPillStatus('loading', `正在翻译 · ${completedCount}/${items.length}`);
         updateFloatingPillStatus('done', failedCount ? `${currentSettings.displayMode === 'replace' ? '已替换' : '已翻译'} · ${failedCount} 段待重试` : (currentSettings.displayMode === 'replace' ? '已替换' : '已翻译'));
+      } else {
+        failedCount = items.length;
+        updateFloatingPillStatus('done', `${currentSettings.displayMode === 'replace' ? '已替换' : '已翻译'} · ${failedCount} 段待重试`);
       }
     } catch (e) {
       console.warn('Incremental translation warning:', e);
+      updateFloatingPillStatus('done', '翻译暂未完成 · 点击重试');
+    } finally {
+      isIncrementalTranslating = false;
+      incrementalTotalBlocks = 0;
+      incrementalCompletedBlocks = 0;
     }
   }
 
   function scheduleVisibleTranslationRefresh(delay = 120) {
-    if (!isPageTranslated || isTranslating) return;
+    if (!isPageTranslated || isTranslating || isIncrementalTranslating) return;
     clearTimeout(interactionRefreshTimer);
     interactionRefreshTimer = setTimeout(() => {
       const units = collectTranslatableBlocks();
@@ -4896,6 +4918,10 @@
       mutationRefreshTimer = null;
       if (!isPageTranslated || isTranslating) {
         pendingMutationTranslationRoots.clear();
+        return;
+      }
+      if (isIncrementalTranslating) {
+        scheduleMutationTranslationRefresh();
         return;
       }
       const roots = compactMutationTranslationRoots(pendingMutationTranslationRoots);
@@ -5056,13 +5082,14 @@
 
     const root = document.createElement("div");
     root.id = "raccoon-floating-ball-root";
+    const initialPillState = floatingPillStatusSnapshot();
 
     root.innerHTML = `
       <div class="raccoon-floating-main-pill" id="raccoon-pill-main" title="点击切换整页翻译 / 右键展开侧边栏">
         <svg class="raccoon-pill-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5">
           <path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>
         </svg>
-        <span class="raccoon-pill-text" id="raccoon-pill-text">${currentSettings.displayMode === "replace" ? "替换翻译" : "双语翻译"}</span>
+        <span class="raccoon-pill-text" id="raccoon-pill-text">${initialPillState.text}</span>
       </div>
       <div class="raccoon-floating-close-circle" id="raccoon-pill-close" title="临时关闭此页悬浮球">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -5071,6 +5098,7 @@
 
     document.documentElement.appendChild(root);
     floatingPillRoot = root;
+    updateFloatingPillStatus(initialPillState.status, initialPillState.text);
 
     const pillMain = root.querySelector("#raccoon-pill-main");
     pillMain.addEventListener("click", () => {
@@ -5104,10 +5132,24 @@
     }
   }
 
+  function floatingPillStatusSnapshot() {
+    if (isIncrementalTranslating) {
+      const progress = incrementalTotalBlocks > 0 ? ` · ${incrementalCompletedBlocks}/${incrementalTotalBlocks}` : "";
+      return { status:"loading", text:`正在翻译${progress}` };
+    }
+    if (isTranslating) {
+      const progress = totalBlocks > 0 ? ` · ${translatedBlocksCount}/${totalBlocks}` : "";
+      return { status:"loading", text:`正在翻译${progress}` };
+    }
+    if (isPageTranslated) {
+      return { status:"done", text:currentSettings.displayMode === "replace" ? "已替换" : "已翻译" };
+    }
+    return { status:"idle", text:currentSettings.displayMode === "replace" ? "替换翻译" : "双语翻译" };
+  }
+
   function resetFloatingPillText() {
-    if (!floatingPillRoot) return;
-    const textEl = floatingPillRoot.querySelector("#raccoon-pill-text");
-    if (textEl) textEl.textContent = isPageTranslated ? (currentSettings.displayMode === "replace" ? "已替换" : "已翻译") : (currentSettings.displayMode === "replace" ? "替换翻译" : "双语翻译");
+    const state = floatingPillStatusSnapshot();
+    updateFloatingPillStatus(state.status, state.text);
   }
 
   let floatingPillSessionHidden = false;

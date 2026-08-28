@@ -5,7 +5,7 @@ async page => {
     const settings = {
       sourceLang:"auto", targetLang:"zh-CN", displayMode:"bilingual", renderStyle:"classic",
       replaceRenderStyle:"clean", enableImageTranslation:true, enableDictionaryAi:false,
-      excludeDomainList:["127.0.0.1","example.com"], excludeDomainDefaultRule:{floating:true,hover:true,selection:true,image:true,auto:true},
+      excludeDomainList:["example.com","search.example"], excludeDomainDefaultRule:{floating:true,hover:true,selection:true,image:true,auto:true},
       readerSurface:"card", readerTheme:"white", readerWidth:"920", readerFont:"system",
       readerLineHeight:"1.82", readerParagraphSpacing:"28", readerWritingMode:"horizontal"
     };
@@ -20,7 +20,11 @@ async page => {
           const action=message?.action||"";
           if(action==="GET_SETTINGS")return reply(callback,{success:true,settings:{...settings}});
           if(action==="UPDATE_SETTINGS"){Object.assign(settings,message.settings||{});return reply(callback,{success:true});}
-          if(action==="TRANSLATE_BATCH_IDS")return reply(callback,{success:true,data:(message.items||[]).map((item,index)=>({id:item.id,text:`译文 ${index+1}：${String(item.text||"").slice(0,42)}`}))});
+          if(action==="TRANSLATE_BATCH_IDS"){
+            const value={success:true,data:(message.items||[]).map((item,index)=>({id:item.id,text:`译文 ${index+1}：${String(item.text||"").slice(0,42)}`}))};
+            if(typeof callback==="function")setTimeout(()=>callback(value),90);
+            return;
+          }
           if(action==="TRANSLATE_SINGLE_BLOCK")return reply(callback,{success:true,text:`译文：${String(message.text||"").slice(0,60)}`});
           if(action==="GET_IMAGE_OCR_READY_MAP")return reply(callback,{success:true,map:{}});
           if(action==="GET_TAB_TRANSLATION_SESSION")return reply(callback,{success:true,session:null});
@@ -47,7 +51,10 @@ async page => {
   await page.evaluate(() => {
     for(const listener of globalThis.__jijianRuntimeListeners)listener({action:"TOGGLE_PAGE_TRANSLATION"},{},()=>{});
   });
+  await page.waitForFunction(() => document.querySelector("#raccoon-pill-text")?.textContent?.includes("正在翻译"));
+  const translationProgress = await page.evaluate(() => document.querySelector("#raccoon-pill-text")?.textContent || "");
   await page.waitForFunction(() => document.querySelectorAll(".raccoon-translated-block,.raccoon-translated-inline,.raccoon-linked-card-translation").length > 80, null, {timeout:20000});
+  await page.waitForFunction(() => /已翻译|已替换/.test(document.querySelector("#raccoon-pill-text")?.textContent || ""), null, {timeout:20000});
   const layout = await page.evaluate(() => globalThis.runBilingualLayoutAudit());
   if(layout.missing || layout.overlaps || layout.lowContrast || layout.overflow || layout.iconDrift || layout.squeezedRows || layout.richControlDamage || layout.richLinkedMissing || layout.proseLinkDamage || layout.hiddenTocMissing || layout.tocNumberDamage || layout.alignmentMismatch || layout.emphasisMismatch){
     throw new Error(`布局矩阵失败：${JSON.stringify(layout)}`);
@@ -127,5 +134,5 @@ async page => {
   await page.click("#site-image-translation-toggle");
   const siteImageToggle=await page.evaluate(()=>({state:document.querySelector("#site-image-translation-state")?.textContent,pressed:document.querySelector("#site-image-translation-toggle")?.getAttribute("aria-pressed")}));
   if(siteImageToggle.state!=="已关闭"||siteImageToggle.pressed!=="false")throw new Error(`当前网站图片开关失败：${JSON.stringify(siteImageToggle)}`);
-  return {layout,hover,reader,preview,blacklist,siteImageToggle};
+  return {layout,translationProgress,hover,reader,preview,blacklist,siteImageToggle};
 }

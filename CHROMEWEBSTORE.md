@@ -9,9 +9,9 @@
 - 主要语言：简体中文
 - 分类：生产力工具
 - 发布者：龙猫君
-- 联系邮箱：待开发者账号开通后填写
+- 联系邮箱：待在开发者信息页填写并完成验证
 - 主页地址：`https://github.com/Cuteraccoons/minimalist-translate`（仓库公开后启用）
-- 隐私政策地址：待仓库公开或独立网页上线后填写
+- 隐私政策地址：`https://github.com/Cuteraccoons/minimalist-translate/blob/main/PRIVACY.md`（仓库公开后启用）
 
 ## 商店文案
 
@@ -53,6 +53,8 @@
 - OCR 译文按识别行写回原位置，自动处理居中、右对齐、相邻行边界和深浅复杂背景；运行错误只显示可读提示，不暴露内部代码片段。
 - OCR 批量翻译漏回的文字行会自动补译，复杂图片的原文遮罩会覆盖抗锯齿字边，减少英文残影。
 - Google 翻译可直接使用；DeepL、DeepSeek、OpenAI、Claude、Gemini、Ollama 与自定义兼容 API 需要用户自行配置，Popup 会清晰显示当前引擎的连接状态。
+- 模型列表刷新会明确显示读取进度、无效 API Key、权限不足、地址错误与网络超时，不再只让刷新图标静默停止。
+- 自动翻译延续到新页面或动态加载区块时，右下角入口会先显示“正在翻译”及段落进度，完成后才切换为“已翻译”。
 - 无需注册扩展账号。API Key 与私有服务配置仅保存在当前设备。
 
 ## 权限说明
@@ -92,13 +94,13 @@
 ## 商店素材
 
 - [x] 128 × 128 图标：`icons/icon128.png`
-- [ ] 截图 1：英文网页双语对照，1280 × 800
-- [ ] 截图 2：日文网页沉浸阅读，1280 × 800
-- [ ] 截图 3：侧边分栏与原文定位，1280 × 800
-- [ ] 截图 4：牛津本地词典查询，1280 × 800
-- [ ] 截图 5：图片 OCR 原位翻译，1280 × 800
-- [ ] 440 × 280 小型宣传图
-- [ ] 1400 × 560 大型宣传图
+- [x] 截图 1：英文网页双语对照，1280 × 800，`assets/store/release/screenshots/1.png`
+- [x] 截图 2：日文网页沉浸阅读，1280 × 800，`assets/store/release/screenshots/2.png`
+- [x] 截图 3：侧边分栏与原文定位，1280 × 800，`assets/store/release/screenshots/3.png`
+- [x] 截图 4：牛津本地词典查询，1280 × 800，`assets/store/release/screenshots/4.png`
+- [x] 截图 5：图片 OCR 原位翻译，1280 × 800，`assets/store/release/screenshots/5.png`
+- [x] 440 × 280 小型宣传图：`assets/store/release/promo-small-440x280.png`
+- [x] 1400 × 560 大型宣传图：`assets/store/release/promo-marquee-1400x560.png`
 
 旧宣传图草稿不作为发布素材。截图必须来自真实扩展界面，不展示 API Key、个人账号、浏览历史或其他私人信息。
 
@@ -113,17 +115,17 @@ Chrome Web Store ZIP 只包含扩展运行所需文件，排除以下内容：
 
 - `README*.md`、`CHROMEWEBSTORE.md`、`TODO.md`、`TESTING.md`
 - `tests/`
-- `assets/readme/` 与 `assets/store/`
+- README 的本地化头图、商店截图和宣传素材；设置页实时预览使用的 `assets/readme/hero-background.png` 作为运行资源保留
 - Git 元数据、开发脚本和本地词典文件
 - API Key、导出的配置备份与测试账号信息
 
 ## 提交前检查
 
-- [ ] 在 Chrome Test Browser 重新加载最终目录。
-- [ ] 完成五类真实界面截图并检查隐私信息。
-- [ ] 执行 `node tests/release-audit.mjs`。
-- [ ] 执行 `node tests/translation-core-audit.mjs`。
-- [ ] 在本地静态服务器上执行 `tests/playwright-runtime-audit.js` 与 `tests/playwright-ocr-audit.js` 的浏览器冒烟测试。
-- [ ] 对最终 ZIP 再做文件清单与密钥扫描。
+- [x] 在 Chrome Test Browser 重新加载最终目录。
+- [x] 完成五类真实界面截图并检查隐私信息。
+- [x] 执行 `node tests/release-audit.mjs`。
+- [x] 执行 `node tests/translation-core-audit.mjs`。
+- [x] 在本地静态服务器上执行 `tests/playwright-runtime-audit.js` 与 OCR 浏览器冒烟测试。
+- [x] 对最终 ZIP 再做文件清单与密钥扫描。
 - [ ] 在商店后台核对权限、数据披露与 `PRIVACY.md` 一致。
 - [ ] 首次上传后保持草稿，先处理后台警告，不提交审核。

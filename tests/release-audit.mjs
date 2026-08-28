@@ -38,6 +38,7 @@ for (const f of [
 const sandboxCsp = manifest.content_security_policy?.sandbox || '';
 if (/script-src[^;]*https?:/i.test(sandboxCsp) || /worker-src[^;]*https?:/i.test(sandboxCsp)) fail('remote executable code remains allowed by sandbox CSP');
 if (!read('ocr-sandbox.html').includes('vendor/tesseract/tesseract.min.js')) fail('OCR sandbox does not load local Tesseract runtime');
+if (!read('ocr-sandbox.html').includes('makeFilteredWorkerUrl') || !read('ocr-sandbox.html').includes('isBenignTesseractDiagnostic')) fail('OCR worker diagnostics are not filtered');
 if (!process.exitCode) pass('local-only OCR executable runtime');
 
 for (const [htmlFile, jsFile] of [['options.html','options.js'],['popup.html','popup.js']]) {
@@ -104,6 +105,8 @@ if (!content.includes('activeReaderViewController(readerViewForDisplayMode') || 
 if (!read('floating.css').includes('.reader-drawer-backdrop {\n  display: none !important;') || !read('floating.css').includes('overscroll-behavior: contain;\n  scrollbar-gutter: stable;')) fail('reader settings drawer still blocks or scroll-captures the article');
 if (content.includes('has-orig-highlight') || content.includes('"MARK","CODE"') || read('floating.css').includes('.raccoon-translated-block.has-orig-highlight')) fail('clean translation still copies a host highlight across the whole translated block');
 if (!content.includes('for (let index = 0; index < uncachedItems.length; index += 6)') || !content.includes('翻译请求等待时间过长')) fail('direct reader translation is not progressive or timeout-safe');
+if (!content.includes('function floatingPillStatusSnapshot') || !content.includes('正在翻译 · 0/${totalBlocks}') || !content.includes('isIncrementalTranslating')) fail('automatic translation progress state can become stale');
+if (!read('options.js').includes('readableProviderError') || !read('options.js').includes('}, 12000)') || !read('options.js').includes('正在读取模型...')) fail('model discovery does not expose invalid-key or timeout failures');
 if (!process.exitCode) pass('DOM-preserving translation safeguards');
 
 const sandbox = read('ocr-sandbox.html');
@@ -119,6 +122,7 @@ for (const needle of [
 ]) {
   if (!sandbox.includes(needle)) fail(`missing OCR geometry/download invariant: ${needle}`);
 }
+if (!sandbox.includes("user_defined_dpi:'300'")) fail('OCR still emits resolution estimation diagnostics');
 for (const needle of ['showImageSource','restoreImageSource','data-act="download-current"','translateOcrForImage','makeTranslatedImageDataUrl']) {
   if (!content.includes(needle)) fail(`missing translated-image invariant: ${needle}`);
 }

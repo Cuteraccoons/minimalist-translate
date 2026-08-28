@@ -258,6 +258,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (copy) copy.textContent = connected ? `已连接 · ${engineModelValue(engine) || engine}` : "";
   }
 
+  function readableProviderError(error) {
+    const raw = String(error?.message || error || "").replace(/\s+/g, " ").trim();
+    if (!raw || /^(?:null|undefined|unknown|未知错误)$/i.test(raw)) {
+      return "连接超时，请检查网络、API Key 或 Base URL";
+    }
+    if (/(?:\b401\b|unauthori[sz]ed|invalid\s*(?:api[-_ ]?)?key|incorrect\s*(?:api[-_ ]?)?key)/i.test(raw)) {
+      return "API Key 无效，或没有读取模型的权限（401）";
+    }
+    if (/(?:\b403\b|forbidden|permission denied|insufficient permissions?)/i.test(raw)) {
+      return "API Key 没有访问模型列表的权限（403）";
+    }
+    if (/(?:\b404\b|not found)/i.test(raw)) {
+      return "模型接口不存在，请检查 Base URL（404）";
+    }
+    if (/(?:abort|timeout|timed out|超时|network|failed to fetch)/i.test(raw)) {
+      return "连接超时，请检查网络、API Key 或 Base URL";
+    }
+    return raw.length > 120 ? `${raw.slice(0, 117)}...` : raw;
+  }
+
   // 4. 事件监听与自动保存
   apiActiveEngine.addEventListener("change", (e) => saveSetting({ translationEngine: e.target.value }));
 
@@ -632,19 +652,33 @@ document.addEventListener("DOMContentLoaded", async () => {
     btn.addEventListener("click", async () => {
       const engine = btn.getAttribute("data-engine");
       const listEl = document.getElementById(`models-${engine}`);
+      const resultEl = document.getElementById(`test-result-${engine}`);
       const oldTitle = btn.title;
       btn.disabled = true;
       btn.classList.add("is-loading");
       btn.title = "正在读取模型";
+      if (resultEl) {
+        resultEl.className = "test-result loading";
+        resultEl.textContent = "正在读取模型...";
+      }
       try {
-        const res = await sendRuntimeMessage({ action: "LIST_MODELS", engine, settings: currentSettings });
+        const res = await sendRuntimeMessage({ action: "LIST_MODELS", engine, settings: currentSettings }, 12000);
         if (!res?.success) throw new Error(res?.error || "无法读取模型列表");
         const models = Array.from(new Set((res.models || []).filter(Boolean))).slice(0, 120);
         if (listEl && models.length) listEl.innerHTML = models.map(m => `<option value="${escapeHtml(m)}"></option>`).join("");
         refreshModelPickerMenu(engine);
         btn.title = models.length ? `已读取 ${models.length} 个模型` : "服务商未返回模型列表";
+        if (resultEl) {
+          resultEl.className = models.length ? "test-result success" : "test-result warning";
+          resultEl.textContent = models.length ? `✓ 已读取 ${models.length} 个模型` : "未返回模型，可继续手动输入";
+        }
       } catch (err) {
+        invalidateEngine(engine);
         btn.title = "读取模型失败，可继续手动输入";
+        if (resultEl) {
+          resultEl.className = "test-result error";
+          resultEl.textContent = `✕ ${readableProviderError(err)}`;
+        }
       } finally {
         btn.classList.remove("is-loading");
         btn.disabled = false;
@@ -675,8 +709,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         await saveSetting({ verifiedEngines });
         setEngineCardConnectedState(engine, true);
       } else {
+        invalidateEngine(engine);
         resultEl.className = "test-result error";
-        resultEl.textContent = `✕ 失败: ${testRes ? testRes.error : "未知错误"}`;
+        resultEl.textContent = `✕ ${readableProviderError(testRes?.error)}`;
       }
     });
   });

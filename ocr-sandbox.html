@@ -2,13 +2,31 @@
 <html><head><meta charset="utf-8"><title>Jijian OCR Sandbox</title><script src="vendor/tesseract/tesseract.min.js"></script></head><body>
 <script>
 (() => {
-  const LOCAL_WORKER = new URL('vendor/tesseract/worker.min.js', location.href).href;
+  const LOCAL_WORKER_RUNTIME = new URL('vendor/tesseract/worker.min.js', location.href).href;
+  const LOCAL_WORKER = makeFilteredWorkerUrl(LOCAL_WORKER_RUNTIME);
   const LOCAL_CORE = new URL('vendor/tesseract/tesseract-core-lstm.wasm.js', location.href).href;
   const TESSDATA_CDN = 'https://cdn.jsdelivr.net/gh/naptha/tessdata@gh-pages/4.0.0_best_int';
   const TESSDATA_GITHUB = 'https://raw.githubusercontent.com/naptha/tessdata/gh-pages/4.0.0_best_int';
   const TESSDATA_PROJECT = 'https://tessdata.projectnaptha.com/4.0.0';
   let workerState = { key:'', promise:null };
   let currentRecognizeProgress = null;
+
+  function isBenignTesseractDiagnostic(args) {
+    const message=args.map(value=>String(value??'')).join(' ').trim();
+    return /^Warning: Parameter not found: [a-z0-9_]+$/i.test(message)
+      || /^Estimating resolution as \d+$/i.test(message);
+  }
+  function installDiagnosticFilter(targetConsole) {
+    for(const method of ['log','warn','error']){
+      const original=targetConsole?.[method]?.bind(targetConsole); if(!original)continue;
+      targetConsole[method]=(...args)=>{if(!isBenignTesseractDiagnostic(args))original(...args);};
+    }
+  }
+  function makeFilteredWorkerUrl(runtimeUrl) {
+    const source=`(()=>{const benign=args=>{const message=args.map(value=>String(value??'')).join(' ').trim();return /^Warning: Parameter not found: [a-z0-9_]+$/i.test(message)||/^Estimating resolution as \\d+$/i.test(message);};for(const method of ['log','warn','error']){const original=console[method]?.bind(console);if(!original)continue;console[method]=(...args)=>{if(!benign(args))original(...args);};}importScripts(${JSON.stringify(runtimeUrl)});})();`;
+    return URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
+  }
+  installDiagnosticFilter(console);
 
   function post(type, payload={}) { parent.postMessage({source:'jijian-ocr-sandbox', type, ...payload}, '*'); }
   function readableOcrError(error) {
@@ -317,7 +335,7 @@
         const seg=segments[i]; currentRecognizeProgress={index:i,total:segments.length};
         post('progress',{id:msg.id,status:segments.length>1?`recognizing segment ${i+1}/${segments.length}`:'recognizing text',progress:i/segments.length});
         const psm=selectPageSegMode(seg.width||0,seg.height||0);
-        try{await worker.setParameters({tessedit_pageseg_mode:psm,preserve_interword_spaces:'1'});}catch(_){}
+        try{await worker.setParameters({tessedit_pageseg_mode:psm,preserve_interword_spaces:'1',user_defined_dpi:'300'});}catch(_){}
         const out=await worker.recognize(seg.dataUrl,{rotateAuto:true},{text:true,tsv:true});
         const scale=Math.max(.0001,prepared.scale||1);
         const mapped=tsvToLines(out?.data?.tsv||'',seg.width||0).map(line=>({
