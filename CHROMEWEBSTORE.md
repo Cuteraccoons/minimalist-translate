@@ -4,14 +4,15 @@
 
 - 扩展名称：极简翻译 | 双语网页翻译与沉浸阅读
 - 当前版本：1.0.0
-- 文档更新：2026-08-28
-- 发布状态：草稿，暂不提交审核
+- 文档更新：2026-08-29
+- 发布状态：草稿，待完成商店后台隐私权规范后提交审核
 - 主要语言：简体中文
 - 分类：生产力工具
 - 发布者：龙猫君
 - 联系邮箱：待在开发者信息页填写并完成验证
-- 主页地址：`https://github.com/Cuteraccoons/minimalist-translate`（仓库公开后启用）
-- 隐私政策地址：`https://github.com/Cuteraccoons/minimalist-translate/blob/main/PRIVACY.md`（仓库公开后启用）
+- 主页地址：`https://github.com/Cuteraccoons/minimalist-translate`
+- 隐私政策地址：`https://github.com/Cuteraccoons/minimalist-translate/blob/main/PRIVACY.md`
+- 项目赞赏地址：`https://www.ifdian.net/a/longmaojun`
 
 ## 商店文案
 

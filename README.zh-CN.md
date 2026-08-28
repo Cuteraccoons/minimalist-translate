@@ -60,6 +60,10 @@ Chrome 不能直接加载 ZIP 文件。更新本地安装时，用新文件覆�
 
 完整的服务与权限边界见 [隐私说明](PRIVACY.md)。
 
+## 项目与赞赏
+
+如果极简翻译对你的日常阅读有所帮助，可以通过 [爱发电](https://www.ifdian.net/a/longmaojun) 表达赞赏。赞赏是对当前开源成果的认可，不对应专属功能、更新排期或维护承诺。
+
 ## 参与贡献
 
 欢迎提交 Bug、网页兼容案例、文档改进与边界清晰的代码贡献。提交 Pull Request 前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请按照 [SECURITY.md](SECURITY.md) 中的方式反馈，不要在公开 Issue 中披露可被利用的细节。

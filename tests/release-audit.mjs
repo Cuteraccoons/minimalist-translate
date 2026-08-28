@@ -249,7 +249,8 @@ if (!popupJs.includes("!['native','classic'].includes(btn.dataset.value)")) fail
 if (!read('options.js').includes('function activeTypographyRenderStyle')) fail('settings replacement typography mode is not independent');
 const publicCopy = `${read('README.md')}\n${read('PRIVACY.md')}`;
 if (publicCopy.includes('浏览器本机文字检测能力') || publicCopy.includes('正式发布 GitHub 仓库后')) fail('public OCR/privacy copy still contains inaccurate or placeholder wording');
-if (!backgroundJs.includes('donationUrl: ""') || !backgroundJs.includes('projectUrl: ""')) fail('unpublished project or donation URL must remain empty');
+if (!backgroundJs.includes('donationUrl: "https://www.ifdian.net/a/longmaojun"')) fail('public appreciation URL missing or contains tracking parameters');
+if (!backgroundJs.includes('projectUrl: "https://github.com/Cuteraccoons/minimalist-translate"')) fail('public project URL missing');
 const uiSources = ['content.js','floating.css','options.css','options.html','options.js','popup.css','popup.js'].map(read).join('\n');
 if (/(?:dict-example|dict-examples|domain-list|domain-row-copy|domain-row|highlight-date|highlight-delete|highlight-group|highlight-items|highlight-orig|highlight-row|highlight-trans|popup-vocab-detail|segment-indicator|vocab-delete|vocab-empty|vocab-export|vocab-gallery-card|vocab-lang-label|vocab-lang-select|vocab-list-row|vocab-row-head|vocab-row-main|vocab-row|vocab-toolbar)-v\d/.test(uiSources) || backgroundJs.includes('dict::v1250::')) fail('historical version identifiers remain in UI classes or dictionary cache keys');
 if (!process.exitCode) pass('popup / lookup stability safeguards');

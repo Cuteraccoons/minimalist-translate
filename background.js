@@ -85,8 +85,8 @@ const DEFAULT_SETTINGS = {
   autoDetectPageLanguage: true,
   floatingShortcut: "zz",
   readerShortcut: "aa",
-  donationUrl: "",
-  projectUrl: "",
+  donationUrl: "https://www.ifdian.net/a/longmaojun",
+  projectUrl: "https://github.com/Cuteraccoons/minimalist-translate",
   verifiedEngines: {},
 
   // 发音设置
@@ -293,6 +293,8 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (!['clean','native'].includes(current.replaceRenderStyle)) updated.replaceRenderStyle = "clean";
   if (!current.claudeModel || (current.claudeModel === "claude-3-5-sonnet-20241022" || current.claudeModel === "claude-sonnet-4-20250514")) updated.claudeModel = "claude-sonnet-5";
   if (!current.geminiModel || current.geminiModel === "gemini-1.5-flash") updated.geminiModel = "gemini-3.6-flash";
+  if (!/^https?:\/\//i.test(String(current.donationUrl || ""))) updated.donationUrl = DEFAULT_SETTINGS.donationUrl;
+  if (!/^https?:\/\//i.test(String(current.projectUrl || ""))) updated.projectUrl = DEFAULT_SETTINGS.projectUrl;
   // Remove only untouched legacy rules so customized domain rules survive.
   const legacyDefaultRule = { floating:true, hover:true, image:true, auto:true, selection:false };
   const sameRule = (a,b) => Object.keys(b).every(k => a?.[k] === b[k]) && Object.keys(a || {}).every(k => k in b);

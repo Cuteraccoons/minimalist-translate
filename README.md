@@ -60,6 +60,10 @@ Chrome cannot load the ZIP file directly. When updating a local installation, re
 
 See the [privacy notice](PRIVACY.md) for the complete service and permission boundary.
 
+## Project and appreciation
+
+If Minimalist Translate helps with your reading, you can leave an optional appreciation through [Afdian](https://www.ifdian.net/a/longmaojun). It recognizes the open-source work already released and does not purchase exclusive features, scheduling, or maintenance commitments.
+
 ## Contributing
 
 Bug reports, compatibility examples, documentation improvements, and focused code contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Please report security issues through the process in [SECURITY.md](SECURITY.md), not through a public issue.
