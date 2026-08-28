@@ -636,6 +636,18 @@
     return (light + .05) / (dark + .05);
   }
 
+  function foregroundLuminanceOnSurface(color, surface) {
+    if (!color) return null;
+    const alpha = Math.max(0, Math.min(1, Number(color.a ?? 1)));
+    const background = surface < .5 ? 0 : 255;
+    return cssColorLuminance({
+      r:color.r * alpha + background * (1 - alpha),
+      g:color.g * alpha + background * (1 - alpha),
+      b:color.b * alpha + background * (1 - alpha),
+      a:1
+    });
+  }
+
   function applyAdaptiveTranslationColor(origEl, transNode, preferredColor, sourceStyle = null) {
     if (!origEl || !transNode) return;
     try {
@@ -643,8 +655,15 @@
       const surface = sourceSurfaceLuminance(origEl, cs);
       let candidate = parsedCssColor(preferredColor);
       if (!candidate) candidate = parsedCssColor(cs.color);
-      const candidateLuminance = cssColorLuminance(candidate);
-      const readable = contrastRatio(candidateLuminance, surface) >= 4.5
+      const candidateLuminance = foregroundLuminanceOnSurface(candidate, surface);
+      const renderStyle = transNode.getAttribute?.("data-render-style") || "";
+      // Reference mode often inherits deliberately muted metadata colours. A
+      // colour can technically pass AA and still become faint after a host
+      // applies opacity or anti-aliasing, so prose and compact UI translations
+      // use a stronger floor than explicit clean-style accent colours.
+      const minimumContrast = renderStyle === "native" || transNode.classList?.contains("raccoon-ui-translated") || transNode.classList?.contains("raccoon-ui-translation-line") ? 7 : 4.5;
+      const candidateAlpha = Number(candidate?.a ?? 1);
+      const readable = candidateAlpha >= .92 && contrastRatio(candidateLuminance, surface) >= minimumContrast
         ? String(preferredColor || cs.color || "").trim()
         : (surface < .42 ? "#f5f7fa" : "#111827");
       transNode.style.setProperty("--raccoon-local-text-color", readable || (surface < .42 ? "#f5f7fa" : "#111827"));
@@ -1747,6 +1766,8 @@
       bindCompactUiOriginalPreview(record);
       origEl.classList.add('raccoon-ui-translated', 'raccoon-ui-compact');
       origEl.setAttribute('data-raccoon-ui-mode', 'compact');
+      const sourceStyle = getComputedStyle(origEl);
+      applyAdaptiveTranslationColor(origEl, origEl, sourceStyle.color, sourceStyle);
     } else {
       const line = document.createElement('span');
       line.className = 'raccoon-ui-translation-line';
@@ -1757,6 +1778,8 @@
       origEl.classList.add('raccoon-ui-translated', 'raccoon-ui-bilingual');
       positionExpandableUiTranslation(record, line);
       origEl.setAttribute('data-raccoon-ui-mode', 'bilingual');
+      const sourceStyle = getComputedStyle(origEl);
+      applyAdaptiveTranslationColor(origEl, line, sourceStyle.color, sourceStyle);
     }
     adaptTranslatedUiLayout(origEl);
     origEl.setAttribute('data-raccoon-translated', 'true');
@@ -4169,6 +4192,9 @@
     if (!overlay || !img?.isConnected) return;
     const r = img.getBoundingClientRect();
     const cs = getComputedStyle(img);
+    const intersectsViewport = r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight;
+    overlay.style.visibility = intersectsViewport ? "visible" : "hidden";
+    overlay.style.pointerEvents = intersectsViewport ? "auto" : "none";
     const compactHorizontal = r.height < 118 && r.width >= 280;
     const compactVertical = r.width < 210 && r.height >= 320;
     overlay.classList.toggle("compact-horizontal", compactHorizontal);
@@ -4184,10 +4210,8 @@
       translatedImage.style.borderRadius = cs.borderRadius || "0px";
     }
 
-    // For long screenshots, keep the controls inside the visible slice of the
-    // image instead of attaching them to an off-screen top/bottom edge.
-    const visibleTop = Math.max(0, -r.top);
-    const visibleBottom = Math.max(0, r.bottom - innerHeight);
+    // Controls belong to the image coordinate system. Do not pin them to the
+    // viewport while a long image scrolls underneath.
     const topbar = overlay.querySelector(".image-translate-topbar");
     const progress = overlay.querySelector(".image-translate-progress");
     const actions = overlay.querySelector(".image-translate-actions");
@@ -4196,18 +4220,17 @@
       topbar.style.left = "8px";
       topbar.style.right = "8px";
       topbar.style.width = "auto";
-      topbar.style.top = `${Math.min(Math.max(8, visibleTop + 8), Math.max(8, r.height - 42))}px`;
+      topbar.style.top = "8px";
     }
     if (progress) progress.style.top = "auto";
     if (actions) {
       actions.style.left = "auto";
       actions.style.right = "8px";
       actions.style.width = "auto";
-      actions.style.bottom = `${Math.min(Math.max(8, visibleBottom + 8), Math.max(8, r.height - 40))}px`;
+      actions.style.bottom = "8px";
     }
     if (result && !result.hidden) {
-      const y = Math.min(Math.max(50, visibleTop + 50), Math.max(50, r.height - 180));
-      result.style.top = `${y}px`;
+      result.style.top = "50px";
       result.style.bottom = "auto";
       result.style.maxHeight = `${Math.max(90, Math.min(300, innerHeight - 120))}px`;
     }
@@ -4283,7 +4306,24 @@
         sl:"auto",tl:targetLang
       },resolve));
       if(batch?.success&&Array.isArray(batch.data)){
-        const byId=new Map(batch.data.filter(Boolean).map(item=>[String(item.id||""),String(item.text||"").trim()]));
+        const byId=new Map(batch.data.filter(item=>item&&!item.error).map(item=>[String(item.id||""),String(item.text||"").trim()]));
+        // A provider can report success while omitting a few batch entries.
+        // Retry only those visual lines once instead of silently leaving their
+        // source text visible in the translated image.
+        const missing=lines.map((line,i)=>({line,id:`ocr-line-${i}`})).filter(item=>!byId.get(item.id));
+        if(missing.length){
+          const retry=await new Promise(resolve=>sendDictionaryRuntimeMessage({
+            action:"TRANSLATE_BATCH_IDS",
+            items:missing.map(({line,id})=>({id,text:line.text})),
+            sl:"auto",tl:targetLang
+          },resolve));
+          if(retry?.success&&Array.isArray(retry.data)){
+            retry.data.filter(item=>item&&!item.error).forEach(item=>{
+              const id=String(item?.id||""), text=String(item?.text||"").trim();
+              if(id&&text)byId.set(id,text);
+            });
+          }
+        }
         const items=lines.map((line,i)=>({...line,translated:byId.get(`ocr-line-${i}`)||""})).filter(x=>x.translated);
         if(items.length)return { translatedText:items.map(x=>x.translated).join("\n"), items, structured:true };
       }
@@ -4330,7 +4370,9 @@
       ctx.filter=`blur(${blur}px)`;
       ctx.drawImage(sourceCanvas,rect.x,rect.y,rect.width,rect.height,rect.x-blur,rect.y-blur,rect.width+blur*2,rect.height+blur*2);
       ctx.filter="none";
-      ctx.fillStyle=`rgba(${r},${g},${b},.58)`;
+      // Keep texture continuity, but make the sampled veil opaque enough to
+      // remove the original glyphs instead of merely tinting them.
+      ctx.fillStyle=`rgba(${r},${g},${b},.88)`;
       ctx.fillRect(rect.x,rect.y,rect.width,rect.height);
     }
     ctx.restore();
@@ -4385,8 +4427,10 @@
         if(sameColumn&&box.y1<=base.y0)topLimit=Math.max(topLimit,(box.y1+base.y0)/2);
         if(sameColumn&&box.y0>=base.y1)bottomLimit=Math.min(bottomLimit,(base.y1+box.y0)/2);
       }
-      const padX=Math.max(2,Math.min(12,Math.round(base.height*.22)));
-      const padY=Math.max(2,Math.min(8,Math.round(base.height*.16)));
+      // OCR boxes often stop before anti-aliased glyph edges. Widen the mask so
+      // source letters cannot remain visible around the Chinese replacement.
+      const padX=Math.max(3,Math.min(16,Math.round(base.height*.32)));
+      const padY=Math.max(3,Math.min(12,Math.round(base.height*.24)));
       const x0=clampNumber(Math.max(leftLimit,base.x0-padX),0,canvasWidth-1);
       const y0=clampNumber(Math.max(topLimit,base.y0-padY),0,canvasHeight-1);
       const x1=clampNumber(Math.min(rightLimit,base.x1+padX),x0+1,canvasWidth);

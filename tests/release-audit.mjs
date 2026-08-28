@@ -182,6 +182,8 @@ if (!backgroundJs.includes('replaceRenderStyle: "clean"')) fail('replacement cle
 if (!content.includes("parent.classList.add('raccoon-dom-preserved-translation','raccoon-replaced-text')")) fail('replacement typography class is not applied');
 if (!read('floating.css').includes('.raccoon-replaced-text[data-render-style="native"]') || !read('floating.css').includes('font-style:normal!important')) fail('replacement reference style may inherit italics');
 if (!content.includes('function applyAdaptiveTranslationColor') || !read('floating.css').includes('var(--raccoon-local-text-color,var(--raccoon-text-color,inherit))')) fail('translation styles do not share adaptive surface contrast');
+if (!content.includes('function foregroundLuminanceOnSurface') || !content.includes('candidateAlpha >= .92') || !content.includes('minimumContrast = renderStyle === "native"')) fail('transparent or muted host colours can still wash translations to grey');
+if (!read('floating.css').includes('mix-blend-mode:normal!important') || !read('floating.css').includes('.raccoon-ui-translation-line{\n  color:var(--raccoon-local-text-color')) fail('host blend/text-fill rules can still reduce translated UI contrast');
 if (!read('floating.css').includes('var(--raccoon-bg-color,rgba(253,224,71,.43))')) fail('live webpage highlight colour binding missing');
 if (!content.includes('style.backgroundImage && style.backgroundImage !== "none"') || !content.includes('dataset.raccoonSurface')) fail('gradient/dark surface diagnostics missing');
 if (!read('floating.css').includes('opacity:.2!important') || !read('floating.css').includes('transition:opacity .18s ease!important')) fail('hover reveal is indistinguishable from clean text');
@@ -191,6 +193,8 @@ if (content.includes('speechSynthesis.cancel()') || content.includes('speechSynt
 if (/\bWebSocket\b/.test(content) || /\bWebSocket\b/.test(backgroundJs)) fail('unexpected WebSocket integration present');
 if (content.includes('TextDetector') || !backgroundJs.includes('jijianImageOcrReadyV1') || !content.includes('GET_IMAGE_OCR_READY_MAP')) fail('image OCR must use the verified local model path');
 if (!content.includes('TRANSLATE_BATCH_IDS')) fail('structured image-line translation mapping missing');
+if (!content.includes('const missing=lines.map') || !content.includes('rgba(${r},${g},${b},.88)')) fail('partial OCR batches or translucent masks can leave source text visible');
+if (!content.includes('const intersectsViewport =') || content.includes('visibleTop + 8') || content.includes('visibleBottom + 8')) fail('image progress can remain pinned to the viewport instead of its image');
 if (!content.includes('dataset?.canonicalSrc') || !backgroundJs.includes('credentials:"include"') || !backgroundJs.includes('credentials:"omit"')) fail('authenticated/CDN GitHub image fallback missing');
 for (const direction of ['n','e','s','w','nw','ne','se','sw']) {
   if (!content.includes(`data-resize="${direction}"`)) fail(`dictionary resize direction missing: ${direction}`);

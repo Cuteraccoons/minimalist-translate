@@ -4293,3 +4293,28 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
   border-color:#17191c!important;background:#17191c!important;color:#fff!important;
   -webkit-text-fill-color:#fff!important;box-shadow:none!important;font-weight:700!important
 }
+
+/* Translation legibility is a hard floor, not a copy of the host's muted
+   metadata treatment. The adaptive variable is calculated from the actual
+   landing surface; these rules prevent host opacity, blend and text-fill
+   selectors from washing the result back to grey. Concealment styles retain
+   their own intentional opacity/filter rules. */
+.raccoon-translated-block:not([data-render-style="hover-reveal"]):not([data-render-style="blur-reveal"]):not([data-render-style="click-reveal"]),
+.raccoon-translated-inline:not([data-render-style="hover-reveal"]):not([data-render-style="blur-reveal"]):not([data-render-style="click-reveal"]),
+.raccoon-replaced-text[data-render-style="native"],
+.raccoon-replaced-text[data-render-style="classic"]{
+  color:var(--raccoon-local-text-color,var(--raccoon-text-color,#111827))!important;
+  -webkit-text-fill-color:currentColor!important;opacity:1!important;filter:none!important;
+  mix-blend-mode:normal!important;text-shadow:none!important
+}
+.raccoon-translation-text{
+  color:inherit!important;-webkit-text-fill-color:currentColor!important;opacity:1!important;mix-blend-mode:normal!important
+}
+.raccoon-ui-translation-line{
+  color:var(--raccoon-local-text-color,#111827)!important;
+  -webkit-text-fill-color:currentColor!important;opacity:1!important;mix-blend-mode:normal!important
+}
+.raccoon-ui-translated[data-raccoon-ui-showing="translation"]{
+  color:var(--raccoon-local-text-color,currentColor)!important;
+  -webkit-text-fill-color:currentColor!important;opacity:1!important
+}
