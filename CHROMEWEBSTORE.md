@@ -4,13 +4,14 @@
 
 - 扩展名称：极简翻译 | 双语网页翻译与沉浸阅读
 - 当前版本：1.0.1
-- 文档更新：2026-08-29
-- 发布状态：已于 2026-08-29 提交审核，等待 Chrome Web Store 审核结果
+- 文档更新：2026-09-02
+- 发布状态：1.0.1 已通过审核并于 2026-08-31 上架 Chrome Web Store
 - 主要语言：简体中文
-- 分类：生产力工具
+- 分类：工具
 - 发布者：龙猫君
 - 联系邮箱：待在开发者信息页填写并完成验证
 - 主页地址：`https://github.com/Cuteraccoons/minimalist-translate`
+- Chrome Web Store：`https://chromewebstore.google.com/detail/pbndcgchimohkkdijfafhaljldgfkhbd`
 - 隐私政策地址：`https://github.com/Cuteraccoons/minimalist-translate/blob/main/PRIVACY.md`
 - 项目赞赏地址：`https://www.ifdian.net/a/longmaojun`
 
@@ -150,3 +151,4 @@ Chrome Web Store ZIP 只包含扩展运行所需文件，排除以下内容：
 - [x] 对最终 ZIP 再做文件清单与密钥扫描。
 - [x] 在商店后台核对权限、数据披露与 `PRIVACY.md` 一致。
 - [x] 已接受宽泛主机权限可能延长审核时间的提示，并提交 1.0.1 审核。
+- [x] 1.0.1 已通过审核并公开上架。
