@@ -1774,3 +1774,14 @@ html:has(#raccoon-reader-root) #raccoon-selection-bubble-root .selection-tool-bt
 #raccoon-reader-root .reader-list-block[data-list-marker]::before{content:attr(data-list-marker)!important;top:0!important;left:0!important;width:1.4em!important;height:auto!important;background:none!important;border-radius:0!important;opacity:1!important;text-align:right!important;font:inherit!important;line-height:var(--reader-line-height,1.82)!important}
 #raccoon-reader-root .reader-copy-grid button.is-copied svg{display:none!important}
 #raccoon-reader-root .reader-copy-grid button.is-copied span{width:100%!important;text-align:center!important}
+/* Quieter surfaces; hierarchy remains visible without repeated rules. */
+#raccoon-reader-root[data-reader-outline-accent="neutral"] .reader-outline-item:is(.level-2,.level-3):is(.active-heading,.active-ancestor){text-decoration:underline!important;text-underline-offset:4px!important;text-decoration-thickness:1.5px!important;color:var(--reader-text)!important}
+#raccoon-reader-root .reader-context-panel :is(.reader-drawer-quick-label,.reader-settings-inline,.reader-style-toggle-grid,.reader-export-wrap){border-top:0!important;border-bottom:0!important}
+#raccoon-reader-root .reader-content-divider{border:0!important;height:0!important;margin:20px 0!important}
+#raccoon-reader-root[data-surface="forum"] .reader-paragraph-pair{border:0!important;box-shadow:none!important;border-radius:6px!important;padding:12px 16px!important;margin-bottom:10px!important}
+#raccoon-reader-root[data-surface="flat"] .reader-scroll-card{border:0!important;box-shadow:none!important;border-radius:0!important}
+#raccoon-reader-root[data-surface="safari"] .reader-scroll-card{border:0!important;box-shadow:none!important;padding-inline:clamp(26px,5vw,64px)!important}
+#raccoon-reader-root.reader-wikipedia-magazine .reader-content,#raccoon-reader-root.reader-wikipedia-magazine .reader-content *{content-visibility:visible!important;contain:none!important}
+#raccoon-reader-root .reader-note-editor .reader-note-editor-source{display:block!important;margin-bottom:12px!important}
+#raccoon-reader-root .reader-note-editor-source blockquote{margin:0!important;padding:8px 10px!important;border:0!important;border-left:2px solid var(--reader-text)!important;font:400 13px/1.6 var(--reader-ui-font)!important;max-height:84px!important;overflow:auto!important;color:var(--reader-shell-muted)!important}
+#raccoon-reader-root .reader-note-editor-source img{max-width:100%!important;max-height:100px!important;object-fit:contain!important;border-radius:5px!important}

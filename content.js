@@ -4581,31 +4581,67 @@
 
     const exportMenu = root.querySelector("#reader-export-menu");
     const safeFileName = String(title || "article").replace(/[\\/:*?"<>|]/g, "-").slice(0, 48) || "article";
-    const getReaderPairs = () => Array.from(root.querySelectorAll(".reader-paragraph-pair")).map(pair => ({
-      orig: pair.querySelector(".reader-orig-p")?.innerText || "",
-      trans: pair.querySelector(".reader-trans-p")?.innerText || ""
-    }));
+    const readerExportClone = () => {
+      const source=root.querySelector('.reader-scroll-card'),clone=source.cloneNode(true);
+      const originals=[source,...source.querySelectorAll('*')],copies=[clone,...clone.querySelectorAll('*')];
+      const properties=['display','font-family','font-size','font-weight','font-style','line-height','letter-spacing','color','background-color','text-align','text-decoration','padding','margin','border','border-radius','box-shadow','float','clear','column-count','column-gap','column-span','break-inside','grid-template-columns','gap','align-items','justify-content','flex-direction','flex-wrap','list-style-type','white-space'];
+      originals.forEach((node,index)=>{
+        const copy=copies[index],style=getComputedStyle(node);
+        copy.removeAttribute('id');copy.removeAttribute('contenteditable');
+        [...copy.attributes].filter(attr=>attr.name.startsWith('on')).forEach(attr=>copy.removeAttribute(attr.name));
+        if(node.matches('button,script,style,iframe,.reader-image-note-marker,.reader-capture-note-region')||style.display==='none'||node.matches('.reader-trans-p:not([data-loaded="true"])')){copy.remove();return;}
+        copy.removeAttribute('style');properties.forEach(name=>copy.style.setProperty(name,style.getPropertyValue(name)));
+        if(node.matches('img')){copy.src=node.currentSrc||node.src;copy.removeAttribute('loading');copy.style.maxWidth='100%';copy.style.width=`${node.getBoundingClientRect().width}px`;copy.style.height='auto';}
+        if(style.float!=='none'&&node.parentElement)copy.style.width=`${Math.min(100,node.getBoundingClientRect().width/node.parentElement.getBoundingClientRect().width*100)}%`;
+        if(style.display==='grid'&&style.gridTemplateColumns!=='none')copy.style.gridTemplateColumns=`repeat(${style.gridTemplateColumns.split(' ').length},minmax(0,1fr))`;
+        if(node.matches('a'))copy.href=node.href;
+        if(node.matches('details'))copy.open=true;
+      });
+      clone.style.width='100%';clone.style.maxWidth='100%';clone.style.margin='0';clone.style.boxSizing='border-box';
+      clone.querySelectorAll('*').forEach(node=>{node.style.boxSizing='border-box';});
+      return clone;
+    };
+    const markdownText=value=>String(value||'').replace(/([\\`*_\[\]])/g,'\\$1');
+    const readerMarkdown = node => {
+      if(node.nodeType===Node.TEXT_NODE)return markdownText(node.nodeValue);
+      if(node.nodeType!==Node.ELEMENT_NODE)return '';
+      if(node.matches('button,script,style,.reader-meta-bar,.reader-image-note-marker,.reader-capture-note-region,.reader-chart')||getComputedStyle(node).display==='none'||node.matches('.reader-trans-p:not([data-loaded="true"])'))return '';
+      const children=()=>[...node.childNodes].map(readerMarkdown).join('');
+      if(node.matches('img'))return `![${markdownText(node.alt)}](<${node.currentSrc||node.src}>)`;
+      if(node.matches('a'))return `[${children()}](<${node.href}>)`;
+      if(node.matches('h1,h2,h3,h4,h5,h6'))return `${'#'.repeat(Number(node.tagName[1]))} ${children().trim()}\n\n`;
+      if(node.matches('strong,b'))return `**${children()}**`;
+      if(node.matches('em,i'))return `*${children()}*`;
+      if(node.matches('pre,.reader-code-block'))return '\n```\n'+node.textContent.trim()+'\n```\n\n';
+      if(node.matches('code'))return '`'+node.textContent.replaceAll('`','\\`')+'`';
+      if(node.matches('br'))return '  \n';
+      if(node.matches('hr'))return '\n';
+      if(node.matches('.reader-list-block'))return `${node.dataset.listMarker||'-'} ${children().trim().replace(/\n+/g,' ')}\n`;
+      if(node.matches('blockquote,.reader-blockquote'))return children().trim().split('\n').map(line=>'> '+line).join('\n')+'\n\n';
+      if(node.matches('table')){
+        const rows=[...node.rows].filter(row=>row.closest('table')===node).map(row=>[...row.cells].map(cell=>readerMarkdown(cell).trim().replace(/\n+/g,'<br>').replace(/\|/g,'\\|')));
+        if(!rows.length)return '';const width=Math.max(...rows.map(row=>row.length));const line=row=>'| '+Array.from({length:width},(_,i)=>row[i]||'').join(' | ')+' |\n';
+        return '\n'+line(rows[0])+line(Array(width).fill('---'))+rows.slice(1).map(line).join('')+'\n';
+      }
+      if(node.matches('.reader-fact-row'))return [...node.children].map(readerMarkdown).map(value=>value.trim()).filter(Boolean).join('：')+'\n\n';
+      const text=children();return node.matches('p,figure,figcaption,section,.reader-paragraph-pair,.reader-img-wrap')?text.trim()+'\n\n':text;
+    };
     const downloadTextFile = (content, mime, ext) => {
       const blob = new Blob([content], { type: `${mime};charset=utf-8;` });
-      const url = URL.createObjectURL(blob); const a = document.createElement("a");
-      a.href = url; a.download = `${safeFileName}.${ext}`; a.click(); setTimeout(()=>URL.revokeObjectURL(url), 400);
+      const url = URL.createObjectURL(blob); const a = document.createElement('a');
+      a.href = url; a.download = `${safeFileName}.${ext}`; a.click(); setTimeout(()=>URL.revokeObjectURL(url), 1000);
     };
-    exportMenu?.addEventListener("click", (e) => {
-      const btn=e.target.closest("button[data-format]"); if(!btn)return;
-      const format=btn.dataset.format; const pairs=getReaderPairs();
-      if (format === "md") {
-        let md = `# ${title}\n\n来源: ${window.location.href}\n\n`;
-        pairs.forEach(pair => { md += `${pair.orig}\n\n${pair.trans}\n\n---\n\n`; });
-        downloadTextFile(md, "text/markdown", "md");
-      } else if (format === "txt") {
-        const txt = `${title}\n${window.location.href}\n\n` + pairs.map(p => `${p.orig}\n${p.trans}`).join("\n\n");
-        downloadTextFile(txt, "text/plain", "txt");
-      } else {
-        const body = pairs.map(p => `<section><p class="orig">${escapeHtml(p.orig)}</p><p class="trans">${escapeHtml(p.trans)}</p></section>`).join("");
-        const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{max-width:820px;margin:48px auto;padding:0 30px;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#202328;line-height:1.75}h1{font-size:30px;line-height:1.3}small{color:#7b818a}section{margin:0 0 24px}.orig{font-size:16px;margin:0 0 7px}.trans{font-size:17px;margin:0;color:#525a65}@media print{body{margin:0 auto}}</style></head><body><h1>${escapeHtml(title)}</h1><small>${escapeHtml(window.location.href)}</small>${body}</body></html>`;
-        if (format === "html") downloadTextFile(html, "text/html", "html");
-        else if (format === "print") { const w=window.open("","_blank"); if(w){ w.document.open(); w.document.write(html); w.document.close(); setTimeout(()=>{w.focus();w.print();},250); } }
-      }
+    exportMenu?.addEventListener('click', async e => {
+      const btn=e.target.closest('button[data-format]');if(!btn)return;
+      const format=btn.dataset.format;
+      if(format==='md'){downloadTextFile(`# ${markdownText(title)}\n\n来源：<${location.href}>\n\n${readerMarkdown(root.querySelector('#reader-content')).replace(/\n{3,}/g,'\n\n')}`,'text/markdown','md');return;}
+      const clone=readerExportClone();
+      if(format==='txt'){downloadTextFile(`${title}\n${location.href}\n\n`+[...clone.querySelectorAll('.reader-orig-p,.reader-trans-p')].map(node=>node.textContent.trim()).join('\n\n'),'text/plain','txt');return;}
+      const html=`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>@page{size:A4;margin:12mm}body{margin:0;padding:0;background:${getComputedStyle(root.querySelector('.reader-scroll-card')).backgroundColor};}*{box-sizing:border-box;print-color-adjust:exact;-webkit-print-color-adjust:exact}img,svg,video{max-width:100%;height:auto}table{width:100%;max-width:100%;table-layout:auto;border-collapse:collapse}td,th{overflow-wrap:anywhere}h1,h2,h3,h4{break-after:avoid}p{orphans:3;widows:3}.reader-table-scroll{overflow:visible!important}.reader-content{content-visibility:visible!important}.reader-scroll-card{box-shadow:none!important} @media screen{body{max-width:1100px;margin:24px auto}}@media print{.reader-scroll-card{padding:12px!important;border:0!important}.reader-data-table{font-size:13px!important}.reader-data-table *{font-size:inherit!important}}</style></head><body>${clone.outerHTML}</body></html>`;
+      if(format==='html'){downloadTextFile(html,'text/html','html');return;}
+      const frame=document.createElement('iframe');frame.className='reader-export-print-frame';frame.style.cssText='position:fixed;left:-10000px;top:0;width:1000px;height:800px;border:0';frame.srcdoc=html;
+      frame.onload=async()=>{await frame.contentDocument.fonts.ready;await Promise.all([...frame.contentDocument.images].map(image=>image.decode().catch(()=>{})));frame.contentWindow.focus();frame.contentWindow.print();};
+      document.body.append(frame);frame.contentWindow.addEventListener('afterprint',()=>frame.remove(),{once:true});
     });
     root.querySelectorAll("[data-reader-info-action]").forEach(button => button.addEventListener("click", () => {
       const action = button.dataset.readerInfoAction;
@@ -4876,7 +4912,7 @@
     accentSection.innerHTML='<label class="reader-context-label">大纲选中色<select id="reader-outline-accent"><option value="neutral">黑白</option><option value="blue">雾蓝</option><option value="green">灰绿</option><option value="purple">淡紫</option></select></label>';
     root.querySelector('.reader-context-themes').closest('section').after(accentSection);
     const accentSelect=accentSection.querySelector('select');
-    const applyAccent=value=>{const palette={neutral:['#555','#ededed'],blue:['#355b86','#e8eef7'],green:['#3c6654','#e7efea'],purple:['#72577e','#eee7f2']}[value]||['#555','#ededed'];root.style.setProperty('--outline-ink',palette[0]);root.style.setProperty('--outline-fill',palette[1]);};
+    const applyAccent=value=>{root.dataset.readerOutlineAccent=value;const palette={neutral:['#555','#ededed'],blue:['#355b86','#e8eef7'],green:['#3c6654','#e7efea'],purple:['#72577e','#eee7f2']}[value]||['#555','#ededed'];root.style.setProperty('--outline-ink',palette[0]);root.style.setProperty('--outline-fill',palette[1]);};
     accentSelect.value=currentSettings.readerOutlineAccent||'neutral';applyAccent(accentSelect.value);
     accentSelect.addEventListener('change',()=>{currentSettings.readerOutlineAccent=accentSelect.value;applyAccent(accentSelect.value);chrome.runtime.sendMessage({action:'UPDATE_SETTINGS',settings:{readerOutlineAccent:accentSelect.value}});});
     const copyLink = root.querySelector("#reader-copy-link");
