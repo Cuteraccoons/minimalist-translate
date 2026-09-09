@@ -6,7 +6,7 @@
   --apple-green: #34c759;
   --apple-orange: #ff9500;
   --apple-red: #ff3b30;
-  --apple-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
+  --apple-font: "Source Han Sans SC", "Noto Sans CJK SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 
   --raccoon-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif;
   --raccoon-font-style: normal;
@@ -282,11 +282,14 @@ h3 + .raccoon-translated-block {
 }
 
 .raccoon-floating-main-pill.active-state .raccoon-pill-svg {
-  stroke: #ffffff;
+  color: #ffffff;
+  fill: currentColor;
 }
 
 .raccoon-pill-svg {
-  stroke: #0071e3;
+  color: #0071e3;
+  fill: currentColor;
+  stroke: none;
   flex-shrink: 0;
 }
 
@@ -3460,7 +3463,7 @@ h3 + .raccoon-translated-block{
 /* Bear-inspired reading rhythm: calm line length, clear hierarchy and softer
    single-language surfaces without reproducing Bear's UI. */
 #raccoon-reader-root[data-reader-view="orig"] .reader-scroll-card,
-#raccoon-reader-root[data-reader-view="trans"] .reader-scroll-card{max-width:min(var(--reader-max-width,920px),820px)!important}
+#raccoon-reader-root[data-reader-view="trans"] .reader-scroll-card{max-width:var(--reader-max-width,920px)!important}
 #raccoon-reader-root[data-reader-view="orig"] .reader-orig-p:not(.reader-structural-heading),
 #raccoon-reader-root[data-reader-view="trans"] .reader-trans-p:not(.reader-structural-heading){
   font-size:calc(var(--reader-body-size,17.5px) * 1.02)!important;
@@ -4322,4 +4325,19 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
   color:var(--raccoon-local-text-color,currentColor)!important;
   -webkit-text-fill-color:currentColor!important;opacity:1!important;
   mix-blend-mode:normal!important;text-shadow:none!important
+}
+
+/* Card translation is a padded reading surface, not a full-width marker. */
+.raccoon-translated-block[data-render-style="card"]{
+  width:min(100%,fit-content)!important;margin-top:8px!important;padding:10px 13px!important;
+  border:1px solid rgba(71,81,94,.11)!important;border-radius:11px!important;
+  background:var(--raccoon-bg-color,rgba(254,240,138,.28))!important;box-shadow:none!important
+}
+.raccoon-translated-inline[data-render-style="card"]{
+  display:inline-block!important;margin:2px 0 2px 5px!important;padding:3px 6px!important;
+  border:1px solid rgba(71,81,94,.10)!important;border-radius:7px!important;
+  background:var(--raccoon-bg-color,rgba(254,240,138,.28))!important;box-shadow:none!important
+}
+.raccoon-dark-host :is(.raccoon-translated-block,.raccoon-translated-inline)[data-render-style="card"]{
+  border-color:rgba(255,255,255,.10)!important;background:rgba(255,255,255,.065)!important
 }

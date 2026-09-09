@@ -196,12 +196,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function syncStyleDependentOptions(value) {
-    if (highlightStyleOptions) highlightStyleOptions.hidden = value !== "highlight";
+    if (highlightStyleOptions) highlightStyleOptions.hidden = !["highlight","card"].includes(value);
     if (underlineStyleOptions) underlineStyleOptions.hidden = value !== "underline";
     if (clickStyleOptions) clickStyleOptions.hidden = value !== "click-reveal";
     const box = document.getElementById("style-dependent-options");
     if (box) {
-      const active = ["highlight","underline","click-reveal"].includes(value);
+      const active = ["highlight","card","underline","click-reveal"].includes(value);
       box.classList.toggle("is-empty", !active);
     }
   }
@@ -345,7 +345,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const val = btn.getAttribute("data-value");
       currentSettings.bgHighlight = val;
       saveSetting({ bgHighlight: val });
-      setRenderStyleCard("highlight", true);
+      setRenderStyleCard(activeTypographyRenderStyle(currentSettings) === "card" ? "card" : "highlight", true);
     });
   });
 
@@ -544,6 +544,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     const rules = currentSettings.excludeDomainRules || {};
     return {...defaultExcludeDomainRule(), ...(rules[domain] || {})};
   }
+  function updateExcludeDomainRowState(row, domain) {
+    if (!row || !domain) return;
+    const labels = {floating:"悬浮入口",hover:"段落翻译",selection:"划词查词",image:"图片翻译",auto:"自动翻译"};
+    const rule = getExcludeDomainRule(domain);
+    const disabledCount = Object.keys(labels).filter(scope => rule[scope]).length;
+    const custom = Object.prototype.hasOwnProperty.call(currentSettings.excludeDomainRules || {}, domain);
+    const note = row.querySelector(".domain-row-copy span");
+    if (note) note.textContent = custom ? `自定义 · 停用 ${disabledCount} 项` : `使用默认 · 停用 ${disabledCount} 项`;
+    row.querySelectorAll('.domain-scope-chip input[data-scope]').forEach(input => {
+      const checked = rule[input.dataset.scope] === true;
+      input.checked = checked;
+      input.closest("label")?.classList.toggle("active", checked);
+    });
+  }
   async function saveExcludeDomainRules() {
     await saveSetting({excludeDomainRules: currentSettings.excludeDomainRules || {}});
   }
@@ -610,19 +624,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       const rules={...(currentSettings.excludeDomainRules||{})};
       rules[domain]={...getExcludeDomainRule(domain), [scope]:!!input.checked};
       currentSettings.excludeDomainRules=rules;
-      await saveExcludeDomainRules(); renderExcludeDomainList();
-      const row = excludeDomainListEl.querySelector(`[data-domain-row="${CSS.escape(domain)}"]`);
-      const panel=row?.querySelector('.domain-scope-panel');
-      const configBtn=row?.querySelector('.domain-config-btn');
-      panel?.removeAttribute('hidden');
-      panel?.classList.add('is-open');
-      row?.classList.add('is-config-open');
-      configBtn?.classList.add('active');
-      configBtn?.setAttribute('aria-expanded','true');
+      input.closest("label")?.classList.toggle("active", !!input.checked);
+      updateExcludeDomainRowState(input.closest(".domain-row"), domain);
+      await saveExcludeDomainRules();
     }));
     excludeDomainListEl.querySelectorAll('.domain-reset-rule').forEach(btn => btn.addEventListener('click', async () => {
-      const rules={...(currentSettings.excludeDomainRules||{})}; delete rules[btn.dataset.domain]; currentSettings.excludeDomainRules=rules;
-      await saveExcludeDomainRules(); renderExcludeDomainList();
+      const domain = btn.dataset.domain;
+      const rules={...(currentSettings.excludeDomainRules||{})}; delete rules[domain]; currentSettings.excludeDomainRules=rules;
+      updateExcludeDomainRowState(btn.closest(".domain-row"), domain);
+      await saveExcludeDomainRules();
     }));
   }
 
@@ -905,6 +915,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     let md = `# 极简翻译 · 高亮收藏\n\n`;
     (list || []).forEach((item, idx) => {
       md += `${idx + 1}. ${String(item.orig || "").trim()}\n`;
+      if (item.note) md += `   - 笔记：${String(item.note).trim()}\n`;
+      if (item.sourceUrl) md += `   - 来源：${item.articleTitle || item.title || ""} · ${item.sourceUrl}\n`;
       if (item.trans) md += `   - ${String(item.trans).trim()}\n`;
       if (item.url || item.title) md += `   - 来源：${item.title || item.url || ""}${item.url ? ` · ${item.url}` : ""}\n`;
       md += `\n`;
@@ -932,15 +944,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderHighlightCollection() {
     if (!highlightManagerList) return;
     const q = String(inputHighlightSearch?.value || "").trim().toLowerCase();
-    const list = cachedHighlightList.filter(x => !q || String(x.orig || "").toLowerCase().includes(q) || String(x.trans || "").toLowerCase().includes(q));
+    const list = cachedHighlightList.filter(x => !q || String(x.orig || "").toLowerCase().includes(q) || String(x.trans || "").toLowerCase().includes(q) || String(x.note || "").toLowerCase().includes(q) || String(x.articleTitle || "").toLowerCase().includes(q));
     if (highlightCount) highlightCount.textContent = `${list.length} 条`;
     if (!list.length) { highlightManagerList.innerHTML = `<div class="vocab-empty">没有符合条件的高亮收藏。</div>`; return; }
-    highlightManagerList.innerHTML = list.map(item => `<article class="highlight-manager-item">
-      <div class="highlight-quote">${escapeHtml(item.orig || "")}</div>
-      ${item.trans ? `<div class="highlight-translation">${escapeHtml(item.trans)}</div>` : ""}
-      <div class="highlight-meta">${escapeHtml(item.hostname || item.sourceUrl || item.url || "")}</div>
-      <button type="button" class="highlight-delete" data-id="${escapeHtml(item.id || "")}" data-orig="${escapeHtml(item.orig || "")}" title="删除"><svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M9 11v6M15 11v6M7 7l1 13h8l1-13"/></svg></button>
-    </article>`).join("");
+    const groups=new Map();
+    list.forEach(item=>{const url=item.sourceUrl||item.url||'';if(!groups.has(url))groups.set(url,[]);groups.get(url).push(item);});
+    highlightManagerList.innerHTML=[...groups].map(([url,items])=>{
+      const title=items.find(item=>item.articleTitle)?.articleTitle||items.find(item=>item.title)?.title||items[0].hostname||url||'未命名文章';
+      const safeUrl=/^https?:\/\//i.test(url)?url:'';
+      return `<details class="highlight-article-group" open><summary>${escapeHtml(title)} <span>${items.length} 条</span></summary>${safeUrl?`<a class="highlight-article-link" href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">打开原文</a>`:''}${items.map(item=>`<article class="highlight-manager-item"><div class="highlight-quote">${item.image&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(item.image)?`<img src="${item.image}" alt="截图笔记">`:escapeHtml(item.orig||'')}</div>${item.note?`<p>${escapeHtml(item.note)}</p>`:''}${item.trans?`<div class="highlight-translation">${escapeHtml(item.trans)}</div>`:''}<button type="button" class="highlight-delete" data-id="${escapeHtml(item.id||'')}" data-orig="${escapeHtml(item.orig||'')}" title="删除"><svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M9 11v6M15 11v6M7 7l1 13h8l1-13"/></svg></button></article>`).join('')}</details>`;
+    }).join('');
     highlightManagerList.querySelectorAll(".highlight-delete").forEach(btn => btn.addEventListener("click", async () => {
       if (!confirm("确定删除这条高亮收藏吗？")) return;
       await sendRuntimeMessage({action:"REMOVE_HIGHLIGHT_SENTENCE", id:btn.dataset.id || undefined, orig:btn.dataset.orig || undefined});
@@ -1085,8 +1098,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const activeRenderStyle = activeTypographyRenderStyle(s);
     optRenderStyle.value = activeRenderStyle;
     renderStyleCardGrid?.querySelectorAll(".style-choice-card").forEach(card => card.classList.toggle("active", card.dataset.value === activeRenderStyle));
-    if (optFontFamily) optFontFamily.value = s.fontFamily || "system";
-    translationFontCardGrid?.querySelectorAll(".font-choice-card").forEach(card => card.classList.toggle("active", card.dataset.value === (s.fontFamily || "system")));
+    if (optFontFamily) optFontFamily.value = s.fontFamily || "smiley-sans";
+    translationFontCardGrid?.querySelectorAll(".font-choice-card").forEach(card => card.classList.toggle("active", card.dataset.value === (s.fontFamily || "smiley-sans")));
 
     const highlight = s.bgHighlight || "soft-yellow";
     optBgHighlightGrid?.querySelectorAll(".mini-swatch").forEach((btn) => {
@@ -1216,7 +1229,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     translatedEls.forEach(el => setPreviewStyle(el, "line-height", String(lineHeight)));
 
     const previewFontMap = {
-      system: '-apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif',
+      system: '-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", sans-serif',
       "source-sans": '"Source Han Sans SC", "PingFang SC", sans-serif',
       pingfang: '"PingFang SC", sans-serif',
       "kinghwa-song": '"KingHwa_OldSong", "STSong", serif',
@@ -1225,17 +1238,22 @@ document.addEventListener("DOMContentLoaded", async () => {
       "smiley-sans": '"Smiley Sans", "PingFang SC", sans-serif',
       kaiti: '"Kaiti SC", "STKaiti", serif'
     };
-    const previewFont = previewFontMap[s.fontFamily || "system"] || previewFontMap.system;
+    const previewFont = previewFontMap[s.fontFamily || "smiley-sans"] || previewFontMap["smiley-sans"];
     translatedEls.forEach(el => { if (el) setPreviewStyle(el, "font-family", previewFont); });
 
     translatedEls.forEach((el) => {
       const pairId = el.closest?.("[data-preview-pair]")?.dataset.previewPair || "";
       const pairHovered = pairId && pairId === livePreviewHoverPair;
       setPreviewStyle(el, "background-color", "transparent");
+      setPreviewStyle(el, "border", "none");
+      setPreviewStyle(el, "border-radius", "0");
       setPreviewStyle(el, "border-bottom", "none");
       setPreviewStyle(el, "text-decoration", "none");
       setPreviewStyle(el, "border-left", "none");
       setPreviewStyle(el, "padding-left", "0");
+      setPreviewStyle(el, "padding-right", "0");
+      setPreviewStyle(el, "padding-top", "0");
+      setPreviewStyle(el, "padding-bottom", "0");
       setPreviewStyle(el, "opacity", "1");
       setPreviewStyle(el, "filter", "none");
 
@@ -1244,6 +1262,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         setPreviewStyle(el, "font-family", "inherit");
         setPreviewStyle(el, "font-style", "normal");
         setPreviewStyle(el, "opacity", ".72");
+      } else if (renderStyle === "card") {
+        let bg = "rgba(254,240,138,.30)";
+        if (s.bgHighlight === "soft-green") bg = "rgba(187,247,208,.34)";
+        if (s.bgHighlight === "soft-purple") bg = "rgba(233,213,255,.32)";
+        if (s.bgHighlight === "soft-orange") bg = "rgba(254,215,170,.34)";
+        if (s.bgHighlight === "soft-blue") bg = "rgba(191,219,254,.34)";
+        if (s.bgHighlight === "none") bg = "rgba(100,116,139,.055)";
+        setPreviewStyle(el, "background-color", bg);
+        setPreviewStyle(el, "border", "1px solid rgba(71,81,94,.10)");
+        setPreviewStyle(el, "border-radius", "10px");
+        setPreviewStyle(el, "padding", "9px 11px");
       } else if (renderStyle === "highlight") {
         let bg = "#fef08a";
         if (s.bgHighlight === "soft-green") bg = "#bbf7d0";

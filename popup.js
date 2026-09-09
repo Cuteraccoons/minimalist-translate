@@ -86,7 +86,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const siteDockNote = document.getElementById("site-dock-note");
   const popupRenderStyleGrid = document.getElementById("popup-render-style-grid");
   const siteImageTranslationToggle = document.getElementById("site-image-translation-toggle");
-  const siteImageTranslationState = document.getElementById("site-image-translation-state");
   const siteImageTranslationDomain = document.getElementById("site-image-translation-domain");
 
   // 弹窗内 API 配置抽屉
@@ -249,7 +248,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const disabled = !!matchedImageDisabledDomain() || globallyDisabled;
     siteImageTranslationToggle.classList.toggle("is-disabled", disabled);
     siteImageTranslationToggle.setAttribute("aria-pressed", String(!disabled));
-    if (siteImageTranslationState) siteImageTranslationState.textContent = globallyDisabled ? "全局关闭" : disabled ? "已关闭" : "已开启";
     if (siteImageTranslationDomain) siteImageTranslationDomain.textContent = activeHost || "按网站单独控制图片入口";
     siteImageTranslationToggle.disabled = !activeHost || globallyDisabled;
   }
@@ -874,10 +872,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     popupRenderStyleGrid?.querySelectorAll("button[data-value]").forEach(btn => btn.classList.toggle("active", btn.dataset.value === value));
   }
   function syncPopupStyleDependentOptions(value) {
-    if (popupHighlightOptions) popupHighlightOptions.hidden = value !== "highlight";
+    if (popupHighlightOptions) popupHighlightOptions.hidden = !["highlight","card"].includes(value);
     if (popupUnderlineOptions) popupUnderlineOptions.hidden = value !== "underline";
     if (popupClickOptions) popupClickOptions.hidden = value !== "click-reveal";
-    popupStyleDependentOptions?.classList.toggle("has-option", ["highlight","underline","click-reveal"].includes(value));
+    popupStyleDependentOptions?.classList.toggle("has-option", ["highlight","card","underline","click-reveal"].includes(value));
   }
   popupRenderStyleGrid?.querySelectorAll("button[data-value]").forEach(btn => btn.addEventListener("click", () => {
     selectRenderStyle.value = btn.dataset.value;
@@ -942,6 +940,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     previewTransText.style.fontStyle = !isReplace && style === "italic" ? "italic" : "normal";
     previewTransText.style.backgroundColor = "transparent";
+    previewTransText.style.border = "none";
+    previewTransText.style.borderRadius = "0";
     previewTransText.style.borderBottom = "none";
     previewTransText.style.textDecoration = "none";
     previewTransText.style.borderLeft = "none";
@@ -973,6 +973,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       previewTransText.style.fontStyle = "normal";
       previewTransText.style.fontSize = "12.5px";
       previewTransText.style.opacity = "0.72";
+    } else if (style === "card") {
+      let bg = "rgba(254,240,138,.30)";
+      if (currentSettings.bgHighlight === "soft-green") bg = "rgba(187,247,208,.34)";
+      if (currentSettings.bgHighlight === "soft-purple") bg = "rgba(233,213,255,.32)";
+      if (currentSettings.bgHighlight === "soft-orange") bg = "rgba(254,215,170,.34)";
+      if (currentSettings.bgHighlight === "soft-blue") bg = "rgba(191,219,254,.34)";
+      if (currentSettings.bgHighlight === "none") bg = "rgba(100,116,139,.055)";
+      previewTransText.style.backgroundColor = bg;
+      previewTransText.style.border = "1px solid rgba(71,81,94,.10)";
+      previewTransText.style.borderRadius = "9px";
+      previewTransText.style.padding = "8px 10px";
     } else if (style === "highlight") {
       let bg = "#fef08a";
       if (currentSettings.bgHighlight === "soft-green") bg = "#bbf7d0";
@@ -1091,7 +1102,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           await chrome.scripting.executeScript({
             target: { tabId: tabId },
-            files: ["content.js"]
+            files: ["vendor/qrcode.js", "reader-share.js", "reader-notes.js", "content.js"]
           });
 
           setTimeout(() => {
@@ -1199,7 +1210,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     selectRenderStyle.value = activeRenderStyle;
     syncPopupRenderStyleGrid(activeRenderStyle);
     syncPopupStyleDependentOptions(activeRenderStyle);
-    if (s.fontFamily) selectFontFamily.value = s.fontFamily;
+    selectFontFamily.value = s.fontFamily || "smiley-sans";
     syncPopupTextColor(s.textColor || "black");
     if (s.fontSizeRatio) {
       labelFontSize.textContent = `${s.fontSizeRatio}%`;

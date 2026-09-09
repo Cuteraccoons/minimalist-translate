@@ -1,4 +1,5 @@
 /* Settings page styles. */
+@import url("fonts/smiley.css");
 
 :root {
   --apple-blue: #0071e3;
@@ -1688,12 +1689,16 @@ input:checked + .switch-knob:before {
    Project and appreciation page
    ========================================================================== */
 #tab-about .project-hero-card{
-  display:block!important;min-height:0!important;padding:28px 30px!important;
+  display:block!important;min-height:0!important;padding:0 0 28px!important;
   border:1px solid #d9dde1!important;border-radius:10px!important;background:#fff!important;
   box-shadow:none!important;overflow:hidden!important
 }
 #tab-about .project-hero-card::before,#tab-about .project-hero-card::after{display:none!important;content:none!important}
-#tab-about .project-hero-copy{max-width:850px}
+#tab-about .project-promo-image{
+  display:block;width:100%;height:auto;aspect-ratio:2121/741;object-fit:cover;object-position:center;
+  margin:0 0 25px;border:0;border-radius:9px 9px 0 0;background:#fbf4e9
+}
+#tab-about .project-hero-copy{max-width:850px;padding:0 30px}
 #tab-about .project-eyebrow{display:none!important}
 #tab-about .project-hero-copy .about-name{
   margin:0 0 12px!important;color:#202429!important;font-size:27px!important;line-height:1.12!important;
@@ -1730,7 +1735,9 @@ input:checked + .switch-knob:before {
 .support-action-github .support-link-go{background:#202429;color:#fff}
 .support-link-go svg{display:none!important}
 @media(max-width:760px){
-  #tab-about .project-hero-card{padding:23px 22px!important}
+  #tab-about .project-hero-card{padding:0 0 23px!important}
+  #tab-about .project-promo-image{margin-bottom:21px}
+  #tab-about .project-hero-copy{padding:0 22px}
   #tab-about .project-meta-row{align-items:center;flex-direction:row;gap:9px}
   .support-links-panel{grid-template-columns:1fr}
 }
@@ -1894,7 +1901,7 @@ input:checked + .switch-knob:before {
   box-sizing:border-box!important;
   transform-origin:top center!important;
 }
-.blacklist-domain-list .domain-scope-panel.is-open{animation:domainScopePanelIn .16s cubic-bezier(.2,.8,.2,1) both}
+.blacklist-domain-list .domain-scope-panel.is-open{animation:domainScopePanelIn .14s ease-out both}
 .blacklist-domain-list .domain-scope-panel[hidden]{display:none!important}
 .blacklist-domain-list .domain-scope-chip{
   display:inline-flex!important;
@@ -1938,7 +1945,7 @@ input:checked + .switch-knob:before {
   border-radius:9px!important;
 }
 
-@keyframes domainScopePanelIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes domainScopePanelIn{from{opacity:0}to{opacity:1}}
 
 @media(max-width:900px){
   .blacklist-default-card{grid-template-columns:1fr!important}
@@ -1952,8 +1959,8 @@ input:checked + .switch-knob:before {
 /* Local dictionary configuration uses one calm accent and explicit status
    surfaces, so importing, testing and reauthorizing are visually distinct. */
 #tab-local-dict .local-dict-test-card{
-  border-color:#dce6e2!important;
-  background:#f7faf9!important;
+  border-color:#e0e4e8!important;
+  background:#fff!important;
   box-shadow:none!important;
 }
 #tab-local-dict .local-dict-test-head{
@@ -1997,9 +2004,9 @@ input:checked + .switch-knob:before {
   color:#68766f!important;
   box-sizing:border-box!important;
 }
-#tab-local-dict .local-dict-test-status.success{border-color:#cfe1d8!important;background:#f0f7f3!important;color:#35634f!important}
-#tab-local-dict .local-dict-test-status.warn{border-color:#eadfc8!important;background:#fff9ed!important;color:#795f30!important}
-#tab-local-dict .local-dict-test-status.error{border-color:#ead4d2!important;background:#fff4f3!important;color:#8d4742!important}
+#tab-local-dict .local-dict-test-status.success{border-color:#d7e1dc!important;background:#fff!important;color:#35634f!important}
+#tab-local-dict .local-dict-test-status.warn{border-color:#e1e4e8!important;background:#fff!important;color:#755f39!important}
+#tab-local-dict .local-dict-test-status.error{border-color:#e2d8d7!important;background:#fff!important;color:#8d4742!important}
 #tab-local-dict .local-dict-card{
   border-color:#e0e6e3!important;
   background:#fff!important;
@@ -2011,18 +2018,18 @@ input:checked + .switch-knob:before {
   color:#fff!important;
 }
 #tab-local-dict #btn-add-local-dict-files{
-  border-color:#d5dfdb!important;
-  background:#f7faf9!important;
-  color:#40584e!important;
+  border-color:#dce1e5!important;
+  background:#fff!important;
+  color:#49535e!important;
 }
 #tab-local-dict .local-dict-import-note{
-  border:1px solid #e1e8e5!important;
-  background:#f7faf9!important;
-  color:#66756e!important;
+  border:1px solid #e2e6e9!important;
+  background:#fff!important;
+  color:#68717b!important;
 }
 #tab-local-dict .local-dict-row{
-  border-color:#e1e7e4!important;
-  background:#fcfdfd!important;
+  border-color:#e3e7ea!important;
+  background:#fff!important;
 }
 
 /* Highlighters use the same toolbar + independent record-card rhythm as the
@@ -2078,3 +2085,18 @@ input:checked + .switch-knob:before {
   #tab-highlights .highlight-toolbar{align-items:stretch!important;flex-direction:column!important}
   #tab-highlights .highlight-export-actions{display:flex!important;flex-wrap:wrap!important}
 }
+
+.style-choice-demo .demo-card{
+  display:block!important;margin-top:4px!important;padding:6px 7px!important;
+  border:1px solid rgba(71,81,94,.10)!important;border-radius:7px!important;
+  background:rgba(254,240,138,.28)!important
+}
+.support-link-row{min-height:52px!important;padding:10px 12px!important;gap:8px!important}
+.support-action-github .support-link-go{background:#fff!important;color:#000!important}
+#btn-test-local-dict,#btn-add-local-dict-folder{background:#000!important;color:#fff!important;border-color:#000!important}
+#tab-local-dict .local-dict-test-status,#tab-local-dict .local-dict-import-note{border:0!important;background:transparent!important;border-radius:0!important;box-shadow:none!important;padding:6px 0!important;font-size:13px!important}
+.highlight-article-group{margin:14px 0;border:1px solid #e5e5e5;border-radius:10px;padding:14px}
+.highlight-article-group summary{cursor:pointer;font-size:15px;font-weight:600;line-height:1.5}
+.highlight-article-group summary span{font-size:13px;font-weight:400;color:#777;margin-left:8px}
+.highlight-article-link{display:inline-block;margin:8px 0;color:#666;font-size:13px}
+.highlight-quote img{display:block;max-width:100%;max-height:360px;object-fit:contain}

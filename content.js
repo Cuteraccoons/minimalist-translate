@@ -11,10 +11,11 @@
       return {
         icon128: chrome.runtime.getURL("icons/icon128.png"),
         icon32: chrome.runtime.getURL("icons/icon32.png"),
-        ocrSandbox: chrome.runtime.getURL("ocr-sandbox.html")
+        ocrSandbox: chrome.runtime.getURL("ocr-sandbox.html"),
+        readerStyles: chrome.runtime.getURL("reader.css")
       };
     } catch (_) {
-      return { icon128:"", icon32:"", ocrSandbox:"" };
+      return { icon128:"", icon32:"", ocrSandbox:"", readerStyles:"" };
     }
   })();
 
@@ -39,20 +40,27 @@
 
     // 阅读器持久化偏好
     readerWidth: "920",
-    readerTheme: "envelope",
+    readerTheme: "white",
     readerSurface: "card",
-    readerFont: "system",
+    readerTableStyle: "clean",
+    readerRenderStyle: "classic",
+    readerFont: "auto",
     readerFontSize: "17.5",
     readerLineHeight: "1.82",
     readerParagraphSpacing: "28",
     readerWritingMode: "horizontal", // horizontal | vertical
     readerOutlineCollapsed: false,
+    readerToolsCollapsed: false,
     readerOutlineWidth: 270,
+    readerToolsWidth: 288,
+    readerWikipediaFlow: true,
+    readerWikipediaMagazine: false,
     readerImageShadow: true,
     readerProgressVisible: true,
     readerMetaVisible: true,
+    readerSpeechHighlightMode: "sentence",
 
-    fontFamily: "system",
+    fontFamily: "smiley-sans",
     fontStyle: "normal",
     renderStyle: "classic",
     replaceRenderStyle: "clean",
@@ -394,7 +402,7 @@
         return '"EB Garamond", Garamond, Baskerville, "Source Han Serif SC", serif';
       case "system":
       default:
-        return '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "WenQuanYi Micro Hei", sans-serif';
+        return '-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif';
     }
   }
 
@@ -409,7 +417,7 @@
     root.style.setProperty("--raccoon-font-style", s.fontStyle || "normal");
     root.style.setProperty("--raccoon-sidebar-width", `${s.sidebarWidth || 400}px`);
 
-    const fontFam = getFontFamilyCss(s.fontFamily || "system");
+    const fontFam = getFontFamilyCss(s.fontFamily || "smiley-sans");
     root.style.setProperty("--raccoon-font-family", fontFam);
     root.style.setProperty("--reader-font-family", fontFam);
 
@@ -1963,7 +1971,7 @@
     if (attachShortLabel) transNode.classList.add("raccoon-attached-translation");
     transNode.setAttribute("data-render-style", currentSettings.renderStyle || "classic");
 
-    const fontFam = getFontFamilyCss(currentSettings.fontFamily || "system");
+    const fontFam = getFontFamilyCss(currentSettings.fontFamily || "smiley-sans");
     if (currentSettings.renderStyle === "native") applyNativeReferenceStyle(origEl, transNode);
     else {
       transNode.style.setProperty("font-family", fontFam, "important");
@@ -2695,6 +2703,26 @@
   let readerKeydownHandler = null;
   let readerContainerCache = { url:"", element:null };
   let readerImageInfoCache = new WeakMap();
+  let readerStylesheetPromise = null;
+  let readerSpeechController = null;
+
+  function ensureReaderStylesheet() {
+    if (document.getElementById("raccoon-reader-styles")) return Promise.resolve();
+    if (readerStylesheetPromise) return readerStylesheetPromise;
+    readerStylesheetPromise = new Promise(resolve => {
+      const link = document.createElement("link");
+      link.id = "raccoon-reader-styles";
+      link.rel = "stylesheet";
+      link.href = extensionAssetUrls.readerStyles;
+      link.addEventListener("load", resolve, { once:true });
+      link.addEventListener("error", resolve, { once:true });
+      document.documentElement.appendChild(link);
+      // A local extension reload can invalidate the old URL while a page stays
+      // open. Never leave Reader Mode waiting on a stylesheet event forever.
+      setTimeout(resolve, 900);
+    });
+    return readerStylesheetPromise;
+  }
 
   function readerHeadingLevel(node) {
     const tagMatch = String(node?.tagName || "").match(/^H([1-6])$/);
@@ -2714,6 +2742,8 @@
   }
 
   async function warmReaderLazyContent() {
+    const lazyCandidates = document.querySelectorAll("img[loading='lazy'],img[data-src],img[data-lazy-src],img[data-original],source[data-srcset]");
+    if (lazyCandidates.length === 0) return;
     const viewport = Math.max(600, window.innerHeight || 800);
     const maxScroll = Math.max(0, document.documentElement.scrollHeight - viewport);
     if (maxScroll < viewport * 1.5) return;
@@ -2721,12 +2751,18 @@
     const htmlStyle = document.documentElement.style;
     const previousBehavior = htmlStyle.scrollBehavior;
     htmlStyle.setProperty("scroll-behavior", "auto", "important");
-    const steps = Math.min(8, Math.max(3, Math.ceil(maxScroll / (viewport * 2.4))));
+    // Five sparse passes are enough to wake common lazy loaders. The former
+    // full-page sweep performed up to eight forced layouts even on image-light
+    // articles, which made opening Reader Mode feel heavier than the page.
+    const steps = Math.min(5, Math.max(2, Math.ceil(maxScroll / (viewport * 3.4))));
     try {
       for (let index = 1; index <= steps; index++) {
         window.scrollTo(0, Math.round(maxScroll * index / steps));
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        await new Promise(resolve => setTimeout(resolve, 28));
+        await new Promise(resolve => {
+          if (typeof requestIdleCallback === "function") requestIdleCallback(resolve, { timeout:55 });
+          else setTimeout(resolve, 24);
+        });
       }
     } finally {
       window.scrollTo(0, startY);
@@ -2890,24 +2926,28 @@
     const width = Number(node.naturalWidth) || Number(node.getAttribute("width")) || 0;
     const height = Number(node.naturalHeight) || Number(node.getAttribute("height")) || 0;
     const renderedRect = node.getBoundingClientRect();
-    const displayWidth = renderedRect.width >= 160 ? Math.round(renderedRect.width) : 0;
-    const displayHeight = renderedRect.height >= 100 ? Math.round(renderedRect.height) : 0;
+    const displayWidth = renderedRect.width > 0 ? Math.round(renderedRect.width) : Number(node.getAttribute("width")) || 0;
+    const displayHeight = renderedRect.height > 0 ? Math.round(renderedRect.height) : Number(node.getAttribute("height")) || 0;
     const layoutWidth = displayWidth || width;
+    const layoutHeight = displayHeight || height;
     const ratio = width > 0 && height > 0 ? width / height : 0;
-    const compact = layoutWidth > 0 && layoutWidth <= 620 && (displayHeight || height || 0) <= 760;
-    const portrait = ratio > 0 && ratio <= .86;
-    const wide = !compact && (ratio >= 1.55 || width >= 1000);
-    const classes = [
-      animatedSource ? "reader-img-animated" : "",
-      wide ? "reader-img-wide" : "",
-      compact || portrait ? "reader-img-inline" : ""
-    ].filter(Boolean).join(" ");
+    const sourceContainer = readerContainerCache.element || node.closest('article,main,.mw-parser-output') || node.parentElement;
+    const containerWidth = sourceContainer?.getBoundingClientRect().width || 800;
+    const relativeWidth = Math.min(1, layoutWidth / Math.max(1,containerWidth));
+    const mediaContainer=node.closest('figure,.thumb,.tright,.tleft') || node;
+    const alignmentHint=`${mediaContainer.className || ''} ${getComputedStyle(mediaContainer).float}`;
+    const side=/left|right|mw-halign/.test(alignmentHint);
+    const isIcon=(layoutWidth>0 && layoutHeight>0 && (Math.max(layoutWidth,layoutHeight)<=72 || (layoutHeight<=36&&layoutWidth<=160))) || node.closest('.mw-indicator,.mw-editsection,.noprint')!==null;
+    const compact=!isIcon && (side || (relativeWidth<.58 && layoutWidth<520));
+    const wide=!compact && !isIcon;
+    const classes=[animatedSource?'reader-img-animated':'',wide?'reader-img-wide':'',compact?'reader-img-inline':'',isIcon?'reader-img-icon':''].filter(Boolean).join(' ');
     const info = {
       src,
       width,
       height,
       displayWidth,
       displayHeight,
+      relativeWidth, isIcon, side:compact, alignment:/left/.test(alignmentHint)?"left":"right",
       candidates,
       classes,
       alt: String(node.getAttribute("alt") || "文章配图").trim() || "文章配图"
@@ -2919,10 +2959,13 @@
   function isReaderMaintenanceContainer(node) {
     const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
     if (!element) return false;
+    // Wikipedia infoboxes are article data, even when a skin also gives them a
+    // generic `sidebar` class. Keep them and render them as compact fact rows.
+    if (element.closest?.("table.infobox, table[data-infobox]")) return false;
     // MediaWiki maintenance/template boxes belong to the editing interface,
     // not to the article narrative. Their class names are shared across
     // languages, so filtering by structure is safer than matching notice text.
-    if (element.closest?.(".ambox,.tmbox,.cmbox,.ombox,.fmbox,.mw-message-box,.metadata")) return true;
+    if (element.closest?.(".ambox,.tmbox,.cmbox,.ombox,.fmbox,.mw-message-box,.metadata,.navbox,.vertical-navbox,.sidebar,.sistersitebox,.portalbox")) return true;
     const presentationBox = element.closest?.("table[role='presentation']");
     if (!presentationBox) return false;
     const className = typeof presentationBox.className === "string" ? presentationBox.className : "";
@@ -2930,7 +2973,7 @@
   }
 
   function collectReaderContentNodes(container) {
-    const selector = "p, h1, h2, h3, h4, h5, h6, [role='heading'][aria-level], blockquote, pre, li, dt, dd, figcaption, a[download], a[href$='.pdf'], a[href$='.epub'], a[href$='.zip'], img";
+    const selector = "figure, table, details, video, audio, iframe[src], hr, p, h1, h2, h3, h4, h5, h6, [role='heading'][aria-level], blockquote, pre, li, dt, dd, figcaption, a[download], a[href$='.pdf'], a[href$='.epub'], a[href$='.zip'], a[href*='.mp4'], a[href*='.webm'], a[href*='.ogv'], img";
     const seenText = new Set();
     const raw = Array.from(container.querySelectorAll(selector));
     const result = [];
@@ -2943,12 +2986,54 @@
       if (tailReached) break;
       if (node.closest("nav, header, footer, aside, [role='navigation'], [aria-hidden='true'], #raccoon-sidebar-root, #raccoon-floating-ball-root, #raccoon-selection-bubble-root, .raccoon-translated-block, .raccoon-translated-inline, #raccoon-hover-trigger-root")) continue;
       if (isReaderMaintenanceContainer(node)) continue;
+      const semanticParent = node.parentElement?.closest("figure,table,details");
+      if (semanticParent && semanticParent !== node) continue;
       const ancestor = node.closest("section, div, ul, ol");
       const noiseHint = `${ancestor?.id || ""} ${typeof ancestor?.className === "string" ? ancestor.className : ""}`.trim();
       if (noiseContainerRe.test(noiseHint)) continue;
 
+      if (node.tagName === "FIGURE") {
+        const media = Array.from(node.querySelectorAll("img")).some(img => !!getReaderImageInfo(img).src);
+        const caption = String(node.querySelector("figcaption")?.innerText || "").trim();
+        if (media || caption.length >= 6) result.push(node);
+        continue;
+      }
+
+      if (node.tagName === "TABLE") {
+        const rows = Array.from(node.rows || []).filter(row => {
+          const hasText = String(row.innerText || "").trim().length >= 3;
+          const hasInlineMedia = Array.from(row.querySelectorAll?.("img") || []).some(image => !!getReaderImageInfo(image).src);
+          return hasText || hasInlineMedia;
+        });
+        const hint = `${node.id || ""} ${typeof node.className === "string" ? node.className : ""}`;
+        const textLength = String(node.innerText || "").trim().length;
+        const isArticleInfobox = /(?:^|\s)infobox(?:\s|$)/i.test(hint) || node.hasAttribute("data-infobox");
+        if (rows.length >= 2 && rows.length <= 80 && textLength <= 12000 && (isArticleInfobox || !/(?:navbox|sidebar|metadata|toccolours)/i.test(hint))) result.push(node);
+        continue;
+      }
+
+      if (node.tagName === "DETAILS") {
+        const textLength = String(node.innerText || node.textContent || "").trim().length;
+        if (textLength >= 8 && textLength <= 10000) result.push(node);
+        continue;
+      }
+
+      if (["VIDEO", "AUDIO", "IFRAME"].includes(node.tagName) || (node.tagName === "A" && /\.(?:mp4|webm|ogv)(?:$|[?#])/i.test(node.href || ""))) {
+        const src = node.currentSrc || node.getAttribute("src") || node.getAttribute("href") || node.querySelector?.("source")?.getAttribute("src") || "";
+        const safeEmbeddedFrame = node.tagName !== "IFRAME" || /(?:youtube(?:-nocookie)?\.com\/embed\/|player\.vimeo\.com\/video\/|player\.bilibili\.com\/player\.html)/i.test(src);
+        if (src && safeEmbeddedFrame) result.push(node);
+        continue;
+      }
+
+      if (node.tagName === "HR") {
+        if (accumulatedText > 80) result.push(node);
+        continue;
+      }
+
       if (node.tagName === "IMG") {
-        const src = getReaderImageInfo(node).src;
+        const imageInfo = getReaderImageInfo(node);
+        if(imageInfo.isIcon || node.closest("p,li,dt,dd")) continue;
+        const src = imageInfo.src;
         const hint = `${src} ${node.alt || ""} ${node.className || ""} ${node.id || ""}`.toLowerCase();
         if (!src || /icon|avatar|logo|emoji|sprite|tracking|pixel|badge|button|chevron|favicon|placeholder|loading|spinner|divider|separator|advert|promo|sponsor|banner|watermark|qrcode|qr-code/.test(hint)) continue;
         const w = Number(node.getAttribute("width")) || node.naturalWidth || 0;
@@ -3001,15 +3086,53 @@
         cloneWalker.currentNode.nodeValue = originalTextForNode(sourceWalker.currentNode);
       }
     } catch (_) {}
+    const sourceElements=[...sourceNode.querySelectorAll('*')],cloneElements=[...clone.querySelectorAll('*')];
+    sourceElements.forEach((source,index)=>{
+      const copy=cloneElements[index];if(!copy)return;
+      const css=getComputedStyle(source);
+      if(source.hidden || source.getAttribute('aria-hidden')==='true' || css.display==='none' || css.visibility==='hidden' || /(?:^|\s)(?:geo-nondefault|geo-multi-punct)(?:\s|$)/.test(source.className||'')){copy.remove();return;}
+      if(source.tagName==='IMG'){
+        const info=getReaderImageInfo(source);copy.setAttribute('src',info.src);
+        copy.setAttribute('width',String(info.displayWidth||info.width));copy.setAttribute('height',String(info.displayHeight||info.height));
+      }
+    });
     clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
+    // Preserve separators from nested layout wrappers before stripping host
+    // markup. Wikipedia facts often place several values in sibling DIV/LI
+    // nodes; blindly unwrapping them would concatenate every label.
+    clone.querySelectorAll?.("div,p,li,dt,dd").forEach(node => {
+      if (!String(node.textContent || "").trim() || !node.nextSibling) return;
+      const spacer = document.createTextNode(" ");
+      const lineBreak = document.createElement("br");
+      node.after(spacer, lineBreak);
+    });
     // Reader clean-up keeps semantic structure but deliberately drops MARK.
     // A host highlight covers a source glyph range; copying it to an entire
     // translated paragraph invents a relationship that cannot be aligned.
-    const allowed = new Set(["A","STRONG","B","EM","I","U","S","CODE","KBD","SAMP","SUB","SUP","RUBY","RT","RP","BR","SPAN","SMALL","Q"]);
+    const allowed = new Set(["A","STRONG","B","EM","I","U","S","CODE","KBD","SAMP","SUB","SUP","RUBY","RT","RP","BR","SPAN","SMALL","Q","IMG"]);
     Array.from(clone.querySelectorAll?.("*") || []).reverse().forEach(node => {
       const tag = node.tagName;
       if (["SCRIPT","STYLE","NOSCRIPT","IFRAME","OBJECT","EMBED"].includes(tag)) { node.remove(); return; }
       if (!allowed.has(tag)) { node.replaceWith(...Array.from(node.childNodes)); return; }
+      if (tag === "IMG") {
+        const src = readerSafeMediaUrl(node.currentSrc || node.getAttribute("src") || node.getAttribute("data-src"));
+        const alt = String(node.getAttribute("alt") || "").trim();
+        const width = Math.max(0, Number(node.getAttribute("width")) || 0);
+        const height = Math.max(0, Number(node.getAttribute("height")) || 0);
+        const imageHint = `${src} ${alt} ${node.className || ""}`.toLowerCase();
+        const isCompactAsset = (width > 0 && height > 0 && Math.max(width, height) <= 72)
+          || /(?:^|[\s_./-])(icon|flag|logo|badge|emoji|avatar)(?:[\s_./-]|$)/i.test(imageHint);
+        Array.from(node.attributes || []).forEach(attr => node.removeAttribute(attr.name));
+        if (!src) { node.remove(); return; }
+        node.setAttribute("src", src);
+        node.setAttribute("alt", alt);
+        node.setAttribute("class", `reader-inline-asset ${isCompactAsset ? "reader-inline-icon" : "reader-inline-photo"}`);
+        node.setAttribute("loading", "lazy");
+        node.setAttribute("decoding", "async");
+        if (width > 0 && width <= 640) node.setAttribute("width", String(Math.round(width)));
+        if (height > 0 && height <= 640) node.setAttribute("height", String(Math.round(height)));
+        return;
+      }
       const originalHref = tag === "A" ? node.getAttribute("href") : "";
       Array.from(node.attributes || []).forEach(attr => node.removeAttribute(attr.name));
       if (tag === "A" && originalHref) {
@@ -3064,44 +3187,345 @@
     return shorter.length >= 8 && shorter.length / longer.length >= .64 && longer.includes(shorter);
   }
 
+  function collectReaderMediaEntries(contentNodes) {
+    const entries = [];
+    const seen = new Set();
+    const add = (image, caption = "") => {
+      const info = getReaderImageInfo(image);
+      if (!info.src || info.isIcon || seen.has(info.src)) return;
+      const hint = `${info.src} ${info.alt} ${image.className || ""}`.toLowerCase();
+      if (/icon|avatar|logo|emoji|sprite|tracking|pixel|badge|button|chevron|favicon|placeholder|loading|spinner|divider|separator|advert|promo|sponsor|banner|watermark|qrcode|qr-code/.test(hint)) return;
+      seen.add(info.src);
+      entries.push({ image, info, caption:String(caption || info.alt || "文章配图").trim() });
+    };
+    contentNodes.forEach(node => {
+      if (node.tagName === "IMG") add(node);
+      else if (node.querySelectorAll) {
+        const caption = node.querySelector("figcaption")?.innerText || "";
+        node.querySelectorAll("img").forEach(image => add(image, caption));
+      }
+    });
+    return entries;
+  }
+
+  function readerMediaImageHtml(entry, mediaIndex, extraClass = "") {
+    if (!entry) return "";
+    const media = entry.info;
+    const naturalWidth = media.width || media.displayWidth || 960;
+    const share=Math.round(Math.max(.22,Math.min(.46,media.relativeWidth||.36))*100);
+    return `<div class="reader-img-wrap ${media.classes} ${extraClass}" id="reader_media_${mediaIndex}" data-media-side="${media.side?media.alignment:"none"}" style="--reader-image-natural-width:${naturalWidth}px;--reader-image-share:${share}%;--reader-image-weight:${media.displayWidth||media.width||300}"><img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt)}" loading="lazy" decoding="async" data-reader-media-index="${mediaIndex}" title="点击放大查看" /></div>`;
+  }
+
+  function readerPairHtml({ id, originalHtml, headingLevel = 0, pairClass = "", wrapperClass = "", listMarker = "", renderStyle = "classic", canTranslateOne = true }) {
+    const isHeading = headingLevel > 0;
+    const contentTag = isHeading ? `h${headingLevel}` : "p";
+    return `${wrapperClass ? `<div class="${wrapperClass}"${listMarker ? ` data-list-marker="${escapeHtml(listMarker)}"` : ""}>` : ""}<div class="reader-paragraph-pair${pairClass ? ` ${pairClass}` : ""}" id="${isHeading ? id.replace(/^r_/, "head_") : id}" data-para-id="${id}" data-heading="${isHeading ? "true" : "false"}" data-heading-level="${isHeading ? headingLevel : 0}">
+      <${contentTag} class="reader-orig-p ${isHeading ? "reader-structural-heading" : ""}">${originalHtml}</${contentTag}>
+      <${contentTag} class="reader-trans-p ${isHeading ? "reader-structural-heading" : ""}" data-render-style="${escapeHtml(renderStyle)}"><span class="reader-translation-text">正在同步精排译文...</span></${contentTag}>
+      ${canTranslateOne && !isHeading ? `<button type="button" class="reader-inline-translate-btn" data-reader-translate-one title="翻译这一段" aria-label="翻译这一段"><img src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true"></button>` : ""}
+    </div>${wrapperClass ? "</div>" : ""}`;
+  }
+
+  function readerFigureHtml(node, nodeIndex, mediaEntries, mediaIndexByNode, renderStyle) {
+    const images = Array.from(node.querySelectorAll("img"));
+    const mediaHtml = images.map(image => readerMediaImageHtml(mediaEntries[mediaIndexByNode.get(image)], mediaIndexByNode.get(image), "reader-figure-image")).filter(Boolean).join("");
+    const captionNode = node.querySelector("figcaption");
+    const captionText = String(captionNode?.innerText || "").trim();
+    const captionHtml = captionText
+      ? readerPairHtml({ id:`r_${nodeIndex}_caption`, originalHtml:readerInlineHtml(captionNode) || escapeHtml(captionText), pairClass:"reader-figcaption", renderStyle, canTranslateOne:false })
+      : "";
+    const usable=images.map(image=>getReaderImageInfo(image)).filter(info=>!info.isIcon);
+    const first=usable[0];
+    const side=usable.length===1&&first?.side;
+    const share=Math.round(Math.max(.22,Math.min(.46,first?.relativeWidth||.36))*100);
+    return `<figure class="reader-media-block ${side?'reader-media-side':'reader-media-full'}" data-media-side="${side?first.alignment:'none'}" style="--reader-image-share:${share}%">${mediaHtml}${captionHtml}</figure>`;
+  }
+
+  function readerTableCellPairHtml(id, sourceHtml, renderStyle, extraClass = "") {
+    return `<div class="reader-paragraph-pair reader-table-cell-pair${extraClass ? ` ${extraClass}` : ""}" id="${id}" data-para-id="${id}" data-heading="false">
+      <div class="reader-orig-p">${sourceHtml}</div>
+      <div class="reader-trans-p" data-render-style="${escapeHtml(renderStyle)}"><span class="reader-translation-text">正在同步译文...</span></div>
+    </div>`;
+  }
+
+  function readerSafeMediaUrl(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    try {
+      const resolved = new URL(raw, location.href);
+      return ["http:", "https:", "blob:", "data:"].includes(resolved.protocol) ? resolved.href : "";
+    } catch (_) { return ""; }
+  }
+
+  function readerEmbeddedMediaHtml(node, nodeIndex) {
+    const sourceTag = node.tagName;
+    const isFrame = sourceTag === "IFRAME";
+    const isLinkedVideo = sourceTag === "A";
+    const tag = sourceTag === "AUDIO" ? "audio" : "video";
+    const src = readerSafeMediaUrl(node.currentSrc || node.getAttribute("src") || node.getAttribute("href") || node.querySelector?.("source")?.getAttribute("src"));
+    if (!src) return "";
+    const poster = tag === "video" && !isFrame ? readerSafeMediaUrl(node.getAttribute("poster")) : "";
+    const title = String(node.getAttribute("aria-label") || node.getAttribute("title") || node.textContent || (tag === "video" ? "文章视频" : "文章音频")).trim().slice(0, 160) || (tag === "video" ? "文章视频" : "文章音频");
+    const rect = node.getBoundingClientRect?.() || { width:0, height:0 };
+    const sourceWidth = Number(node.getAttribute("width")) || rect.width || 16;
+    const sourceHeight = Number(node.getAttribute("height")) || rect.height || 9;
+    const ratio = Math.max(.56, Math.min(2.4, sourceWidth / Math.max(1, sourceHeight)));
+    const media = isFrame
+      ? `<iframe src="${escapeHtml(src)}" title="${escapeHtml(title)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`
+      : `<${tag} controls preload="metadata" src="${escapeHtml(src)}"${poster ? ` poster="${escapeHtml(poster)}"` : ""} aria-label="${escapeHtml(title)}"></${tag}>`;
+    return `<figure class="reader-embedded-media${isFrame ? " reader-embedded-frame" : ""}${isLinkedVideo ? " reader-linked-video" : ""}" id="reader_embedded_${nodeIndex}" style="--reader-media-ratio:${ratio.toFixed(4)}">${media}<figcaption>${escapeHtml(title)}</figcaption></figure>`;
+  }
+
+  function readerDetailsHtml(node, nodeIndex, renderStyle) {
+    const summaryNode = node.querySelector(":scope > summary");
+    const summaryText = String(summaryNode?.innerText || summaryNode?.textContent || "补充资料").trim() || "补充资料";
+    const fullText = String(node.innerText || node.textContent || "").trim();
+    const bodyText = fullText.startsWith(summaryText) ? fullText.slice(summaryText.length).trim() : fullText;
+    const bodyHtml = readerPairHtml({
+      id:`r_${nodeIndex}_details`,
+      originalHtml:escapeHtml(bodyText || summaryText),
+      pairClass:"reader-details-pair",
+      renderStyle,
+      canTranslateOne:false
+    });
+    return `<details class="reader-details-block" open><summary><span>${escapeHtml(summaryText)}</span><small>展开 / 收起</small></summary>${bodyHtml}</details>`;
+  }
+
+  // Only an explicit two-column numerical series qualifies. Infoboxes, merged
+  // cells, mixed units, missing values and linked/media cells remain tables.
+  function readerChartData(rows) {
+    if (rows.length < 3 || rows.length > 41) return null;
+    if (!Array.from(rows[0].cells).every(cell => cell.tagName === "TH")) return null;
+    if (rows.some(row => row.cells.length !== 2 || Array.from(row.cells).some(cell => cell.colSpan !== 1 || cell.rowSpan !== 1 || cell.querySelector("img,a,table")))) return null;
+    const points = [];
+    let unit;
+    for (const row of rows.slice(1)) {
+      const label = String(getHostOriginalText(row.cells[0]) || "").trim();
+      const raw = String(getHostOriginalText(row.cells[1]) || "").trim();
+      const match = raw.match(/^([+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(%)?$/);
+      if (!label || label.length > 64 || !match) return null;
+      const nextUnit = match[2] || "";
+      if (unit !== undefined && unit !== nextUnit) return null;
+      unit = nextUnit;
+      const value = Number(match[1].replaceAll(",", ""));
+      if (!Number.isFinite(value) || Math.abs(value) > Number.MAX_SAFE_INTEGER) return null;
+      points.push({ label, value });
+    }
+    if (new Set(points.map(point => point.label)).size !== points.length) return null;
+    return { label:String(getHostOriginalText(rows[0].cells[1]) || "数值").trim(), unit, points };
+  }
+
+  function initializeReaderCharts(root) {
+    root.querySelectorAll("[data-reader-chart]").forEach(panel => {
+      const data = JSON.parse(panel.dataset.readerChart);
+      const colors = ["#487f82", "#b1784b", "#7773a1", "#82934d", "#af6175", "#5784aa"];
+      const pieAllowed = data.points.every(point => point.value >= 0) && data.points.some(point => point.value > 0) && data.points.length <= 12;
+      const pieButton = panel.querySelector('[data-chart-type="pie"]');
+      if (!pieAllowed) pieButton.remove();
+      const output = panel.querySelector(".reader-chart-output");
+      const render = type => {
+        const { points } = data;
+        const width = 640, height = 280, left = 52, top = 22, bottom = 236;
+        const min = Math.min(0, ...points.map(point => point.value));
+        const max = Math.max(0, ...points.map(point => point.value));
+        const span = max - min || 1;
+        const y = value => top + (max - value) / span * (bottom - top);
+        const x = index => left + (index + .5) * (width - left - 16) / points.length;
+        const label = point => `${point.label}：${point.value.toLocaleString()}${data.unit}`;
+        const accessible = (point, index) => `tabindex="0" role="img" data-chart-point="${index}" aria-label="${escapeHtml(label(point))}"`;
+        let shapes = "";
+        if (type === "pie") {
+          const total = points.reduce((sum, point) => sum + point.value, 0);
+          let angle = -Math.PI / 2;
+          shapes = points.map((point, index) => {
+            const fraction = point.value / total;
+            if (!fraction) return "";
+            const next = angle + fraction * Math.PI * 2;
+            const color = colors[index % colors.length];
+            const path = fraction >= .999999
+              ? `<circle cx="320" cy="135" r="105" fill="${color}" ${accessible(point, index)}><title>${escapeHtml(label(point))}</title></circle>`
+              : `<path d="M320,135 L${320 + 105 * Math.cos(angle)},${135 + 105 * Math.sin(angle)} A105,105 0 ${fraction > .5 ? 1 : 0},1 ${320 + 105 * Math.cos(next)},${135 + 105 * Math.sin(next)} Z" fill="${color}" stroke="var(--reader-card-bg)" stroke-width="2" ${accessible(point, index)}><title>${escapeHtml(label(point))}</title></path>`;
+            angle = next;
+            return path;
+          }).join("");
+        } else {
+          shapes = `<path d="M${left},${top} V${bottom} M${left},${y(0)} H624" fill="none" stroke="currentColor" opacity=".25"/>`;
+          for (const value of new Set([min, max])) shapes += `<text x="46" y="${y(value) + 4}" text-anchor="end">${escapeHtml(value.toLocaleString())}</text>`;
+          if (type === "line") shapes += `<polyline points="${points.map((point,index) => `${x(index)},${y(point.value)}`).join(" ")}" fill="none" stroke="${colors[0]}" stroke-width="2.5"/>`;
+          shapes += points.map((point, index) => {
+            const title = `<title>${escapeHtml(label(point))}</title>`;
+            const barWidth = Math.max(3, Math.min(50, (width-left-16)/points.length * .65));
+            const shape = type === "line"
+              ? `<circle cx="${x(index)}" cy="${y(point.value)}" r="5" fill="${colors[0]}" ${accessible(point,index)}>${title}</circle>`
+              : `<rect x="${x(index)-barWidth/2}" y="${Math.min(y(0),y(point.value))}" width="${barWidth}" height="${Math.max(1,Math.abs(y(point.value)-y(0)))}" rx="2" fill="${colors[0]}" ${accessible(point,index)}>${title}</rect>`;
+            return shape + (points.length <= 8 ? `<text x="${x(index)}" y="258" text-anchor="middle">${escapeHtml(point.label.slice(0,8))}</text>` : "");
+          }).join("");
+        }
+        output.innerHTML = `<svg viewBox="0 0 ${width} ${height}" aria-label="${escapeHtml(data.label)}" role="group">${shapes}</svg>`;
+        panel.querySelectorAll("[data-chart-type]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.chartType === type)));
+        panel.querySelector(".reader-chart-caption").textContent = `${data.label}${data.unit ? `（${data.unit}）` : ""} · ${points.length} 项 · 悬停或用 Tab 查看数值`;
+      };
+      panel.querySelectorAll("[data-chart-type]").forEach(button => button.addEventListener("click", () => render(button.dataset.chartType)));
+      const inspect = event => {
+        const node = event.target.closest?.("[data-chart-point]");
+        if (node) panel.querySelector(".reader-chart-caption").textContent = labelForPoint(data.points[Number(node.dataset.chartPoint)]);
+      };
+      const labelForPoint = point => `${point.label}：${point.value.toLocaleString()}${data.unit}`;
+      output.addEventListener("pointerover", inspect);
+      output.addEventListener("focusin", inspect);
+      panel.addEventListener("toggle", () => { if (panel.open && !output.firstChild) render("bar"); });
+    });
+  }
+
+  function readerTableHtml(node, nodeIndex, mediaEntries, mediaIndexByNode, renderStyle) {
+    const rows = Array.from(node.rows || []).filter(row => {
+      if(row.closest("table")!==node)return false;
+      const hasText = String(row.innerText || "").trim().length > 0;
+      const hasInlineMedia = Array.from(row.querySelectorAll?.("img") || []).some(image => !!getReaderImageInfo(image).src);
+      return hasText || hasInlineMedia;
+    });
+    const caption = String(node.querySelector("caption")?.innerText || "").trim();
+    const className = typeof node.className === "string" ? node.className : "";
+    const isInfobox = /(?:^|\s)(?:infobox|sidebar)(?:\s|$)/i.test(className) || node.hasAttribute("data-infobox");
+    const label = caption || (isInfobox ? "资料卡" : "表格资料");
+
+    if (isInfobox) {
+      const factRows = rows.map((row, rowIndex) => {
+        const cells = Array.from(row.cells || []);
+        if (!cells.length) return "";
+        const keyCell = cells[0];
+        const valueCells = cells.slice(1);
+        const keyHtml = readerInlineHtml(keyCell) || escapeHtml(String(keyCell.innerText || "").trim());
+        const valueHtml = valueCells.length
+          ? valueCells.map(cell => readerInlineHtml(cell) || escapeHtml(String(cell.innerText || "").trim())).join(" · ")
+          : keyHtml;
+        return `<div class="reader-fact-row${valueCells.length ? "" : " reader-fact-row-wide"}">
+          ${valueCells.length ? readerTableCellPairHtml(`r_${nodeIndex}_fact_key_${rowIndex}`, keyHtml, renderStyle, "reader-fact-key") : ""}
+          ${readerTableCellPairHtml(`r_${nodeIndex}_fact_value_${rowIndex}`, valueHtml, renderStyle, "reader-fact-value")}
+        </div>`;
+      }).join("");
+      const flowClass = rows.length <= 12 ? "reader-infobox-compact" : "reader-infobox-long";
+      return `<section class="reader-table-block reader-infobox ${flowClass}" id="reader_table_${nodeIndex}"><div class="reader-table-heading"><span>${escapeHtml(label)}</span><small>${rows.length} 项</small></div><div class="reader-fact-list">${factRows}</div></section>`;
+    }
+
+    const columnCount = rows.reduce((largest, row) => {
+      const count = Array.from(row.cells || []).reduce((sum, cell) => sum + Math.max(1, Number(cell.getAttribute("colspan")) || 1), 0);
+      return Math.max(largest, count);
+    }, 0);
+    const representativeRows = rows
+      .map(row => ({
+        row,
+        cells:Array.from(row.cells || []),
+        count:Array.from(row.cells || []).reduce((sum, cell) => sum + Math.max(1, Number(cell.getAttribute("colspan")) || 1), 0)
+      }))
+      .filter(entry => entry.count === columnCount && entry.cells.length > 1)
+      .slice(0, 12);
+    const columnWidths = Array.from({ length:Math.max(1, columnCount) }, () => 116);
+    representativeRows.forEach(entry => {
+      let columnIndex = 0;
+      entry.cells.forEach(cell => {
+        const span = Math.max(1, Math.min(columnCount, Number(cell.getAttribute("colspan")) || 1));
+        const text = String(cell.innerText || "").replace(/\s+/g, " ").trim();
+        const inlineMedia = cell.querySelector?.("img");
+        const measuredWidth = cell.getBoundingClientRect?.().width || cell.scrollWidth || 0;
+        const estimatedTextWidth = Math.min(360, Math.max(104, Math.sqrt(Math.max(1, text.length)) * 31));
+        const desiredWidth = Math.max(measuredWidth / span, estimatedTextWidth, inlineMedia ? 144 : 0);
+        for (let offset = 0; offset < span && columnIndex + offset < columnWidths.length; offset += 1) {
+          columnWidths[columnIndex + offset] = Math.max(columnWidths[columnIndex + offset], Math.min(360, desiredWidth));
+        }
+        columnIndex += span;
+      });
+    });
+    const tableMinWidth = Math.max(320, Math.round(columnWidths.reduce((sum, value) => sum + value, 0)));
+    const colgroup = `<colgroup>${columnWidths.map(width => `<col style="width:${Math.round(width)}px">`).join("")}</colgroup>`;
+
+    const tableRows = rows.map((row, rowIndex) => {
+      const cells = Array.from(row.cells || []);
+      const cellHtml = cells.map((cell, cellIndex) => {
+        const tag = cell.tagName === "TH" ? "th" : "td";
+        const colspan = Math.max(1, Math.min(24, Number(cell.getAttribute("colspan")) || 1));
+        const rowspan = Math.max(1, Math.min(80, Number(cell.getAttribute("rowspan")) || 1));
+        const sourceAlignment = getComputedStyle(cell).textAlign;
+        const alignment = ["left", "center", "right", "justify", "start", "end"].includes(sourceAlignment) ? sourceAlignment : "start";
+        const sourceHtml = readerInlineHtml(cell) || escapeHtml(String(cell.innerText || "").trim()) || "&nbsp;";
+        return `<${tag} colspan="${colspan}" rowspan="${rowspan}" data-reader-align="${alignment}">${readerTableCellPairHtml(`r_${nodeIndex}_cell_${rowIndex}_${cellIndex}`, sourceHtml, renderStyle, tag === "th" ? "reader-table-header-pair" : "")}</${tag}>`;
+      }).join("");
+      return `<tr>${cellHtml}</tr>`;
+    }).join("");
+    const chartData = readerChartData(rows);
+    const chartHtml = chartData ? `<details class="reader-chart" data-reader-chart="${escapeHtml(JSON.stringify(chartData))}"><summary>数据图 <span>查看这组数值</span></summary><div class="reader-chart-types" role="group" aria-label="图表类型"><button type="button" data-chart-type="bar" aria-pressed="true">柱状</button><button type="button" data-chart-type="line" aria-pressed="false">折线</button><button type="button" data-chart-type="pie" aria-pressed="false">占比</button></div><div class="reader-chart-output"></div><p class="reader-chart-caption" aria-live="polite"></p></details>` : "";
+    return `<section class="reader-table-block reader-data-table" id="reader_table_${nodeIndex}"><div class="reader-table-heading"><span>${escapeHtml(label)}</span><small>${rows.length} 行 · ${columnCount} 列</small></div><div class="reader-table-scroll" tabindex="0" role="region" aria-label="${escapeHtml(label)}"><table class="reader-semantic-table" style="--reader-table-min-width:${tableMinWidth}px">${colgroup}<tbody>${tableRows}</tbody></table></div>${chartHtml}</section>`;
+  }
+
   async function openReaderMode() {
     if (document.getElementById("raccoon-reader-root")) return;
 
-    await warmReaderLazyContent();
+    await Promise.all([ensureReaderStylesheet(), warmReaderLazyContent()]);
     readerImageInfoCache = new WeakMap();
     const bestContainer = findBestReaderContainer();
-    const title = document.querySelector('meta[property="og:title"]')?.content || document.querySelector("h1")?.innerText || document.title || "阅读文章";
+    const redditThread = /(?:^|\.)reddit\.com$/i.test(location.hostname) && /\/comments\//.test(location.pathname);
+    const title = document.querySelector("#firstHeading, main h1, article h1, h1")?.innerText?.trim()
+      || document.querySelector('meta[property="og:title"]')?.content?.trim()
+      || document.title
+      || "阅读文章";
     const detectedWritingMode = detectReaderWritingMode(bestContainer);
     let contentNodes = collectReaderContentNodes(bestContainer);
     contentNodes = contentNodes.filter((node, index) => {
       if (index > 12 || readerHeadingLevel(node) < 1 || readerHeadingLevel(node) > 3) return true;
       return !readerHeadingMatchesTitle(getHostOriginalText(node), title);
     });
+    const redditComments = redditThread ? [...document.querySelectorAll('shreddit-comment,.commentarea .thing.comment')] : [];
+    if (redditThread) {
+      const post=document.querySelector('shreddit-post,[data-testid="post-container"],.sitetable.linklisting .thing.link');
+      if(post)contentNodes=collectReaderContentNodes(post);
+    }
+    const mediaEntries = collectReaderMediaEntries(contentNodes);
+    const mediaIndexByNode = new WeakMap();
+    mediaEntries.forEach((entry, index) => { mediaIndexByNode.set(entry.image, index); });
     const headings = [];
+    const headingStack = [];
     contentNodes.forEach((node, idx) => {
       const level = readerHeadingLevel(node);
       if (level) {
-        headings.push({ id: `head_${idx}`, text: getHostOriginalText(node), level: `h${level}` });
+        while (headingStack.length && headingStack[headingStack.length - 1].level >= level) headingStack.pop();
+        const heading = {
+          id: `head_${idx}`,
+          text: getHostOriginalText(node),
+          level,
+          ancestorIds: headingStack.map(item => item.id)
+        };
+        headings.push(heading);
+        headingStack.push(heading);
       }
     });
 
-    const savedTheme = currentSettings.readerTheme || "envelope";
-    const readerSurfaceValues = new Set(["card", "flat", "column", "folio"]);
+    const savedTheme = currentSettings.readerTheme || "white";
+    const readerSurfaceValues = new Set(["card", "flat", "safari", "forum"]);
     const savedSurface = readerSurfaceValues.has(currentSettings.readerSurface) ? currentSettings.readerSurface : "card";
+    const readerTableStyleValues = new Set(["clean", "three-line", "striped"]);
+    const savedTableStyle = readerTableStyleValues.has(currentSettings.readerTableStyle) ? currentSettings.readerTableStyle : "clean";
     const savedWidth = currentSettings.readerWidth || "920";
-    const savedFont = currentSettings.readerFont || "system";
+    const savedFont = !currentSettings.readerFontAutoV3 && [undefined,"system","smiley-sans"].includes(currentSettings.readerFont) ? "auto" : (currentSettings.readerFont || "auto");
     const savedLineHeight = currentSettings.readerLineHeight || "1.82";
     const savedParagraphSpacing = currentSettings.readerParagraphSpacing || "28";
     const savedWritingMode = currentSettings.readerWritingMode === "vertical" ? "vertical" : "horizontal";
-    const savedRenderStyle = currentSettings.renderStyle || "classic";
+    const readerRenderStyleValues = new Set(["classic", "card"]);
+    const savedRenderStyle = readerRenderStyleValues.has(currentSettings.readerRenderStyle) ? currentSettings.readerRenderStyle : "classic";
     const effectiveWritingMode = savedWritingMode;
     const isOutlineCollapsed = !!currentSettings.readerOutlineCollapsed;
+    const isToolsCollapsed = !!currentSettings.readerToolsCollapsed;
 
     const root = document.createElement("div");
     root.id = "raccoon-reader-root";
     root.style.setProperty("--reader-image-shadow", currentSettings.readerImageShadow === false ? "none" : "0 8px 24px rgba(0,0,0,.14)");
     root.setAttribute("data-theme", savedTheme);
     root.setAttribute("data-surface", savedSurface);
+    root.dataset.readerFont = savedFont;
+    const declaredLanguage = bestContainer.closest("[lang]")?.lang || document.documentElement.lang;
+    const sampleText = title + " " + String((contentNodes.find(node => node.tagName === "P") || bestContainer).textContent || "").slice(0, 600);
+    const articleLanguage = /^[a-z]{2,8}(?:-[a-z0-9]+)*$/i.test(declaredLanguage || "") ? declaredLanguage : (/[ぁ-ゟ゠-ヿ]/u.test(sampleText) ? "ja" : /[가-힣]/u.test(sampleText) ? "ko" : /[一-鿿]/u.test(sampleText) ? "zh-CN" : "en");
+    root.dataset.articleLanguage = articleLanguage;
+    root.setAttribute("data-table-style", savedTableStyle);
     const initialReaderView = isPageTranslated
       ? (currentSettings.displayMode === "replace" ? "trans" : "bilingual")
       : "orig";
@@ -3109,20 +3533,52 @@
     root.setAttribute("data-writing-mode", effectiveWritingMode);
     root.setAttribute("data-reader-lang", inferDictionaryLanguageHint(title));
     root.setAttribute("data-reader-render-style", savedRenderStyle);
+    root.setAttribute("data-reader-site", /(?:^|\.)wikipedia\.org$/i.test(location.hostname) ? "wikipedia" : "article");
+    root.classList.toggle("reader-wikipedia-flow", currentSettings.readerWikipediaFlow !== false && /(?:^|\.)wikipedia\.org$/i.test(location.hostname));
+    root.classList.toggle("reader-wikipedia-magazine", currentSettings.readerWikipediaMagazine === true && /(?:^|\.)wikipedia\.org$/i.test(location.hostname));
     root.classList.toggle("reader-progress-hidden", currentSettings.readerProgressVisible === false);
     root.classList.toggle("reader-meta-hidden", currentSettings.readerMetaVisible === false);
+    root.classList.remove("reader-no-navigator");
+    root.classList.toggle("reader-nav-collapsed", isOutlineCollapsed);
+    root.classList.toggle("reader-tools-collapsed", isToolsCollapsed);
     root.style.setProperty("--reader-font-family", getFontFamilyCss(savedFont));
+    root.style.setProperty("--reader-translation-card-bg", (() => {
+      const colors = {
+        "soft-yellow":"rgba(254,240,138,.28)",
+        "soft-green":"rgba(187,247,208,.30)",
+        "soft-purple":"rgba(233,213,255,.28)",
+        "soft-orange":"rgba(254,215,170,.30)",
+        "soft-blue":"rgba(191,219,254,.30)",
+        "none":"transparent"
+      };
+      return colors[currentSettings.bgHighlight || "soft-yellow"] || colors["soft-yellow"];
+    })());
     root.style.setProperty("--reader-body-size", `${parseFloat(currentSettings.readerFontSize) || 17.5}px`);
-    root.style.setProperty("--reader-outline-width", `${Math.max(190, Math.min(380, Number(currentSettings.readerOutlineWidth) || 270))}px`);
+    root.style.setProperty("--reader-outline-width", `${Math.max(230, Math.min(420, Number(currentSettings.readerOutlineWidth) || 270))}px`);
+    root.style.setProperty("--reader-tools-width", `${Math.max(260, Math.min(420, Number(currentSettings.readerToolsWidth) || 288))}px`);
     root.style.setProperty("--reader-line-height", savedLineHeight);
     root.style.setProperty("--reader-paragraph-spacing", `${savedParagraphSpacing}px`);
+
+    const readerTextCorpus = contentNodes.map(node => getHostOriginalText(node)).join(" ").replace(/\s+/g, " ").trim();
+    const readerCharacterCount = readerTextCorpus.replace(/\s+/g, "").length;
+    const latinWordCount = (readerTextCorpus.match(/[\p{L}\p{M}]+(?:['’\-][\p{L}\p{M}]+)*/gu) || []).length;
+    const cjkCharacterCount = (readerTextCorpus.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu) || []).length;
+    const readerWordCount = typeof Intl.Segmenter === "function"
+      ? Array.from(new Intl.Segmenter(undefined, { granularity:"word" }).segment(readerTextCorpus)).filter(part => part.isWordLike).length
+      : latinWordCount + cjkCharacterCount;
+    const readerPunctuationCount = (readerTextCorpus.match(/[\p{P}\p{S}]/gu) || []).length;
+    const readerBlockCount = contentNodes.filter(node => !["IMG", "HR"].includes(node.tagName)).length;
 
     root.innerHTML = `
       <div class="reader-top-progress-bar" id="reader-top-progress-bar"></div>
 
       <!-- 大纲折叠后只保留一个安静的平面图标 -->
-      <button type="button" class="reader-floating-expand-outline-btn" id="reader-btn-expand-outline" style="${isOutlineCollapsed && headings.length > 0 ? 'display:flex;' : 'display:none;'}" title="展开文章大纲" aria-label="展开文章大纲">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 6h14M5 12h14M5 18h9"/></svg>
+      <button type="button" class="reader-floating-expand-outline-btn" id="reader-btn-expand-outline" style="${isOutlineCollapsed ? 'display:flex;' : 'display:none;'}" title="展开阅读导航" aria-label="展开阅读导航">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg>
+      </button>
+
+      <button type="button" class="reader-floating-expand-tools-btn" id="reader-btn-expand-tools" style="${isToolsCollapsed ? 'display:flex;' : 'display:none;'}" title="展开阅读工具" aria-label="展开阅读工具">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.05.05-2.87 2.87-.05-.05A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 1.55V21h-4v-.05A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.05.05-2.87-2.87.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3v-4h.05A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.05-.05 2.87-2.87.05.05A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.55V3h4v.05A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.05-.05 2.87 2.87-.05.05A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.55 1H21v4h-.05a1.7 1.7 0 0 0-1.55 1Z"/></svg>
       </button>
 
       <div class="reader-vertical-edge-dock" id="reader-vertical-edge-dock">
@@ -3135,20 +3591,47 @@
       </div>
 
       <div class="reader-body-layout">
-        ${headings.length > 0 ? `
+        ${`
           <aside class="reader-outline-panel ${isOutlineCollapsed ? 'collapsed' : ''}" id="reader-outline-panel">
             <div class="reader-outline-header-row">
-              <span class="reader-outline-title">文章大纲</span>
-              <button type="button" class="reader-outline-toggle-btn" id="reader-btn-toggle-outline" title="折叠大纲" aria-label="折叠大纲"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14 6-6 6 6 6"/></svg></button>
+              <div><span class="reader-outline-title">${escapeHtml(title)}</span></div>
+              <button type="button" class="reader-outline-toggle-btn" id="reader-btn-toggle-outline" title="折叠导航" aria-label="折叠导航"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 7h14M5 12h14M5 17h14"/></svg></button>
             </div>
-            ${headings.map(h => `
-              <div class="reader-outline-item level-${Math.min(3, Math.max(1, Number(h.level.slice(1)) - 1))}" data-target-id="${h.id}" title="${escapeHtml(h.text)}">
-                <span class="reader-outline-label">${escapeHtml(h.text)}</span>
+            <div class="reader-navigator-tabs" role="tablist" aria-label="阅读导航内容" data-active-tab="outline">
+              <span class="reader-navigator-tab-indicator" aria-hidden="true"></span>
+              <button type="button" class="active" data-reader-nav-tab="outline" role="tab" aria-selected="true">大纲 <span>${headings.length}</span></button>
+              <button type="button" data-reader-nav-tab="media" role="tab" aria-selected="false" ${mediaEntries.length ? "" : "disabled"}>媒体 <span>${mediaEntries.length}</span></button>
+              <button type="button" data-reader-nav-tab="search" role="tab" aria-selected="false">搜索</button>
+            </div>
+            <div class="reader-nav-views">
+              <div class="reader-nav-view active" data-reader-nav-view="outline">
+                ${headings.length ? headings.map(h => `
+                  <button type="button" class="reader-outline-item level-${Math.min(3, Math.max(1, h.level - 1))}" data-heading-level="${h.level}" data-target-id="${h.id}" data-ancestor-ids="${escapeHtml(h.ancestorIds.join(" "))}" title="${escapeHtml(h.text)}">
+                    <span class="reader-outline-label">${escapeHtml(h.text)}</span>
+                  </button>
+                `).join("") : '<div class="reader-nav-empty">这篇页面没有可用的分级标题。</div>'}
               </div>
-            `).join("")}
+              <div class="reader-nav-view reader-search-view" data-reader-nav-view="search">
+                <div class="reader-nav-search" role="search">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+                  <input type="search" id="reader-nav-search-input" placeholder="搜索本文" autocomplete="off" spellcheck="false" aria-label="搜索本文">
+                </div>
+                <div class="reader-nav-search-status" id="reader-nav-search-status" aria-live="polite"></div>
+                <div class="reader-search-results" id="reader-search-results"><div class="reader-nav-empty">输入文字后，这里会列出所在段落。</div></div>
+              </div>
+              <div class="reader-nav-view" data-reader-nav-view="media">
+                <div class="reader-media-index">
+                  ${mediaEntries.map((entry, index) => {
+                    const width = entry.info.width || entry.info.displayWidth || 0;
+                    const height = entry.info.height || entry.info.displayHeight || 0;
+                    return `<button type="button" class="reader-media-index-item" data-target-id="reader_media_${index}" title="${escapeHtml(entry.caption)}"><img src="${escapeHtml(entry.info.src)}" alt="" loading="lazy" decoding="async"${width ? ` width="${width}"` : ""}${height ? ` height="${height}"` : ""}><span><b>${escapeHtml(entry.caption || `配图 ${index + 1}`)}</b><small>${String(index + 1).padStart(2,"0")}</small></span></button>`;
+                  }).join("") || '<div class="reader-nav-empty">正文中没有可索引的图片。</div>'}
+                </div>
+              </div>
+            </div>
             <div class="reader-outline-resizer" id="reader-outline-resizer" title="拖动调整大纲宽度" aria-hidden="true"></div>
           </aside>
-        ` : ''}
+        `}
 
         <div class="reader-scroll-area" id="reader-scroll-area">
           <main class="reader-scroll-card" id="reader-scroll-card" style="max-width: ${savedWidth}px; --reader-max-width:${savedWidth}px;">
@@ -3162,53 +3645,147 @@
             <div class="reader-content" id="reader-content">
               ${contentNodes.map((node, idx) => {
                 if (node.tagName === "IMG") {
-                  const media = getReaderImageInfo(node);
-                  const naturalWidth = media.displayWidth || (media.width ? Math.min(media.width, 1800) : 960);
-                  const inlineSide = idx % 2 === 0 ? "reader-img-inline-right" : "reader-img-inline-left";
-                  return `<div class="reader-img-wrap ${media.classes} ${media.classes.includes("reader-img-inline") ? inlineSide : ""}" style="--reader-image-natural-width:${naturalWidth}px"><img src="${escapeHtml(media.src)}" alt="${escapeHtml(media.alt)}" loading="eager" decoding="async" title="点击或双击放大查看" /></div>`;
+                  const mediaIndex = mediaIndexByNode.get(node);
+                  const media = mediaEntries[mediaIndex]?.info;
+                  const inlineSide = media?.classes.includes("reader-img-inline") ? (idx % 2 === 0 ? "reader-img-inline-right" : "reader-img-inline-left") : "";
+                  return readerMediaImageHtml(mediaEntries[mediaIndex], mediaIndex, inlineSide);
                 }
+                if (node.tagName === "FIGURE") return readerFigureHtml(node, idx, mediaEntries, mediaIndexByNode, savedRenderStyle);
+                if (node.tagName === "TABLE") return readerTableHtml(node, idx, mediaEntries, mediaIndexByNode, savedRenderStyle);
+                if (node.tagName === "DETAILS") return readerDetailsHtml(node, idx, savedRenderStyle);
+                if (["VIDEO", "AUDIO", "IFRAME"].includes(node.tagName) || (node.tagName === "A" && /\.(?:mp4|webm|ogv)(?:$|[?#])/i.test(node.href || ""))) return readerEmbeddedMediaHtml(node, idx);
+                if (node.tagName === "HR") return '<hr class="reader-content-divider" aria-hidden="true">';
                 const headingLevel = readerHeadingLevel(node);
                 const isHeading = headingLevel > 0;
                 const isFigcaption = node.tagName === "FIGCAPTION";
                 const isCode = node.tagName === "PRE";
                 const isQuote = node.tagName === "BLOCKQUOTE";
                 const isListItem = node.tagName === "LI";
-                const contentTag = isHeading ? `h${headingLevel}` : "p";
                 const wrapperClass = isCode ? "reader-code-block" : isQuote ? "reader-blockquote" : isListItem ? "reader-list-block" : "";
-                const pairClass = isFigcaption ? " reader-figcaption" : "";
+                let listMarker="";
+                if(isListItem&&node.parentElement?.tagName==='OL'){
+                  const siblings=[...node.parentElement.children].filter(el=>el.tagName==='LI'),reverse=node.parentElement.reversed;
+                  let number=node.parentElement.hasAttribute('start')?Number(node.parentElement.start):(reverse?siblings.length:1);
+                  for(const sibling of siblings){if(sibling.hasAttribute('value'))number=Number(sibling.value);if(sibling===node)break;number+=reverse?-1:1;}listMarker=String(number)+'.';
+                }
                 const originalHtml = isCode
                   ? escapeHtml(readerOriginalTextPreservingWhitespace(node)).replace(/\n/g, "<br>")
                   : (readerInlineHtml(node) || escapeHtml(getHostOriginalText(node)));
-                return `
-                  ${wrapperClass ? `<div class="${wrapperClass}">` : ""}<div class="reader-paragraph-pair${pairClass}" id="head_${idx}" data-para-id="r_${idx}" data-heading="${isHeading ? 'true' : 'false'}">
-                    <${contentTag} class="reader-orig-p ${isHeading ? 'reader-structural-heading' : ''}">${originalHtml}</${contentTag}>
-                    <${contentTag} class="reader-trans-p ${isHeading ? 'reader-structural-heading' : ''}" data-render-style="${escapeHtml(savedRenderStyle)}"><span class="reader-translation-text">正在同步精排译文...</span></${contentTag}>
-                    ${!isHeading && !isFigcaption && !isCode ? `<button type="button" class="reader-inline-translate-btn" data-reader-translate-one title="翻译这一段" aria-label="翻译这一段"><img src="${extensionAssetUrls.icon128}" alt="" aria-hidden="true"></button>` : ""}
-                  </div>${wrapperClass ? "</div>" : ""}
-                `;
+                return readerPairHtml({ id:`r_${idx}`, originalHtml, headingLevel, pairClass:isFigcaption ? "reader-figcaption" : "", wrapperClass, listMarker, renderStyle:savedRenderStyle, canTranslateOne:!isFigcaption && !isCode });
               }).join("")}
             </div>
           </main>
         </div>
+
+        <aside class="reader-context-panel" id="reader-context-panel" aria-label="阅读工具" data-active-tool="format">
+          <div class="reader-context-resizer" id="reader-context-resizer" title="拖动调整工具栏宽度" aria-hidden="true"></div>
+          <div class="reader-context-header">
+            <div><span>阅读设置</span><small id="reader-context-progress">0%</small></div>
+            <div class="reader-context-header-actions">
+              <button type="button" class="reader-context-close" id="reader-btn-toggle-tools" title="折叠阅读工具" aria-label="折叠阅读工具"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m10 6 6 6-6 6"/></svg></button>
+            </div>
+          </div>
+          <div class="reader-tool-tabs" role="tablist" aria-label="阅读设置分类" data-active-tool-tab="format">
+            <span class="reader-tool-tab-indicator" aria-hidden="true"></span>
+            <button type="button" class="active" data-reader-tool-tab="format" role="tab" aria-selected="true">格式</button>
+            <button type="button" data-reader-tool-tab="style" role="tab" aria-selected="false">样式</button>
+            <button type="button" data-reader-tool-tab="info" role="tab" aria-selected="false">信息</button>
+            <button type="button" data-reader-tool-tab="notes" role="tab" aria-selected="false">笔记</button>
+          </div>
+          <section class="reader-info-link-section" data-reader-tool-section="info">
+            <button type="button" class="reader-info-source" id="reader-copy-link" title="${escapeHtml(location.href)}" aria-label="复制文章链接"><span class="reader-source-url">${escapeHtml(location.host + location.pathname)}</span><span class="reader-source-copy" aria-live="polite">复制</span></button>
+            <button type="button" class="reader-share-button" id="reader-share-screenshot" data-reader-tool-section="info"><span>截图分享</span><span aria-hidden="true">↗</span></button>
+          </section>
+          <section class="reader-context-section" data-reader-tool-section="format">
+            <span class="reader-context-label">阅读内容</span>
+            <div class="reader-mode-tabs reader-context-mode-tabs">
+              <span class="reader-tab-indicator" aria-hidden="true"></span>
+              <button type="button" class="reader-mode-btn ${initialReaderView === 'orig' ? 'active' : ''}" data-mode="orig">原文</button>
+              <button type="button" class="reader-mode-btn ${initialReaderView === 'bilingual' ? 'active' : ''}" data-mode="bilingual">双语</button>
+              <button type="button" class="reader-mode-btn ${initialReaderView === 'trans' ? 'active' : ''}" data-mode="trans">中文</button>
+            </div>
+          </section>
+          <section class="reader-context-section" data-reader-tool-section="format">
+            <span class="reader-context-label">译文样式</span>
+            <div class="reader-render-style-grid" role="group" aria-label="阅读模式译文样式">
+              <button type="button" class="${savedRenderStyle === 'classic' ? 'active' : ''}" data-reader-render-style="classic"><span><b>纯净</b><small>自然留白</small></span></button>
+              <button type="button" class="${savedRenderStyle === 'card' ? 'active' : ''}" data-reader-render-style="card"><span><b>卡片</b><small>独立底色</small></span></button>
+            </div>
+            <div class="reader-card-tone-grid" data-reader-card-tones ${savedRenderStyle === 'card' ? '' : 'hidden'} aria-label="卡片底色">
+              ${[
+                ["soft-yellow","#f8e49a"],["soft-green","#bfe7d0"],["soft-purple","#dfd0ee"],
+                ["soft-orange","#f3cda4"],["soft-blue","#bed9e9"],["none","#eef0f2"]
+              ].map(([value,color]) => `<button type="button" data-reader-card-tone="${value}" class="${(currentSettings.bgHighlight || 'soft-yellow') === value ? 'active' : ''}" style="--tone:${color}" title="${value === 'none' ? '中性灰' : '切换卡片底色'}"></button>`).join("")}
+            </div>
+          </section>
+          <section class="reader-context-section" data-reader-tool-section="style">
+            <span class="reader-context-label">纸张</span>
+            <div class="reader-context-themes" aria-label="快速切换阅读主题">
+              <button type="button" data-reader-theme-quick="envelope" title="暖纸"><i style="--reader-theme-chip:#f5f0e5"></i><span>暖纸</span></button>
+              <button type="button" data-reader-theme-quick="white" title="白纸"><i style="--reader-theme-chip:#ffffff"></i><span>白纸</span></button>
+              <button type="button" data-reader-theme-quick="stone" title="石灰"><i style="--reader-theme-chip:#eeeeeb"></i><span>石灰</span></button>
+              <button type="button" data-reader-theme-quick="mint" title="浅绿"><i style="--reader-theme-chip:#edf5ef"></i><span>浅绿</span></button>
+              <button type="button" data-reader-theme-quick="mist" title="雾蓝"><i style="--reader-theme-chip:#eaf0f4"></i><span>雾蓝</span></button>
+              <button type="button" data-reader-theme-quick="lavender" title="淡紫"><i style="--reader-theme-chip:#f1eef7"></i><span>淡紫</span></button>
+              <button type="button" data-reader-theme-quick="dark" title="深色"><i style="--reader-theme-chip:#1d1f22"></i><span>深色</span></button>
+            </div>
+          </section>
+          <section class="reader-context-section reader-context-section-actions" data-reader-tool-section="info">
+            <div class="reader-context-actions">
+              <button type="button" data-reader-context-action="speak"><span>全文朗读</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="11" width="4" height="8" rx="2"/><rect x="17" y="11" width="4" height="8" rx="2"/></svg></button>
+              <button type="button" data-reader-context-action="top"><span>返回顶部</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14M7 13l5-5 5 5M12 8v12"/></svg></button>
+            </div>
+            <div class="reader-speech-player" id="reader-speech-player" hidden>
+              <div class="reader-speech-head"><span id="reader-speech-status">准备朗读</span><small id="reader-speech-count">0 / 0</small></div>
+              <div class="reader-speech-progress" aria-hidden="true"><i id="reader-speech-progress-fill"></i></div>
+              <p class="reader-speech-current" id="reader-speech-current">选择朗读后将在这里显示当前句子。</p>
+              <div class="reader-speech-controls">
+                <button type="button" data-reader-speech-action="previous" title="上一句" aria-label="上一句"><svg viewBox="0 0 24 24"><path d="M7 5v14M18 6l-8 6 8 6z"/></svg></button>
+                <button type="button" class="reader-speech-primary" data-reader-speech-action="toggle" title="暂停或继续" aria-label="暂停或继续"><svg class="reader-speech-pause-icon" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM14 5h4v14h-4z"/></svg><svg class="reader-speech-play-icon" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg></button>
+                <button type="button" data-reader-speech-action="next" title="下一句" aria-label="下一句"><svg viewBox="0 0 24 24"><path d="M17 5v14M6 6l8 6-8 6z"/></svg></button>
+                <button type="button" data-reader-speech-action="stop" title="停止朗读" aria-label="停止朗读"><svg viewBox="0 0 24 24"><path d="M7 7h10v10H7z"/></svg></button>
+              </div>
+              <div class="reader-speech-options"><label>声音<select id="reader-speech-voice"><option value="">按语种自动选择</option></select></label><label>语速<select id="reader-speech-rate"><option value="0.8">0.8 ×</option><option value="1" selected>1.0 ×</option><option value="1.2">1.2 ×</option><option value="1.5">1.5 ×</option></select></label></div>
+              <div class="reader-speech-highlight-tabs" role="group" aria-label="朗读高亮方式">
+                <button type="button" data-reader-speech-highlight="sentence">逐句</button>
+                <button type="button" data-reader-speech-highlight="word">逐词</button>
+              </div>
+            </div>
+          </section>
+          <section class="reader-context-section reader-context-info" data-reader-tool-section="info">
+            <span class="reader-context-label">文章信息</span>
+            <div class="reader-info-stats">
+              <span><b>${readerWordCount.toLocaleString()}</b><small>词语</small></span>
+              <span><b>${readerCharacterCount.toLocaleString()}</b><small>字符</small></span>
+              <span><b>${readerPunctuationCount.toLocaleString()}</b><small>标点</small></span>
+              <span><b>${readerBlockCount}</b><small>区块</small></span>
+              <span><b>${mediaEntries.length}</b><small>媒体</small></span>
+              <span><b>${headings.length}</b><small>标题</small></span>
+            </div>
+
+
+          </section>
+          <button type="button" class="reader-context-exit" data-reader-context-action="exit"><span>退出阅读模式</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H5v14h4M13 8l4 4-4 4M7 12h10"/></svg></button>
+        </aside>
 
         <div class="reader-drawer-backdrop" id="reader-drawer-backdrop" aria-hidden="true"></div>
 
         <aside class="reader-settings-drawer" id="reader-settings-drawer">
           <div class="drawer-header-row">
             <span class="drawer-title">阅读偏好设置</span>
-            <button class="dock-close-btn" id="drawer-btn-close" title="关闭设置抽屉">✕</button>
+            <button class="dock-close-btn" id="drawer-btn-close" title="收起排版设置" aria-label="收起排版设置"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 14 6-6 6 6"/></svg></button>
           </div>
 
-          <span class="drawer-section-label">阅读呈现模式</span>
-          <div class="reader-mode-tabs">
+          <span class="drawer-section-label reader-drawer-redundant">阅读呈现模式</span>
+          <div class="reader-mode-tabs reader-drawer-redundant">
             <span class="reader-tab-indicator" aria-hidden="true"></span>
             <button type="button" class="reader-mode-btn ${initialReaderView === 'orig' ? 'active' : ''}" data-mode="orig">原文</button>
             <button type="button" class="reader-mode-btn ${initialReaderView === 'bilingual' ? 'active' : ''}" data-mode="bilingual">双语</button>
             <button type="button" class="reader-mode-btn ${initialReaderView === 'trans' ? 'active' : ''}" data-mode="trans">纯中文</button>
           </div>
 
-          <span class="drawer-section-label">阅读主题</span>
-          <div class="reader-theme-swatches" id="reader-theme-swatches" aria-label="阅读主题">
+          <span class="drawer-section-label reader-drawer-redundant">阅读主题</span>
+          <div class="reader-theme-swatches reader-drawer-redundant" id="reader-theme-swatches" aria-label="阅读主题">
             <button type="button" class="reader-theme-swatch ${savedTheme === 'envelope' ? 'active' : ''}" data-theme-value="envelope" title="暖纸"><span style="background:#f5f0e5"></span></button>
             <button type="button" class="reader-theme-swatch ${savedTheme === 'white' ? 'active' : ''}" data-theme-value="white" title="白纸"><span style="background:#ffffff"></span></button>
             <button type="button" class="reader-theme-swatch ${savedTheme === 'stone' ? 'active' : ''}" data-theme-value="stone" title="石灰"><span style="background:#eeeeeb"></span></button>
@@ -3218,25 +3795,45 @@
             <button type="button" class="reader-theme-swatch ${savedTheme === 'dark' ? 'active' : ''}" data-theme-value="dark" title="深色"><span style="background:#1d1f22"></span></button>
           </div>
 
+          <div class="reader-style-toggle-grid" data-reader-tool-section="style">
           <label class="reader-drawer-switch-row" for="reader-toggle-image-shadow">
             <span><b>图片阴影</b><small>为正文配图增加轻柔层次</small></span>
             <span class="reader-drawer-switch"><input type="checkbox" id="reader-toggle-image-shadow" ${currentSettings.readerImageShadow !== false ? 'checked' : ''}><i></i></span>
           </label>
 
-          <span class="drawer-section-label">页面样式</span>
-          <div class="reader-surface-switch" id="reader-surface-switch">
-            <button type="button" class="${savedSurface === 'card' ? 'active' : ''}" data-reader-surface="card"><b>纸张</b><span>居中阅读页</span></button>
-            <button type="button" class="${savedSurface === 'flat' ? 'active' : ''}" data-reader-surface="flat"><b>铺开</b><span>直接融入背景</span></button>
-            <button type="button" class="${savedSurface === 'column' ? 'active' : ''}" data-reader-surface="column"><b>专栏</b><span>窄栏聚焦正文</span></button>
-            <button type="button" class="${savedSurface === 'folio' ? 'active' : ''}" data-reader-surface="folio"><b>书页</b><span>宽边舒展留白</span></button>
+          <label class="reader-drawer-switch-row reader-wikipedia-flow-setting" for="reader-toggle-wikipedia-flow">
+            <span><b>资料并排</b><small>宽屏时让资料卡与导言自然并排</small></span>
+            <span class="reader-drawer-switch"><input type="checkbox" id="reader-toggle-wikipedia-flow" ${currentSettings.readerWikipediaFlow === false ? '' : 'checked'}><i></i></span>
+          </label>
+
+          <label class="reader-drawer-switch-row reader-wikipedia-flow-setting" for="reader-toggle-wikipedia-magazine">
+            <span><b>杂志双栏</b><small>仅在宽屏维基百科中使用，可随时关闭</small></span>
+            <span class="reader-drawer-switch"><input type="checkbox" id="reader-toggle-wikipedia-magazine" ${currentSettings.readerWikipediaMagazine === true ? 'checked' : ''}><i></i></span>
+          </label>
           </div>
 
-          <span class="drawer-section-label">字体</span>
-          <select id="drawer-select-font" class="reader-hidden-select" tabindex="-1" aria-hidden="true">
-            <option value="system" ${savedFont === 'system' ? 'selected' : ''}>系统默认</option><option value="source-sans" ${savedFont === 'source-sans' ? 'selected' : ''}>思源黑体</option><option value="pingfang" ${savedFont === 'pingfang' ? 'selected' : ''}>苹方</option><option value="kinghwa-song" ${savedFont === 'kinghwa-song' ? 'selected' : ''}>京華老宋体</option><option value="source-serif" ${savedFont === 'source-serif' ? 'selected' : ''}>思源宋体</option><option value="lxgw-wenkai" ${savedFont === 'lxgw-wenkai' ? 'selected' : ''}>霞鹜文楷</option><option value="smiley-sans" ${savedFont === 'smiley-sans' ? 'selected' : ''}>得意黑</option><option value="kaiti" ${savedFont === 'kaiti' ? 'selected' : ''}>楷体</option><option value="georgia" ${savedFont === 'georgia' ? 'selected' : ''}>Georgia</option><option value="garamond" ${savedFont === 'garamond' ? 'selected' : ''}>EB Garamond</option>
+          <span class="drawer-section-label" data-reader-tool-section="style">页面样式</span>
+          <div class="reader-surface-switch" id="reader-surface-switch" data-reader-tool-section="style">
+            <button type="button" class="${savedSurface === 'card' ? 'active' : ''}" data-reader-surface="card"><i class="reader-page-preview preview-page-card" aria-hidden="true"><i></i><i></i><i></i></i><b>纸张</b><span>居中阅读页</span></button>
+            <button type="button" class="${savedSurface === 'flat' ? 'active' : ''}" data-reader-surface="flat"><i class="reader-page-preview preview-page-flat" aria-hidden="true"><i></i><i></i><i></i></i><b>铺开</b><span>直接融入背景</span></button>
+            <button type="button" class="${savedSurface === 'safari' ? 'active' : ''}" data-reader-surface="safari"><i class="reader-page-preview preview-page-safari" aria-hidden="true"><i></i><i></i><i></i></i><b>Safari</b><span>安静窄页</span></button>
+            <button type="button" class="${savedSurface === 'forum' ? 'active' : ''}" data-reader-surface="forum"><i class="reader-page-preview preview-page-forum" aria-hidden="true"><i></i><i></i><i></i></i><b>论坛</b><span>清晰分区</span></button>
+          </div>
+
+          <span class="drawer-section-label" data-reader-tool-section="style">表格样式</span>
+          <div class="reader-table-style-grid" data-reader-tool-section="style" role="group" aria-label="表格样式">
+            <button type="button" class="${savedTableStyle === 'clean' ? 'active' : ''}" data-reader-table-style="clean"><i class="table-preview preview-clean"></i><span>清爽</span></button>
+            <button type="button" class="${savedTableStyle === 'three-line' ? 'active' : ''}" data-reader-table-style="three-line"><i class="table-preview preview-three-line"></i><span>三线</span></button>
+            <button type="button" class="${savedTableStyle === 'striped' ? 'active' : ''}" data-reader-table-style="striped"><i class="table-preview preview-striped"></i><span>条纹</span></button>
+          </div>
+
+          <span class="drawer-section-label" data-reader-tool-section="format">字体</span>
+          <select id="drawer-select-font" class="reader-hidden-select" aria-label="阅读字体" data-reader-tool-section="format">
+            <option value="auto" ${savedFont === "auto" ? "selected" : ""}>按语种适配</option><option value="system" ${savedFont === 'system' ? 'selected' : ''}>系统默认</option><option value="source-sans" ${savedFont === 'source-sans' ? 'selected' : ''}>思源黑体</option><option value="pingfang" ${savedFont === 'pingfang' ? 'selected' : ''}>苹方</option><option value="kinghwa-song" ${savedFont === 'kinghwa-song' ? 'selected' : ''}>京華老宋体</option><option value="source-serif" ${savedFont === 'source-serif' ? 'selected' : ''}>思源宋体</option><option value="lxgw-wenkai" ${savedFont === 'lxgw-wenkai' ? 'selected' : ''}>霞鹜文楷</option><option value="smiley-sans" ${savedFont === 'smiley-sans' ? 'selected' : ''}>得意黑</option><option value="kaiti" ${savedFont === 'kaiti' ? 'selected' : ''}>楷体</option><option value="georgia" ${savedFont === 'georgia' ? 'selected' : ''}>Georgia</option><option value="garamond" ${savedFont === 'garamond' ? 'selected' : ''}>EB Garamond</option>
           </select>
-          <div class="reader-font-grid" id="reader-font-grid">
-            <button type="button" class="reader-font-card ${savedFont === 'system' ? 'active' : ''}" data-value="system" style="--sample-font:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif"><span>系统默认</span><b>清 Aa 123</b></button>
+          <div class="reader-font-grid" id="reader-font-grid" data-reader-tool-section="format">
+            <button type="button" class="reader-font-card ${savedFont === 'auto' ? 'active' : ''}" data-value="auto" style="--sample-font:system-ui"><span>按语种适配</span><b>文 あ Aa</b></button>
+            <button type="button" class="reader-font-card ${savedFont === 'system' ? 'active' : ''}" data-value="system" style="--sample-font:-apple-system,BlinkMacSystemFont,'PingFang SC','Source Han Sans SC',sans-serif"><span>系统默认</span><b>清 Aa 123</b></button>
             <button type="button" class="reader-font-card ${savedFont === 'source-sans' ? 'active' : ''}" data-value="source-sans" style="--sample-font:'Source Han Sans SC','PingFang SC',sans-serif"><span>思源黑体</span><b>清 Aa 123</b></button>
             <button type="button" class="reader-font-card ${savedFont === 'pingfang' ? 'active' : ''}" data-value="pingfang" style="--sample-font:'PingFang SC',sans-serif"><span>苹方</span><b>清 Aa 123</b></button>
             <button type="button" class="reader-font-card ${savedFont === 'kinghwa-song' ? 'active' : ''}" data-value="kinghwa-song" style="--sample-font:'KingHwa_OldSong','STSong',serif"><span>京華老宋体</span><b>清 Aa 123</b></button>
@@ -3248,30 +3845,30 @@
             <button type="button" class="reader-font-card ${savedFont === 'garamond' ? 'active' : ''}" data-value="garamond" style="--sample-font:'EB Garamond',Garamond,serif"><span>EB Garamond</span><b>Aa 123</b></button>
           </div>
 
-          <span class="drawer-section-label">正文宽度</span>
-          <div class="drawer-slider-row">
+          <span class="drawer-section-label" data-reader-tool-section="style">正文宽度</span>
+          <div class="drawer-slider-row" data-reader-tool-section="style">
             <input type="range" id="drawer-width-slider" class="drawer-slider" min="580" max="1100" step="20" value="${savedWidth}">
             <span class="drawer-slider-val" id="drawer-width-val">${savedWidth}px</span>
           </div>
-          <div class="drawer-preset-chips">
-            <button type="button" class="preset-chip" data-width="640">紧凑 640px</button>
-            <button type="button" class="preset-chip" data-width="780">标准 780px</button>
-            <button type="button" class="preset-chip" data-width="920">宽松 920px</button>
-            <button type="button" class="preset-chip" data-width="1060">宽屏 1060px</button>
+          <div class="drawer-preset-chips" data-reader-tool-section="style">
+            <button type="button" class="preset-chip" data-width="640">紧凑</button>
+            <button type="button" class="preset-chip" data-width="780">标准</button>
+            <button type="button" class="preset-chip" data-width="920">宽松</button>
+            <button type="button" class="preset-chip" data-width="1060">宽屏</button>
           </div>
 
-          <span class="drawer-section-label">字号</span>
-          <div class="dock-stepper-row reader-size-row">
+          <span class="drawer-section-label" data-reader-tool-section="format">字号</span>
+          <div class="dock-stepper-row reader-size-row" data-reader-tool-section="format">
             <button class="dock-mini-btn" id="drawer-btn-font-dec" title="缩小字号">A−</button>
             <span class="reader-size-value" id="drawer-font-size-val">${currentSettings.readerFontSize || '17.5'}px</span>
             <button class="dock-mini-btn" id="drawer-btn-font-inc" title="放大字号">A+</button>
           </div>
 
-          <button type="button" class="reader-advanced-toggle open" id="reader-advanced-toggle" aria-expanded="true">
+          <button type="button" class="reader-advanced-toggle" id="reader-advanced-toggle" aria-expanded="true" data-reader-tool-section="format">
             <span>高级排版</span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m7 10 5 5 5-5"/></svg>
           </button>
-          <div class="reader-advanced-panel open" id="reader-advanced-panel">
+          <div class="reader-advanced-panel open" id="reader-advanced-panel" data-reader-tool-section="format">
             <span class="drawer-section-label">行距</span>
             <div class="drawer-slider-row">
               <input type="range" id="drawer-lineheight-slider" class="drawer-slider" min="1.45" max="2.2" step="0.05" value="${savedLineHeight}">
@@ -3286,23 +3883,24 @@
 
             <span class="drawer-section-label">排版方向</span>
             <div class="reader-writing-tabs" id="reader-writing-tabs">
+              <span class="reader-tab-indicator" aria-hidden="true"></span>
               <button type="button" class="reader-writing-btn ${savedWritingMode === 'horizontal' ? 'active' : ''}" data-writing="horizontal">横排</button>
               <button type="button" class="reader-writing-btn reader-writing-vertical ${savedWritingMode === 'vertical' ? 'active' : ''}" data-writing="vertical">竖排</button>
             </div>
           </div>
 
-          <div class="reader-visibility-controls">
-            <label><span>阅读进度条</span><input type="checkbox" id="reader-toggle-progress" ${currentSettings.readerProgressVisible === false ? "" : "checked"}></label>
-            <label><span>标题信息</span><input type="checkbox" id="reader-toggle-meta" ${currentSettings.readerMetaVisible === false ? "" : "checked"}></label>
+          <div class="reader-visibility-controls" data-reader-tool-section="info">
+            <label><span>阅读进度条</span><span class="reader-info-switch"><input type="checkbox" id="reader-toggle-progress" ${currentSettings.readerProgressVisible === false ? "" : "checked"}><i aria-hidden="true"></i></span></label>
+            <label><span>标题信息</span><span class="reader-info-switch"><input type="checkbox" id="reader-toggle-meta" ${currentSettings.readerMetaVisible === false ? "" : "checked"}><i aria-hidden="true"></i></span></label>
           </div>
 
-          <span class="drawer-section-label">快捷工具</span>
-          <button class="drawer-item-btn" id="drawer-btn-speak">
+          <span class="drawer-section-label reader-drawer-quick-label" data-reader-tool-section="info">快捷工具</span>
+          <button class="drawer-item-btn reader-drawer-quick-action" id="drawer-btn-speak" data-reader-tool-section="info">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
             <span>全文朗读</span>
           </button>
 
-          <div class="reader-export-wrap reader-export-direct">
+          <div class="reader-export-wrap reader-export-direct" data-reader-tool-section="info">
             <span class="drawer-section-label">导出文章</span>
             <div class="reader-export-direct-grid" id="reader-export-menu">
               <button type="button" data-format="md"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="m7 15 2-6 2 6 2-6 2 6"/></svg><span>Markdown</span></button>
@@ -3312,16 +3910,45 @@
             </div>
           </div>
 
-          <button class="drawer-item-btn" id="drawer-btn-copy">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-            <span>复制全文译文</span>
-          </button>
+          <div class="reader-copy-grid reader-export-direct-grid" data-reader-tool-section="info">
+            <button type="button" data-reader-copy="orig"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></svg><span>复制全文</span></button>
+            <button type="button" id="drawer-btn-copy" data-reader-copy="trans"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></svg><span>复制译文</span></button>
+            <button type="button" data-reader-copy="bilingual"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/></svg><span>复制双语</span></button>
+          </div>
+          <section id="reader-notes-panel" data-reader-tool-section="notes"></section>
         </aside>
       </div>
     `;
 
     document.documentElement.appendChild(root);
     readerRoot = root;
+    const languageForText = text => {
+      if (/[ぁ-ゟ゠-ヿ]/u.test(text)) return "ja";
+      if (/[가-힣]/u.test(text)) return "ko";
+      if (/[\u0600-\u06ff]/u.test(text)) return "ar";
+      if (/[\u0590-\u05ff]/u.test(text)) return "he";
+      if (/[一-鿿]/u.test(text)) return /^(ja|zh)/i.test(articleLanguage) ? articleLanguage : "zh-CN";
+      if (/[A-Za-z]/.test(text) && /^(ja|zh|ko)/i.test(articleLanguage)) return "en";
+      return articleLanguage;
+    };
+    root.querySelectorAll(".reader-orig-p").forEach(node => { node.lang = languageForText(node.textContent || ""); });
+    root.querySelectorAll(".reader-trans-p").forEach(node => { node.lang = currentSettings.targetLang || "zh-CN"; });
+    root.querySelector(".reader-title").lang = articleLanguage;
+    if(redditComments.length){
+      const commentSet=new Set(redditComments);let commentIndex=0;
+      const renderComment=comment=>{
+        const author=comment.getAttribute('author')||comment.querySelector('.author')?.textContent||'回复';
+        const candidates=[...comment.querySelectorAll('[slot="comment"],.usertext-body,.md')];
+        const body=candidates.find(node=>node.closest('shreddit-comment,.thing.comment')===comment);
+        const children=redditComments.filter(child=>child.parentElement?.closest('shreddit-comment,.thing.comment')===comment);
+        const index=commentIndex++;
+        return `<details class="reader-forum-reply" open><summary>${escapeHtml(author)}<small>${children.length?`${children.length} 条回复`:'回复'}</small></summary>${body?readerPairHtml({id:`reddit_${index}`,originalHtml:readerInlineHtml(body)||escapeHtml(body.textContent),renderStyle:savedRenderStyle}):''}${children.map(renderComment).join('')}</details>`;
+      };
+      const section=document.createElement('section');section.className='reader-forum-discussion';section.innerHTML='<h2>讨论</h2>'+redditComments.filter(comment=>!commentSet.has(comment.parentElement?.closest('shreddit-comment,.thing.comment'))).map(renderComment).join('');
+      root.querySelector('#reader-content').append(section);
+    }
+    initializeReaderCharts(root);
+    globalThis.JijianReaderShare?.attach(root, { title, url:location.href });
     isReaderOpen = true;
     root.addEventListener("click", (event) => {
       const target = event.target?.closest?.('.reader-trans-p[data-render-style="click-reveal"]');
@@ -3330,34 +3957,33 @@
     });
 
     const settingsDrawer = root.querySelector("#reader-settings-drawer");
+    const toolsPanel = root.querySelector("#reader-context-panel");
+    const contextExitButton = root.querySelector(".reader-context-exit");
+    if (settingsDrawer && toolsPanel) {
+      settingsDrawer.classList.add("reader-settings-inline", "open");
+      toolsPanel.insertBefore(settingsDrawer, contextExitButton || null);
+    }
+    const toolsScroll = document.createElement("div");
+    toolsScroll.className = "reader-tools-scroll";
+    const toolHeader = toolsPanel.querySelector(".reader-context-header");
+    const toolTabs = toolsPanel.querySelector(".reader-tool-tabs");
+    Array.from(toolsPanel.children).forEach(child => {
+      if (child !== toolHeader && child !== toolTabs && child !== contextExitButton && !child.classList.contains("reader-context-resizer")) toolsScroll.append(child);
+    });
+    toolsPanel.insertBefore(toolsScroll, contextExitButton);
+    globalThis.JijianReaderNotes?.attach(root, {title, url:location.href});
     const scrollArea = root.querySelector("#reader-scroll-area");
     const cardElement = root.querySelector("#reader-scroll-card");
     const readerAdvancedToggle = root.querySelector("#reader-advanced-toggle");
     const readerAdvancedPanel = root.querySelector("#reader-advanced-panel");
 
     if (readerAdvancedToggle && readerAdvancedPanel) {
-      readerAdvancedPanel.classList.add("open");
-      readerAdvancedToggle.classList.add("open");
-      readerAdvancedToggle.setAttribute("aria-expanded", "true");
       readerAdvancedToggle.addEventListener("click", () => {
         const open = readerAdvancedPanel.classList.toggle("open");
         readerAdvancedToggle.classList.toggle("open", open);
         readerAdvancedToggle.setAttribute("aria-expanded", String(open));
       });
     }
-
-    const syncReaderTabIndicator = (container, buttonSelector) => {
-      if (!container) return;
-      const active = container.querySelector(`${buttonSelector}.active`);
-      const indicator = container.querySelector(".reader-tab-indicator");
-      if (!active || !indicator) return;
-      indicator.style.width = `${active.offsetWidth}px`;
-      indicator.style.transform = `translateX(${active.offsetLeft}px)`;
-    };
-    const readerModeTabs = root.querySelector(".reader-mode-tabs");
-    const readerWritingTabs = root.querySelector(".reader-writing-tabs");
-    syncReaderTabIndicator(readerModeTabs, ".reader-mode-btn");
-    syncReaderTabIndicator(readerWritingTabs, ".reader-writing-btn");
 
     let readerFontSize = parseFloat(currentSettings.readerFontSize) || 17.5;
     const applyReaderTypography = () => {
@@ -3379,24 +4005,25 @@
     if (outlineResizer && outlinePanel) {
       outlineResizer.addEventListener("pointerdown", (event) => {
         event.preventDefault();
+        event.stopPropagation();
         const startX = event.clientX;
         const startWidth = outlinePanel.getBoundingClientRect().width;
-        outlineResizer.setPointerCapture?.(event.pointerId);
+        root.classList.add("reader-outline-resizing");
         const move = (ev) => {
-          const width = Math.max(190, Math.min(380, Math.round(startWidth + ev.clientX - startX)));
+          const width = Math.max(230, Math.min(420, Math.round(startWidth + ev.clientX - startX)));
           root.style.setProperty("--reader-outline-width", `${width}px`);
           currentSettings.readerOutlineWidth = width;
         };
-        const up = (ev) => {
-          outlineResizer.releasePointerCapture?.(ev.pointerId);
-          outlineResizer.removeEventListener("pointermove", move);
-          outlineResizer.removeEventListener("pointerup", up);
-          outlineResizer.removeEventListener("pointercancel", up);
+        const up = () => {
+          root.classList.remove("reader-outline-resizing");
+          window.removeEventListener("pointermove", move, true);
+          window.removeEventListener("pointerup", up, true);
+          window.removeEventListener("pointercancel", up, true);
           chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ readerOutlineWidth: currentSettings.readerOutlineWidth } }).catch(()=>{});
         };
-        outlineResizer.addEventListener("pointermove", move);
-        outlineResizer.addEventListener("pointerup", up);
-        outlineResizer.addEventListener("pointercancel", up);
+        window.addEventListener("pointermove", move, true);
+        window.addEventListener("pointerup", up, true);
+        window.addEventListener("pointercancel", up, true);
       });
     }
     const toggleOutlineBtn = root.querySelector("#reader-btn-toggle-outline");
@@ -3404,9 +4031,10 @@
 
     const setOutlineCollapsedState = (collapsed) => {
       if (!outlinePanel) return;
+      root.classList.toggle("reader-nav-collapsed", collapsed);
       if (collapsed) {
         outlinePanel.classList.add("collapsed");
-        if (expandOutlineFloatingBtn) expandOutlineFloatingBtn.style.display = "block";
+        if (expandOutlineFloatingBtn) expandOutlineFloatingBtn.style.display = "flex";
       } else {
         outlinePanel.classList.remove("collapsed");
         if (expandOutlineFloatingBtn) expandOutlineFloatingBtn.style.display = "none";
@@ -3425,18 +4053,228 @@
       expandOutlineFloatingBtn.addEventListener("click", () => setOutlineCollapsedState(false));
     }
 
+    const toggleToolsBtn = root.querySelector("#reader-btn-toggle-tools");
+    const expandToolsFloatingBtn = root.querySelector("#reader-btn-expand-tools");
+    const toolsResizer = root.querySelector("#reader-context-resizer");
+    if (toolsResizer && toolsPanel) {
+      toolsResizer.addEventListener("pointerdown", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const startX = event.clientX;
+        const startWidth = toolsPanel.getBoundingClientRect().width;
+        root.classList.add("reader-tools-resizing");
+        const move = ev => {
+          const width = Math.max(260, Math.min(420, Math.round(startWidth + startX - ev.clientX)));
+          root.style.setProperty("--reader-tools-width", `${width}px`);
+          currentSettings.readerToolsWidth = width;
+        };
+        const up = () => {
+          root.classList.remove("reader-tools-resizing");
+          window.removeEventListener("pointermove", move, true);
+          window.removeEventListener("pointerup", up, true);
+          window.removeEventListener("pointercancel", up, true);
+          chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ readerToolsWidth:currentSettings.readerToolsWidth } }).catch(() => {});
+        };
+        window.addEventListener("pointermove", move, true);
+        window.addEventListener("pointerup", up, true);
+        window.addEventListener("pointercancel", up, true);
+      });
+    }
+    const setToolsCollapsedState = (collapsed) => {
+      root.classList.toggle("reader-tools-collapsed", collapsed);
+      if (collapsed) root.classList.remove("reader-settings-open");
+      toolsPanel?.classList.toggle("collapsed", collapsed);
+      if (expandToolsFloatingBtn) expandToolsFloatingBtn.style.display = collapsed ? "flex" : "none";
+      currentSettings.readerToolsCollapsed = collapsed;
+      chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ readerToolsCollapsed:collapsed } }).catch(() => {});
+    };
+    toggleToolsBtn?.addEventListener("click", () => setToolsCollapsedState(true));
+    expandToolsFloatingBtn?.addEventListener("click", () => setToolsCollapsedState(false));
+
+    const setDrawerOpen = open => {
+      if (!settingsDrawer) return;
+      settingsDrawer.classList.toggle("open", open);
+      root.classList.toggle("reader-settings-open", open);
+      root.querySelectorAll("[data-reader-open-settings]").forEach(button => button.setAttribute("aria-expanded", String(open)));
+    };
     const openDrawer = () => {
-      settingsDrawer.classList.add("open");
-      root.classList.add("reader-settings-open");
+      setToolsCollapsedState(false);
+      setDrawerOpen(true);
     };
+    const closeDrawer = () => setDrawerOpen(false);
 
-    const closeDrawer = () => {
-      settingsDrawer.classList.remove("open");
-      root.classList.remove("reader-settings-open");
+    root.querySelectorAll("#reader-btn-open-settings,[data-reader-open-settings]").forEach(button => button.addEventListener("click", openDrawer));
+    root.querySelector("#drawer-btn-close")?.addEventListener("click", closeDrawer);
+
+    const selectReaderNavTab = (selected) => {
+      const next = ["outline", "search", "media"].includes(selected) ? selected : "outline";
+      const tabs = root.querySelector(".reader-navigator-tabs");
+      tabs?.setAttribute("data-active-tab", next);
+      root.querySelectorAll("[data-reader-nav-tab]").forEach(tab => {
+        const active = tab.dataset.readerNavTab === next;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+      });
+      root.querySelectorAll("[data-reader-nav-view]").forEach(view => view.classList.toggle("active", view.dataset.readerNavView === next));
+      if (next === "search") requestAnimationFrame(() => root.querySelector("#reader-nav-search-input")?.focus());
     };
+    root.querySelectorAll("[data-reader-nav-tab]").forEach(button => button.addEventListener("click", () => {
+      if (!button.disabled) selectReaderNavTab(button.dataset.readerNavTab || "outline");
+    }));
 
-    root.querySelector("#reader-btn-open-settings").addEventListener("click", openDrawer);
-    root.querySelector("#drawer-btn-close").addEventListener("click", closeDrawer);
+    const selectReaderToolTab = (selected) => {
+      const next = ["format", "style", "info", "notes"].includes(selected) ? selected : "format";
+      toolsPanel?.setAttribute("data-active-tool", next);
+      const tabs = root.querySelector(".reader-tool-tabs");
+      tabs?.setAttribute("data-active-tool-tab", next);
+      root.querySelectorAll("[data-reader-tool-tab]").forEach(tab => {
+        const active = tab.dataset.readerToolTab === next;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+      });
+      if (settingsDrawer?.classList.contains("reader-settings-inline")) settingsDrawer.classList.add("open");
+    };
+    root.querySelectorAll("[data-reader-tool-tab]").forEach(button => button.addEventListener("click", () => selectReaderToolTab(button.dataset.readerToolTab || "format")));
+
+    const readerSearchInput = root.querySelector("#reader-nav-search-input");
+    const readerSearchStatus = root.querySelector("#reader-nav-search-status");
+    const readerSearchResults = root.querySelector("#reader-search-results");
+    const readerSearchTargets = Array.from(root.querySelectorAll(".reader-paragraph-pair"));
+    readerSearchTargets.forEach((target, index) => { if (!target.id) target.id = `reader_search_target_${index}`; });
+    const readerSearchLocation = node => {
+      const targetPosition = readerSearchTargets.indexOf(node);
+      if (node.matches?.('.reader-paragraph-pair[data-heading="true"]')) {
+        return String(node.querySelector(".reader-orig-p")?.innerText || "章节标题").replace(/\s+/g, " ").trim().slice(0, 42);
+      }
+      for (let position = targetPosition - 1; position >= 0; position -= 1) {
+        const candidate = readerSearchTargets[position];
+        if (!candidate.matches?.('.reader-paragraph-pair[data-heading="true"]')) continue;
+        const headingText = String(candidate.querySelector(".reader-orig-p")?.innerText || "").replace(/\s+/g, " ").trim();
+        if (headingText) return `${headingText.slice(0, 34)} · 第 ${targetPosition + 1} 段`;
+      }
+      return `文章开头 · 第 ${targetPosition + 1} 段`;
+    };
+    let readerSearchIndex = -1;
+    let readerSearchMatches = [];
+    const clearReaderSearchHit = () => root.querySelectorAll(".reader-search-hit").forEach(node => node.classList.remove("reader-search-hit"));
+    const scrollReaderTarget = (targetEl, offset = 28) => {
+      if (!targetEl) return;
+      root.classList.add("reader-navigation-measured");
+      const vertical = root.getAttribute("data-writing-mode") === "vertical";
+      const areaRect = scrollArea.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      if (vertical) {
+        const nextLeft = scrollArea.scrollLeft + targetRect.right - areaRect.right + 32;
+        const longJump = Math.abs(nextLeft - scrollArea.scrollLeft) > scrollArea.clientWidth * 2;
+        scrollArea.scrollTo({ left:nextLeft, behavior:longJump ? "auto" : "smooth" });
+      } else {
+        const nextTop = scrollArea.scrollTop + targetRect.top - areaRect.top - offset;
+        const boundedTop = Math.max(0, nextTop);
+        const longJump = Math.abs(boundedTop - scrollArea.scrollTop) > scrollArea.clientHeight * 2;
+        scrollArea.scrollTo({ top:boundedTop, behavior:longJump ? "auto" : "smooth" });
+      }
+    };
+    const updateReaderSearchMatches = () => {
+      const query = String(readerSearchInput?.value || "").trim();
+      clearReaderSearchHit();
+      CSS.highlights?.delete("reader-search-match");
+      CSS.highlights?.delete("reader-search-current");
+      readerSearchIndex = -1;
+      readerSearchMatches = [];
+      if (query) {
+        // Match the visible text stream, including words split by inline markup.
+        // RegExp indices refer to the original UTF-16 text even for case folding.
+        const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const pattern = new RegExp(escaped, "giu");
+        for (const block of readerSearchTargets) {
+          for (const paragraph of block.querySelectorAll(":scope > .reader-orig-p, :scope > .reader-trans-p")) {
+            if (!paragraph.checkVisibility()) continue;
+            const nodes = [];
+            let text = "";
+            const walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT);
+            while (walker.nextNode()) {
+              const node = walker.currentNode;
+              if (!node.parentElement.checkVisibility() || node.parentElement.closest("rt,rp,button,[aria-hidden='true']")) continue;
+              nodes.push({ node, start:text.length, end:text.length + node.length });
+              text += node.textContent;
+            }
+            pattern.lastIndex = 0;
+            let match;
+            while ((match = pattern.exec(text))) {
+              const end = match.index + match[0].length;
+              const first = nodes.find(entry => entry.end > match.index);
+              const last = nodes.find(entry => entry.end >= end);
+              if (!first || !last) continue;
+              const range = document.createRange();
+              range.setStart(first.node, match.index - first.start);
+              range.setEnd(last.node, end - last.start);
+              readerSearchMatches.push({ block, range, before:text.slice(Math.max(0, match.index - 32), match.index), hit:match[0], after:text.slice(end, end + 72) });
+            }
+          }
+        }
+      }
+      if (CSS.highlights && globalThis.Highlight) {
+        CSS.highlights.set("reader-search-match", new Highlight(...readerSearchMatches.map(hit => hit.range)));
+      }
+      if (readerSearchStatus) readerSearchStatus.textContent = query ? (readerSearchMatches.length ? `${readerSearchMatches.length} 处匹配` : "没有匹配内容") : "";
+      renderReaderSearchResults();
+    };
+    const renderReaderSearchResults = () => {
+      if (!readerSearchResults) return;
+      // Window the list around the current match; keyboard navigation reaches all hits.
+      const start = Math.max(0, readerSearchIndex - 20);
+      readerSearchResults.innerHTML = readerSearchMatches.slice(start, start + 60).map((hit, offset) => {
+        const index = start + offset;
+        return `<button type="button" class="reader-search-result ${index === readerSearchIndex ? "active" : ""}" data-search-index="${index}"><small>${index + 1}</small><span><b>${escapeHtml(readerSearchLocation(hit.block))}</b><em>${escapeHtml(hit.before)}<mark>${escapeHtml(hit.hit)}</mark>${escapeHtml(hit.after)}</em></span></button>`;
+      }).join("") || `<div class="reader-nav-empty">${readerSearchInput?.value.trim() ? "没有匹配内容。" : "输入文字，定位每一处匹配。"}</div>`;
+    };
+    const selectReaderSearch = index => {
+      if (!readerSearchMatches.length) return;
+      readerSearchIndex = (index + readerSearchMatches.length) % readerSearchMatches.length;
+      const hit = readerSearchMatches[readerSearchIndex];
+      clearReaderSearchHit();
+      hit.block.classList.add("reader-search-hit");
+      hit.range.startContainer.parentElement.closest("details")?.setAttribute("open", "");
+      if (CSS.highlights && globalThis.Highlight) CSS.highlights.set("reader-search-current", new Highlight(hit.range));
+      const tableViewport = hit.block.closest(".reader-table-scroll");
+      if (tableViewport) {
+        const hitRect = hit.range.getBoundingClientRect();
+        const viewportRect = tableViewport.getBoundingClientRect();
+        if (hitRect.left < viewportRect.left || hitRect.right > viewportRect.right) {
+          tableViewport.scrollLeft += hitRect.left - viewportRect.left - 24;
+        }
+      }
+      scrollReaderTarget(hit.range, Math.round(scrollArea.clientHeight * .25));
+      renderReaderSearchResults();
+      if (readerSearchStatus) readerSearchStatus.textContent = `${readerSearchIndex + 1} / ${readerSearchMatches.length} · Shift + 回车向前`;
+    };
+    readerSearchInput?.addEventListener("input", updateReaderSearchMatches);
+    readerSearchInput?.addEventListener("keydown", event => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      selectReaderSearch(readerSearchIndex < 0 ? (event.shiftKey ? readerSearchMatches.length - 1 : 0) : readerSearchIndex + (event.shiftKey ? -1 : 1));
+    });
+    readerSearchResults?.addEventListener("click", event => {
+      const button = event.target.closest("[data-search-index]");
+      if (button) selectReaderSearch(Number(button.dataset.searchIndex));
+    });
+    let searchRefreshTimer;
+    const searchObserver = new MutationObserver(() => {
+      if (!readerSearchInput?.value.trim()) return;
+      clearTimeout(searchRefreshTimer);
+      searchRefreshTimer = setTimeout(updateReaderSearchMatches, 120);
+    });
+    searchObserver.observe(root.querySelector("#reader-content"), { childList:true, characterData:true, subtree:true });
+    searchObserver.observe(root, { attributes:true, attributeFilter:["data-reader-view"] });
+    root.cleanupReaderSearch = () => { searchObserver.disconnect(); clearTimeout(searchRefreshTimer); };
+
+    root.querySelectorAll("[data-reader-context-action]").forEach(button => {
+      button.addEventListener("click", () => {
+        if (button.dataset.readerContextAction === "top") scrollArea.scrollTo({ top:0, left:0, behavior:"smooth" });
+        if (button.dataset.readerContextAction === "speak") root.querySelector("#drawer-btn-speak")?.click();
+        if (button.dataset.readerContextAction === "exit") closeReaderMode();
+      });
+    });
 
     const progressToggle = root.querySelector("#reader-toggle-progress");
     const metaToggle = root.querySelector("#reader-toggle-meta");
@@ -3456,6 +4294,15 @@
 
     const topProgBar = root.querySelector("#reader-top-progress-bar");
     const pctBadge = root.querySelector("#reader-progress-pct-badge");
+    const updateReaderOutlineActiveState = (activeHeadId) => {
+      const activeItem = root.querySelector(`.reader-outline-item[data-target-id="${CSS.escape(activeHeadId || "")}"]`);
+      const ancestorIds = new Set(String(activeItem?.dataset.ancestorIds || "").split(/\s+/).filter(Boolean));
+      root.querySelectorAll(".reader-outline-item").forEach(item => {
+        const targetId = item.getAttribute("data-target-id") || "";
+        item.classList.toggle("active-heading", targetId === activeHeadId);
+        item.classList.toggle("active-ancestor", ancestorIds.has(targetId));
+      });
+    };
 
     scrollArea.addEventListener("scroll", () => {
       const isVerticalWriting = root.getAttribute("data-writing-mode") === "vertical";
@@ -3467,23 +4314,27 @@
       const boundedPct = Math.min(100, Math.max(0, pct));
       if (topProgBar) topProgBar.style.width = `${boundedPct}%`;
       if (pctBadge) pctBadge.textContent = `已读 ${Math.round(boundedPct)}%`;
+      const contextProgress = root.querySelector("#reader-context-progress");
+      if (contextProgress) contextProgress.textContent = `${Math.round(boundedPct)}%`;
 
-      const headingPairs = root.querySelectorAll(".reader-paragraph-pair[data-heading='true']");
+      const headingPairs = Array.from(root.querySelectorAll(".reader-paragraph-pair[data-heading='true']"));
       let activeHeadId = "";
+      let bestDistance = Infinity;
+      const areaRect = scrollArea.getBoundingClientRect();
+      const readingAnchor = isVerticalWriting ? areaRect.right - 42 : areaRect.top + 42;
       headingPairs.forEach(pair => {
         const rect = pair.getBoundingClientRect();
-        const inReadingEdge = isVerticalWriting
-          ? rect.right <= window.innerWidth && rect.right >= window.innerWidth - 260
-          : rect.top >= 0 && rect.top <= 200;
-        if (inReadingEdge) activeHeadId = pair.id;
+        const edge = isVerticalWriting ? rect.right : rect.top;
+        const passed = isVerticalWriting ? edge >= readingAnchor : edge <= readingAnchor;
+        if (!passed) return;
+        const distance = Math.abs(edge - readingAnchor);
+        if (distance < bestDistance) { bestDistance = distance; activeHeadId = pair.id; }
       });
-
-      if (activeHeadId) {
-        root.querySelectorAll(".reader-outline-item").forEach(item => {
-          item.classList.toggle("active-heading", item.getAttribute("data-target-id") === activeHeadId);
-        });
-      }
+      if (!activeHeadId && headingPairs.length) activeHeadId = headingPairs[0].id;
+      updateReaderOutlineActiveState(root.dataset.readerOutlinePinned || activeHeadId);
     }, { passive: true });
+    ["wheel","touchstart","pointerdown"].forEach(type=>scrollArea.addEventListener(type,()=>delete root.dataset.readerOutlinePinned,{passive:true}));
+    scrollArea.addEventListener("keydown",event=>{if(["ArrowDown","ArrowUp","PageDown","PageUp","Home","End"," "].includes(event.key))delete root.dataset.readerOutlinePinned;});
 
     const applyReaderViewMode = (requestedMode, { persistDisplayMode = false } = {}) => {
       if (!root?.isConnected) return;
@@ -3491,7 +4342,6 @@
       root.querySelectorAll(".reader-mode-btn").forEach(btn => {
         btn.classList.toggle("active", btn.getAttribute("data-mode") === mode);
       });
-      syncReaderTabIndicator(readerModeTabs, ".reader-mode-btn");
       root.setAttribute("data-reader-view", mode);
 
       const statusText = root.querySelector("#reader-mode-status-text");
@@ -3505,12 +4355,12 @@
         requestReaderTranslation();
         const titleEl = root.querySelector(".reader-title");
         sendDictionaryRuntimeMessage({action:"TRANSLATE_SINGLE_BLOCK",text:title,sl:"auto",tl:currentSettings.targetLang || "zh-CN"}, res => {
-          if (titleEl && res?.success && res.text && res.text.trim().length < 180 && root.getAttribute("data-reader-view") === "trans") titleEl.textContent = res.text.trim();
+          if (titleEl && res?.success && res.text && res.text.trim().length < 180 && root.getAttribute("data-reader-view") === "trans") { titleEl.textContent = res.text.trim(); titleEl.lang = currentSettings.targetLang || "zh-CN"; }
         });
       }
       if (mode === "orig" || mode === "bilingual") {
         const titleEl = root.querySelector(".reader-title");
-        if (titleEl) titleEl.textContent = title;
+        if (titleEl) { titleEl.textContent = title; titleEl.lang = articleLanguage; }
       }
 
       if (persistDisplayMode && mode !== "orig") {
@@ -3527,12 +4377,40 @@
     });
 
     // 偏好持久化监听
-    root.querySelectorAll(".reader-theme-swatch").forEach(btn => btn.addEventListener("click", () => {
-      const val = btn.dataset.themeValue || "envelope";
+    const applyReaderThemeChoice = (val) => {
       root.setAttribute("data-theme", val);
-      root.querySelectorAll(".reader-theme-swatch").forEach(b => b.classList.toggle("active", b === btn));
+      root.querySelectorAll(".reader-theme-swatch").forEach(b => b.classList.toggle("active", b.dataset.themeValue === val));
+      root.querySelectorAll("[data-reader-theme-quick]").forEach(b => b.classList.toggle("active", b.dataset.readerThemeQuick === val));
       currentSettings.readerTheme = val;
       chrome.runtime.sendMessage({ action: "UPDATE_SETTINGS", settings: { readerTheme: val } });
+    };
+    root.querySelectorAll(".reader-theme-swatch").forEach(btn => btn.addEventListener("click", () => applyReaderThemeChoice(btn.dataset.themeValue || "envelope")));
+    root.querySelectorAll("[data-reader-theme-quick]").forEach(btn => btn.addEventListener("click", () => applyReaderThemeChoice(btn.dataset.readerThemeQuick || "envelope")));
+    root.querySelectorAll("[data-reader-theme-quick]").forEach(b => b.classList.toggle("active", b.dataset.readerThemeQuick === savedTheme));
+    const applyReaderRenderStyleChoice = (value) => {
+      const style = readerRenderStyleValues.has(value) ? value : "classic";
+      root.setAttribute("data-reader-render-style", style);
+      root.querySelectorAll(".reader-trans-p").forEach(node => {
+        node.dataset.renderStyle = style;
+        node.classList.remove("raccoon-revealed");
+      });
+      root.querySelectorAll("[data-reader-render-style]").forEach(button => button.classList.toggle("active", button.dataset.readerRenderStyle === style));
+      root.querySelector("[data-reader-card-tones]")?.toggleAttribute("hidden", style !== "card");
+      currentSettings.readerRenderStyle = style;
+      chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ readerRenderStyle:style } }).catch(() => {});
+    };
+    root.querySelectorAll("[data-reader-render-style]").forEach(button => button.addEventListener("click", () => applyReaderRenderStyleChoice(button.dataset.readerRenderStyle)));
+    const readerCardToneColors = {
+      "soft-yellow":"rgba(254,240,138,.28)","soft-green":"rgba(187,247,208,.30)",
+      "soft-purple":"rgba(233,213,255,.28)","soft-orange":"rgba(254,215,170,.30)",
+      "soft-blue":"rgba(191,219,254,.30)","none":"rgba(100,116,139,.055)"
+    };
+    root.querySelectorAll("[data-reader-card-tone]").forEach(button => button.addEventListener("click", () => {
+      const value = button.dataset.readerCardTone || "soft-yellow";
+      root.style.setProperty("--reader-translation-card-bg", readerCardToneColors[value] || readerCardToneColors["soft-yellow"]);
+      root.querySelectorAll("[data-reader-card-tone]").forEach(item => item.classList.toggle("active", item === button));
+      currentSettings.bgHighlight = value;
+      chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ bgHighlight:value } }).catch(() => {});
     }));
     const readerImageShadowToggle = root.querySelector("#reader-toggle-image-shadow");
     readerImageShadowToggle?.addEventListener("change", () => {
@@ -3541,12 +4419,33 @@
       root.style.setProperty("--reader-image-shadow", enabled ? "0 8px 24px rgba(0,0,0,.14)" : "none");
       chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ readerImageShadow:enabled } });
     });
+    const readerWikipediaFlowToggle = root.querySelector("#reader-toggle-wikipedia-flow");
+    readerWikipediaFlowToggle?.addEventListener("change", () => {
+      const enabled = !!readerWikipediaFlowToggle.checked;
+      currentSettings.readerWikipediaFlow = enabled;
+      root.classList.toggle("reader-wikipedia-flow", enabled && root.getAttribute("data-reader-site") === "wikipedia");
+      chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ readerWikipediaFlow:enabled } });
+    });
+    const readerWikipediaMagazineToggle = root.querySelector("#reader-toggle-wikipedia-magazine");
+    readerWikipediaMagazineToggle?.addEventListener("change", () => {
+      const enabled = !!readerWikipediaMagazineToggle.checked;
+      currentSettings.readerWikipediaMagazine = enabled;
+      root.classList.toggle("reader-wikipedia-magazine", enabled && root.getAttribute("data-reader-site") === "wikipedia");
+      chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ readerWikipediaMagazine:enabled } });
+    });
     root.querySelectorAll("[data-reader-surface]").forEach(btn => btn.addEventListener("click", () => {
       const val = readerSurfaceValues.has(btn.dataset.readerSurface) ? btn.dataset.readerSurface : "card";
       root.setAttribute("data-surface", val);
       root.querySelectorAll("[data-reader-surface]").forEach(b => b.classList.toggle("active", b === btn));
       currentSettings.readerSurface = val;
       chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ readerSurface:val } });
+    }));
+    root.querySelectorAll("[data-reader-table-style]").forEach(btn => btn.addEventListener("click", () => {
+      const val = readerTableStyleValues.has(btn.dataset.readerTableStyle) ? btn.dataset.readerTableStyle : "clean";
+      root.setAttribute("data-table-style", val);
+      root.querySelectorAll("[data-reader-table-style]").forEach(item => item.classList.toggle("active", item === btn));
+      currentSettings.readerTableStyle = val;
+      chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ readerTableStyle:val } }).catch(() => {});
     }));
 
     const readerFontSelect = root.querySelector("#drawer-select-font");
@@ -3555,9 +4454,11 @@
       root.style.setProperty("--reader-font-family", fam);
       cardElement.style.fontFamily = fam;
       currentSettings.readerFont = val;
+      currentSettings.readerFontAutoV3 = true;
+      root.dataset.readerFont = val;
       if (readerFontSelect) readerFontSelect.value = val;
       root.querySelectorAll(".reader-font-card").forEach(btn => btn.classList.toggle("active", btn.dataset.value === val));
-      chrome.runtime.sendMessage({ action: "UPDATE_SETTINGS", settings: { readerFont: val } }, () => { if (chrome.runtime.lastError) {} });
+      chrome.runtime.sendMessage({ action: "UPDATE_SETTINGS", settings: { readerFont: val, readerFontAutoV3:true } }, () => { if (chrome.runtime.lastError) {} });
     };
     readerFontSelect?.addEventListener("change", (e) => applyReaderFontChoice(e.target.value));
     root.querySelectorAll(".reader-font-card").forEach(btn => btn.addEventListener("click", () => applyReaderFontChoice(btn.dataset.value)));
@@ -3593,11 +4494,16 @@
         if (!heading) p.style.fontSize = `${readerFontSize}px`;
       });
       if (fontSizeVal) fontSizeVal.textContent = `${readerFontSize}px`;
+      const contextFontValue = root.querySelector("#reader-context-font-value");
+      if (contextFontValue) contextFontValue.textContent = String(readerFontSize);
       currentSettings.readerFontSize = String(readerFontSize);
       chrome.runtime.sendMessage({ action: "UPDATE_SETTINGS", settings: { readerFontSize: String(readerFontSize) } });
     };
     root.querySelector("#drawer-btn-font-dec").addEventListener("click", () => updateReaderFontSize(readerFontSize - 1));
     root.querySelector("#drawer-btn-font-inc").addEventListener("click", () => updateReaderFontSize(readerFontSize + 1));
+    root.querySelectorAll("[data-reader-font-step]").forEach(button => button.addEventListener("click", () => {
+      updateReaderFontSize(readerFontSize + Number(button.dataset.readerFontStep || 0));
+    }));
 
     const lineHeightSlider = root.querySelector("#drawer-lineheight-slider");
     const lineHeightVal = root.querySelector("#drawer-lineheight-val");
@@ -3623,27 +4529,29 @@
       btn.addEventListener("click", () => {
         root.querySelectorAll(".reader-writing-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        syncReaderTabIndicator(readerWritingTabs, ".reader-writing-btn");
         const val = btn.getAttribute("data-writing") === "vertical" ? "vertical" : "horizontal";
         root.setAttribute("data-writing-mode", val);
+        scrollArea.scrollTo({ top:0, left:0 });
         currentSettings.readerWritingMode = val;
         chrome.runtime.sendMessage({ action: "UPDATE_SETTINGS", settings: { readerWritingMode: val } });
       });
     });
 
-    root.querySelectorAll(".reader-outline-item").forEach(item => {
+    root.querySelectorAll(".reader-outline-item,.reader-media-index-item").forEach(item => {
       item.addEventListener("click", () => {
         const targetId = item.getAttribute("data-target-id");
-        const targetEl = root.querySelector(`#${targetId}`);
+        const targetEl = targetId ? root.querySelector(`#${CSS.escape(targetId)}`) : null;
         if (targetEl) {
-          targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+          if (item.classList.contains("reader-outline-item")) root.dataset.readerOutlinePinned=targetId;
+          scrollReaderTarget(targetEl, 28);
+          if (item.classList.contains("reader-outline-item")) updateReaderOutlineActiveState(targetId);
         }
       });
     });
 
-    const readerImageNodes = contentNodes.filter(node => node.tagName === "IMG");
-    root.querySelectorAll(".reader-img-wrap img").forEach((img, index) => {
-      const fallbacks = getReaderImageInfo(readerImageNodes[index])?.candidates || [];
+    root.querySelectorAll(".reader-img-wrap img").forEach(img => {
+      const mediaIndex = Number(img.dataset.readerMediaIndex);
+      const fallbacks = mediaEntries[mediaIndex]?.info?.candidates || [];
       let fallbackIndex = Math.max(0, fallbacks.indexOf(img.src));
       img.addEventListener("error", () => {
         fallbackIndex += 1;
@@ -3657,7 +4565,7 @@
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const pair = btn.closest(".reader-paragraph-pair");
-        const orig = pair?.querySelector(".reader-orig-p")?.innerText?.trim();
+        const orig = pair?.querySelector(".reader-orig-p")?.textContent?.trim();
         const transEl = pair?.querySelector(".reader-trans-p");
         if (!orig || !transEl) return;
         if (transEl.dataset.loaded === "true") { pair.classList.toggle("reader-single-reveal"); btn.classList.toggle("is-active", pair.classList.contains("reader-single-reveal")); return; }
@@ -3699,30 +4607,287 @@
         else if (format === "print") { const w=window.open("","_blank"); if(w){ w.document.open(); w.document.write(html); w.document.close(); setTimeout(()=>{w.focus();w.print();},250); } }
       }
     });
+    root.querySelectorAll("[data-reader-info-action]").forEach(button => button.addEventListener("click", () => {
+      const action = button.dataset.readerInfoAction;
+      if (action === "copy") root.querySelector("#drawer-btn-copy")?.click();
+      if (action === "markdown") root.querySelector('#reader-export-menu [data-format="md"]')?.click();
+    }));
 
     root.querySelector("#reader-btn-exit").addEventListener("click", closeReaderMode);
     if (readerKeydownHandler) window.removeEventListener("keydown", readerKeydownHandler);
     readerKeydownHandler = (e) => {
-      if (e.key === "Escape" && isReaderOpen) closeReaderMode();
+      if (!isReaderOpen) return;
+      if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === "f" && readerSearchInput) {
+        e.preventDefault();
+        setOutlineCollapsedState(false);
+        selectReaderNavTab("search");
+        readerSearchInput.focus();
+        readerSearchInput.select();
+        return;
+      }
+      if (e.key === "Escape" && document.activeElement === readerSearchInput && readerSearchInput.value) {
+        e.preventDefault();
+        readerSearchInput.value = "";
+        updateReaderSearchMatches();
+        return;
+      }
+      if (e.key === "Escape") closeReaderMode();
     };
     window.addEventListener("keydown", readerKeydownHandler);
 
-    root.querySelector("#drawer-btn-speak").addEventListener("click", () => {
+    const speechPlayer = root.querySelector("#reader-speech-player");
+    const speechStatus = root.querySelector("#reader-speech-status");
+    const speechCount = root.querySelector("#reader-speech-count");
+    const speechProgressFill = root.querySelector("#reader-speech-progress-fill");
+    const speechCurrent = root.querySelector("#reader-speech-current");
+    const speechToggleButton = root.querySelector('[data-reader-speech-action="toggle"]');
+    root.querySelectorAll('[data-reader-speech-action]').forEach(button=>{const label=document.createElement('span');label.textContent={previous:'上一句',toggle:'暂停',next:'下一句',stop:'停止'}[button.dataset.readerSpeechAction];button.append(label);});
+    const voiceSelect=root.querySelector('#reader-speech-voice');
+    const fillReaderVoices=()=>{const selected=voiceSelect.value;voiceSelect.replaceChildren(new Option('按语种自动选择',''));(window.speechSynthesis?.getVoices()||[]).forEach(voice=>voiceSelect.add(new Option(`${voice.name} · ${voice.lang}`,voice.voiceURI)));voiceSelect.value=selected;};
+    fillReaderVoices();window.speechSynthesis?.addEventListener?.('voiceschanged',fillReaderVoices);
+    root.cleanupReaderVoices=()=>window.speechSynthesis?.removeEventListener?.('voiceschanged',fillReaderVoices);
+    const speechState = {
+      units: [], index: 0, active: false, speaking: false, paused: false,
+      pendingIndex: null, generation: 0,
+      highlightMode: currentSettings.readerSpeechHighlightMode === "word" ? "word" : "sentence",
+      currentElement: null
+    };
+    const segmentReaderSpeechText = (text, lang) => {
+      const normalized = String(text || "").replace(/\s+/g, " ").trim();
+      if (!normalized) return [];
+      try {
+        if (typeof Intl?.Segmenter === "function") {
+          return Array.from(new Intl.Segmenter(lang, { granularity:"sentence" }).segment(normalized), part => part.segment.trim()).filter(Boolean);
+        }
+      } catch (_) {}
+      return normalized.match(/[^.!?。！？]+[.!?。！？]?/g)?.map(part => part.trim()).filter(Boolean) || [normalized];
+    };
+    const buildReaderSpeechUnits = () => {
       const viewMode = root.getAttribute("data-reader-view") || "bilingual";
       const selector = viewMode === "orig" ? ".reader-orig-p" : viewMode === "trans" ? ".reader-trans-p" : ".reader-orig-p, .reader-trans-p";
-      const allText = Array.from(root.querySelectorAll(selector)).map(p => p.innerText).join("\n");
-      const lang = viewMode === "trans"
-        ? languageCodeToSpeechTag(currentSettings.targetLang)
-        : inferSpeechLanguage(allText, currentSettings.sourceLang);
-      speakTextNeural(allText, lang);
-    });
+      const units = [];
+      root.querySelectorAll(selector).forEach(element => {
+        const text = String(element.textContent || "").trim();
+        if (!text || /^(?:正在同步|这一段暂时没有翻译结果)/.test(text)) return;
+        const isTranslation = element.classList.contains("reader-trans-p");
+        const lang = isTranslation
+          ? languageCodeToSpeechTag(currentSettings.targetLang)
+          : inferSpeechLanguage(text, currentSettings.sourceLang);
+        let cursor=0;segmentReaderSpeechText(text, lang).forEach(sentence => {const offset=element.textContent.indexOf(sentence,cursor);units.push({text:sentence,lang,element,offset:Math.max(0,offset)});cursor=Math.max(0,offset)+sentence.length;});
+      });
+      return units;
+    };
+    const paintReaderSpeechRange=(unit,charIndex=0,charLength=unit?.text.length)=>{
+      if(!unit?.element||!globalThis.CSS?.highlights||!globalThis.Highlight)return;
+      const start=unit.offset+charIndex,end=start+charLength,walker=document.createTreeWalker(unit.element,NodeFilter.SHOW_TEXT);let node,pos=0,first,last;
+      while(node=walker.nextNode()){if(!first&&start>=pos&&start<pos+node.length)first=[node,start-pos];if(end>pos&&end<=pos+node.length){last=[node,end-pos];break;}pos+=node.length;}
+      if(first&&last){const range=document.createRange();range.setStart(...first);range.setEnd(...last);CSS.highlights.set('jijian-reader-speech',new Highlight(range));}
+    };
+    const clearReaderSpeechHighlight = () => {
+      globalThis.CSS?.highlights?.delete('jijian-reader-speech');
+      speechState.currentElement?.classList.remove("reader-speech-current-block");
+      speechState.currentElement = null;
+    };
+    const renderReaderSpeechTranscript = (charIndex = -1, charLength = 0) => {
+      if (!speechCurrent) return;
+      const text = speechState.units[speechState.index]?.text || "";
+      speechCurrent.replaceChildren();
+      if (speechState.highlightMode !== "word" || charIndex < 0 || charIndex >= text.length) {
+        speechCurrent.textContent = text || "等待开始";
+        return;
+      }
+      const inferredLength = charLength || (text.slice(charIndex).match(/^[\p{L}\p{N}\p{M}'’-]+/u)?.[0]?.length || 1);
+      speechCurrent.append(document.createTextNode(text.slice(0, charIndex)));
+      const mark = document.createElement("mark");
+      mark.textContent = text.slice(charIndex, charIndex + inferredLength);
+      speechCurrent.append(mark, document.createTextNode(text.slice(charIndex + inferredLength)));
+    };
+    const updateReaderSpeechUi = (status = "") => {
+      const total = speechState.units.length;
+      const visibleIndex = total ? Math.min(total, speechState.index + 1) : 0;
+      if (speechStatus) speechStatus.textContent = status || (speechState.paused ? "已暂停" : speechState.active ? "正在朗读" : "朗读完成");
+      if (speechCount) speechCount.textContent = `${visibleIndex} / ${total}`;
+      if (speechProgressFill) speechProgressFill.style.width = `${total ? (visibleIndex / total) * 100 : 0}%`;
+      if (speechPlayer) speechPlayer.hidden = false;
+      speechPlayer?.classList.toggle("is-paused", speechState.paused || !speechState.active);
+      speechToggleButton?.setAttribute("aria-label", speechState.paused ? "继续朗读" : "暂停朗读");
+      if(speechToggleButton?.querySelector("span")) speechToggleButton.querySelector("span").textContent=!speechState.active?"播放":speechState.paused?"继续":"暂停";
+      root.querySelectorAll("[data-reader-speech-highlight]").forEach(button => button.classList.toggle("active", button.dataset.readerSpeechHighlight === speechState.highlightMode));
+      renderReaderSpeechTranscript();
+    };
+    const focusReaderSpeechUnit = (unit) => {
+      clearReaderSpeechHighlight();
+      if (!unit?.element) return;
+      speechState.currentElement = unit.element;
+      unit.element.classList.add("reader-speech-current-block");
+      paintReaderSpeechRange(unit);
+      const areaRect = scrollArea.getBoundingClientRect();
+      const targetRect = unit.element.getBoundingClientRect();
+      if (root.getAttribute("data-writing-mode") === "vertical") {
+        scrollArea.scrollTo({ left:scrollArea.scrollLeft + targetRect.right - areaRect.right + areaRect.width * .36, behavior:"smooth" });
+      } else if (targetRect.top < areaRect.top + 80 || targetRect.bottom > areaRect.bottom - 80) {
+        scrollArea.scrollTo({ top:Math.max(0, scrollArea.scrollTop + targetRect.top - areaRect.top - areaRect.height * .3), behavior:"smooth" });
+      }
+    };
+    const finishReaderSpeech = (status = "朗读完成") => {
+      speechState.active = false;
+      speechState.speaking = false;
+      speechState.paused = false;
+      speechState.pendingIndex = null;
+      clearReaderSpeechHighlight();
+      updateReaderSpeechUi(status);
+    };
+    const playReaderSpeechUnit = () => {
+      if (!speechState.active || speechState.paused) return;
+      if (speechState.index >= speechState.units.length) {
+        finishReaderSpeech();
+        return;
+      }
+      const unit = speechState.units[speechState.index];
+      const generation = speechState.generation;
+      speechState.speaking = true;
+      focusReaderSpeechUnit(unit);
+      updateReaderSpeechUi("正在朗读");
+      const utterance = speakTextNeural(unit.text, unit.lang, {
+        voiceURI:voiceSelect.value, rate:Number(root.querySelector("#reader-speech-rate").value),
+        onStart: () => {
+          if (generation !== speechState.generation) return;
+          speechState.speaking = true;
+          updateReaderSpeechUi("正在朗读");
+        },
+        onBoundary: event => {
+          if (generation !== speechState.generation || speechState.highlightMode !== "word") return;
+          renderReaderSpeechTranscript(Number(event.charIndex) || 0, Number(event.charLength) || 0);
+          const index=Number(event.charIndex)||0;paintReaderSpeechRange(unit,index,Number(event.charLength)||unit.text.slice(index).match(/^[\p{L}\p{N}\p{M}]+/u)?.[0].length||1);
+        },
+        onEnd: () => {
+          if (generation !== speechState.generation) return;
+          speechState.speaking = false;
+          if (!speechState.active) return;
+          if (speechState.pendingIndex !== null) {
+            speechState.index = speechState.pendingIndex;
+            speechState.pendingIndex = null;
+          } else {
+            speechState.index += 1;
+          }
+          if (speechState.paused) {
+            clearReaderSpeechHighlight();
+            updateReaderSpeechUi("已暂停");
+            return;
+          }
+          playReaderSpeechUnit();
+        },
+        onError: () => {
+          if (generation !== speechState.generation) return;
+          speechState.speaking = false;
+          speechState.index += 1;
+          if (speechState.active && !speechState.paused) playReaderSpeechUnit();
+        }
+      });
+      if (!utterance) finishReaderSpeech("当前浏览器无法朗读");
+    };
+    const startReaderSpeech = () => {
+      readerSpeechController?.stop?.(true);
+      window.speechSynthesis?.resume();
+      speechState.units = buildReaderSpeechUnits();
+      speechState.index = 0;
+      speechState.active = speechState.units.length > 0;
+      speechState.speaking = false;
+      speechState.paused = false;
+      speechState.pendingIndex = null;
+      speechState.generation += 1;
+      if (!speechState.active) {
+        updateReaderSpeechUi("没有可朗读的内容");
+        return;
+      }
+      playReaderSpeechUnit();
+    };
+    readerSpeechController = {
+      stop(silent = false) {
+        const hadSpeech=speechState.active || speechState.speaking;
+        speechState.active = false;
+        speechState.paused = false;
+        speechState.pendingIndex = null;
+        speechState.generation += 1;
+        clearReaderSpeechHighlight();
+        if(hadSpeech) window.speechSynthesis?.cancel();
+        speechState.speaking = false;
+        if (!silent) updateReaderSpeechUi("已停止");
+      }
+    };
+    root.querySelector("#drawer-btn-speak")?.addEventListener("click", startReaderSpeech);
+    root.querySelectorAll("[data-reader-speech-action]").forEach(button => button.addEventListener("click", () => {
+      const action = button.dataset.readerSpeechAction;
+      if (action === "toggle") {
+        if (!speechState.active) {
+          startReaderSpeech();
+        } else if (speechState.paused) {
+          speechState.paused = false;
+          window.speechSynthesis?.resume();
+          updateReaderSpeechUi("正在朗读");
+          if (!speechState.speaking) playReaderSpeechUnit();
+        } else {
+          speechState.paused = true;
+          window.speechSynthesis?.pause();
+          updateReaderSpeechUi("已暂停");
+        }
+        return;
+      }
+      if (action === "stop") {
+        readerSpeechController?.stop?.();
+        return;
+      }
+      if (!speechState.units.length) startReaderSpeech();
+      const delta = action === "previous" ? -1 : 1;
+      const nextIndex = Math.max(0, Math.min(speechState.units.length - 1, speechState.index + delta));
+      speechState.generation += 1;
+      window.speechSynthesis?.cancel();
+      window.speechSynthesis?.resume();
+      speechState.index = nextIndex;
+      speechState.active = true;
+      speechState.paused = false;
+      speechState.speaking = false;
+      playReaderSpeechUnit();
+    }));
+    root.querySelectorAll("[data-reader-speech-highlight]").forEach(button => button.addEventListener("click", () => {
+      speechState.highlightMode = button.dataset.readerSpeechHighlight === "word" ? "word" : "sentence";
+      currentSettings.readerSpeechHighlightMode = speechState.highlightMode;
+      chrome.runtime.sendMessage({ action:"UPDATE_SETTINGS", settings:{ readerSpeechHighlightMode:speechState.highlightMode } }).catch(() => {});
+      updateReaderSpeechUi();
+    }));
+    root.querySelectorAll("[data-reader-speech-highlight]").forEach(button => button.classList.toggle("active", button.dataset.readerSpeechHighlight === speechState.highlightMode));
 
-    root.querySelector("#drawer-btn-copy").addEventListener("click", (e) => {
-      const allText = Array.from(root.querySelectorAll(".reader-trans-p")).map(p => p.innerText).join("\n\n");
-      navigator.clipboard.writeText(allText);
-      const span = e.currentTarget.querySelector("span");
-      span.textContent = "已复制";
-      setTimeout(() => { span.textContent = "复制全文译文"; }, 1500);
+    root.querySelectorAll("[data-reader-copy]").forEach(button => button.addEventListener("click", async () => {
+      const mode = button.dataset.readerCopy;
+      const label = button.querySelector("span"), originalLabel = {orig:"复制全文",trans:"复制译文",bilingual:"复制双语"}[mode];
+      const selector = mode === "orig" ? ".reader-orig-p" : mode === "trans" ? '.reader-trans-p[data-loaded="true"]' : '.reader-orig-p,.reader-trans-p[data-loaded="true"]';
+      const text = Array.from(root.querySelectorAll(selector)).map(node => node.textContent.trim()).filter(Boolean).join("\n\n");
+      try { if (!text) throw new Error("请先生成译文"); await navigator.clipboard.writeText(text); label.textContent="已复制"; button.classList.add("is-copied"); }
+      catch(error) { label.textContent=text ? "复制失败" : error.message; }
+      clearTimeout(button.readerCopyTimer);
+      button.readerCopyTimer=setTimeout(()=>{label.textContent=originalLabel;button.classList.remove("is-copied");},1600);
+    }));
+    mediaEntries.forEach((entry,index)=>{
+      if(root.querySelector(`#reader_media_${index}`))return;
+      const image=[...root.querySelectorAll('#reader-content img')].find(img=>img.src===entry.info.src);
+      if(image){image.id=`reader_media_${index}`;image.dataset.readerMediaIndex=index;}
+    });
+    const accentSection=document.createElement('section');accentSection.className='reader-context-section';accentSection.dataset.readerToolSection='style';
+    accentSection.innerHTML='<label class="reader-context-label">大纲选中色<select id="reader-outline-accent"><option value="neutral">黑白</option><option value="blue">雾蓝</option><option value="green">灰绿</option><option value="purple">淡紫</option></select></label>';
+    root.querySelector('.reader-context-themes').closest('section').after(accentSection);
+    const accentSelect=accentSection.querySelector('select');
+    const applyAccent=value=>{const palette={neutral:['#555','#ededed'],blue:['#355b86','#e8eef7'],green:['#3c6654','#e7efea'],purple:['#72577e','#eee7f2']}[value]||['#555','#ededed'];root.style.setProperty('--outline-ink',palette[0]);root.style.setProperty('--outline-fill',palette[1]);};
+    accentSelect.value=currentSettings.readerOutlineAccent||'neutral';applyAccent(accentSelect.value);
+    accentSelect.addEventListener('change',()=>{currentSettings.readerOutlineAccent=accentSelect.value;applyAccent(accentSelect.value);chrome.runtime.sendMessage({action:'UPDATE_SETTINGS',settings:{readerOutlineAccent:accentSelect.value}});});
+    const copyLink = root.querySelector("#reader-copy-link");
+    copyLink.addEventListener("click", async () => {
+      const label = copyLink.querySelector(".reader-source-copy");
+      try {
+        await navigator.clipboard.writeText(location.href);
+        copyLink.classList.add("is-copied"); label.textContent = "已复制";
+      } catch { label.textContent = "重试"; }
+      clearTimeout(copyLink.readerCopyTimer);
+      copyLink.readerCopyTimer = setTimeout(() => { copyLink.classList.remove("is-copied"); label.textContent = "复制"; }, 1600);
     });
 
     let hasTriggeredTranslation = false;
@@ -3741,19 +4906,22 @@
           if (key && val?.transText && !translationByOriginal.has(key)) translationByOriginal.set(key, val.transText);
         });
 
-        contentNodes.forEach((node, idx) => {
-          if (!node || node.tagName === "IMG") return;
-          const raw = getHostOriginalText(node);
+        root.querySelectorAll(".reader-paragraph-pair").forEach(pair => {
+          // textContent is intentional here: a reader can start translating
+          // before its opening layout has painted. innerText is layout-aware
+          // and can be empty during that short transition, leaving every
+          // semantic block stuck on “正在同步译文”.
+          const raw = String(pair.querySelector(".reader-orig-p")?.textContent || "").replace(/\s+/g, " ").trim();
           if (!raw) return;
           const matchedTrans = translationByOriginal.get(raw) || "";
-
-          const pairEl = root.querySelector(`[data-para-id="r_${idx}"] .reader-trans-p`);
+          const pairId = pair.getAttribute("data-para-id") || "";
+          const pairEl = pair.querySelector(".reader-trans-p");
           if (pairEl?.dataset.loaded === "true") return;
           if (matchedTrans && pairEl) {
             setReaderTranslationText(pairEl, matchedTrans);
             pairEl.dataset.loaded = "true";
           } else if (pairEl) {
-            uncachedItems.push({ id: `r_${idx}`, text: raw });
+            uncachedItems.push({ id: pairId, text: raw });
           }
         });
 
@@ -3833,6 +5001,12 @@
   }
 
   function closeReaderMode() {
+    readerRoot?.cleanupReaderNotes?.();
+    readerRoot?.cleanupReaderVoices?.();
+    globalThis.CSS?.highlights?.delete("reader-search-match");
+    globalThis.CSS?.highlights?.delete("reader-search-current");
+    readerRoot?.cleanupReaderSearch?.();
+    readerRoot?.cleanupReaderShare?.();
     // A sidebar opened from Reader Mode is bound to the reader DOM. Close it with
     // the reader so no stale panel or page-width shift survives after exiting.
     if (sidebarReaderMode && sidebarRoot) closeSidebar();
@@ -3840,6 +5014,8 @@
       window.removeEventListener("keydown", readerKeydownHandler);
       readerKeydownHandler = null;
     }
+    readerSpeechController?.stop?.(true);
+    readerSpeechController = null;
     if (readerRoot) {
       readerRoot.remove();
       readerRoot = null;
@@ -5086,9 +6262,7 @@
 
     root.innerHTML = `
       <div class="raccoon-floating-main-pill" id="raccoon-pill-main" title="点击切换整页翻译 / 右键展开侧边栏">
-        <svg class="raccoon-pill-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" stroke-width="2.5">
-          <path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>
-        </svg>
+        <svg class="raccoon-pill-svg" width="16" height="16" viewBox="0 0 128 128" fill="currentColor" aria-hidden="true"><circle cx="44" cy="21" r="9"/><path d="M18 31h52v12H55l-9 11-14-12-9 9 15 13-19 19 10 9 17-18 13 18 10-9-15-18 18-22H18z"/><path fill-rule="evenodd" d="M87 49c3 0 5 2 7 6l23 57h-14l-5-13H76l-5 13H57l24-57c1-4 3-6 6-6Zm0 21-7 18h14Z"/></svg>
         <span class="raccoon-pill-text" id="raccoon-pill-text">${initialPillState.text}</span>
       </div>
       <div class="raccoon-floating-close-circle" id="raccoon-pill-close" title="临时关闭此页悬浮球">
@@ -5571,9 +6745,13 @@
     selectionRoot.innerHTML = `
       <div class="raccoon-selection-trigger" style="top: ${top}px !important; left: ${left}px !important;">
         <button type="button" class="selection-tool-btn" data-action="${primaryAction}" title="${primaryLabel}">${primaryIcon}<span>${primaryLabel}</span></button>
-        <button type="button" class="selection-tool-btn ${isHighlighted ? 'danger-lite' : ''}" data-action="${isHighlighted ? 'remove-highlight' : 'highlight'}" title="${isHighlighted ? '删除高亮' : '高亮并收藏'}"><svg class="trigger-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">${isHighlighted ? '<path d="m5 15 8-8 6 6-7 7H7l-2-2a2.1 2.1 0 0 1 0-3Z"/><path d="m11 20 8-8"/>' : '<path d="m9 11-6 6v3h3l6-6"/><path d="m22 7-3-3a2 2 0 0 0-2.83 0L13 7l5 5 3.17-3.17a2 2 0 0 0 0-2.83z"/>'}</svg><span>${isHighlighted ? '删除高亮' : '高亮'}</span></button>
+        <button type="button" class="selection-tool-btn ${isHighlighted ? 'danger-lite' : ''}" data-action="${isHighlighted ? 'remove-highlight' : 'highlight'}" title="${isHighlighted ? '删除高亮' : '高亮并收藏'}"><svg class="trigger-highlight-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">${isHighlighted ? '<path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/>' : '<path d="m9 11-6 6v3h3l6-6"/><path d="m22 7-3-3a2 2 0 0 0-2.83 0L13 7l5 5 3.17-3.17a2 2 0 0 0 0-2.83z"/>'}</svg><span>${isHighlighted ? '删除高亮' : '高亮'}</span></button>
       </div>`;
 
+    if (readerRoot?.readerNotes && exactRange && readerRoot.contains(exactRange.commonAncestorContainer)) {
+      const noteButton=document.createElement("button");noteButton.type="button";noteButton.className="selection-tool-btn";noteButton.dataset.action="note";noteButton.innerHTML='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 4H5v16h14v-9M11 13l1-4 7-7 3 3-7 7-4 1Z"/></svg><span>笔记</span>';
+      selectionRoot.querySelector(".raccoon-selection-trigger").append(noteButton);
+    }
     const toolbar = selectionRoot.querySelector(".raccoon-selection-trigger");
     toolbar.addEventListener("mousedown", e => e.preventDefault());
     toolbar.addEventListener("click", (e) => {
@@ -5581,6 +6759,11 @@
       const btn = e.target.closest(".selection-tool-btn");
       if (!btn) return;
       const action = btn.dataset.action;
+      if ((action === "highlight" || action === "note") && readerRoot?.readerNotes && exactRange && readerRoot.contains(exactRange.commonAncestorContainer)) {
+        readerRoot.readerNotes.addText(exactRange, text, action === "note");
+        hideSelectionTriggerButton();
+        return;
+      }
       if (action === "highlight") {
         const id = `hl_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
         if (exactRange && wrapTextRangeWithHighlight(exactRange, id)) saveExactHighlight(text, exactRange, "", id);
@@ -5588,7 +6771,8 @@
         return;
       }
       if (action === "remove-highlight") {
-        removeHighlightForRange(exactRange, text);
+        if (readerRoot?.readerNotes && exactRange && readerRoot.contains(exactRange.commonAncestorContainer)) readerRoot.readerNotes.removeRange(exactRange);
+        else removeHighlightForRange(exactRange, text);
         hideSelectionTriggerButton();
         return;
       }
@@ -6535,12 +7719,12 @@
     }
   }
 
-  function speakTextNeural(text, bcpLang = "en-US") {
-    if (!window.speechSynthesis) return;
+  function speakTextNeural(text, bcpLang = "en-US", hooks = {}) {
+    if (!window.speechSynthesis) return null;
     try {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = bcpLang;
-      utterance.rate = parseFloat(currentSettings.preferredVoiceSpeed || "1.0") || 1.0;
+      utterance.rate = hooks.rate || parseFloat(currentSettings.preferredVoiceSpeed || "1.0") || 1.0;
       utterance.pitch = 1.0;
 
       const voices = window.speechSynthesis.getVoices();
@@ -6587,8 +7771,16 @@
         if (candidates[0]) utterance.voice = candidates[0];
       }
 
+      if (hooks.voiceURI) utterance.voice = voices.find(voice=>voice.voiceURI===hooks.voiceURI) || utterance.voice;
+      if (typeof hooks.onStart === "function") utterance.onstart = hooks.onStart;
+      if (typeof hooks.onBoundary === "function") utterance.onboundary = hooks.onBoundary;
+      if (typeof hooks.onEnd === "function") utterance.onend = hooks.onEnd;
+      if (typeof hooks.onError === "function") utterance.onerror = hooks.onError;
       window.speechSynthesis.speak(utterance);
-    } catch (_) {}
+      return utterance;
+    } catch (_) {
+      return null;
+    }
   }
 
 

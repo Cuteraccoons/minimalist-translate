@@ -28,20 +28,27 @@ const DEFAULT_SETTINGS = {
 
   // 沉浸阅读偏好持久化设置
   readerWidth: "920", // 默认宽敞舒适版面 (已记忆)
-  readerTheme: "envelope", // envelope | white | dark | mint | mist | lavender | stone
-  readerSurface: "card", // card | flat | column | folio
-  readerFont: "system",
+  readerTheme: "white", // envelope | white | dark | mint | mist | lavender | stone
+  readerSurface: "card", // card | flat | safari | forum
+  readerTableStyle: "clean", // clean | three-line | striped
+  readerRenderStyle: "classic", // classic | card
+  readerFont: "auto",
   readerFontSize: "17.5",
   readerLineHeight: "1.82",
   readerParagraphSpacing: "28",
   readerWritingMode: "horizontal", // horizontal | vertical
   readerOutlineCollapsed: false,
+  readerToolsCollapsed: false,
   readerOutlineWidth: 270,
+  readerToolsWidth: 288,
+  readerWikipediaFlow: true,
+  readerWikipediaMagazine: false,
   readerImageShadow: true,
   readerProgressVisible: true,
   readerMetaVisible: true,
+  readerSpeechHighlightMode: "sentence", // sentence | word
 
-  fontFamily: "system",
+  fontFamily: "smiley-sans",
   fontStyle: "normal",
   renderStyle: "classic", // "native" 参考原网页 | 其他为自定义译文样式
   replaceRenderStyle: "clean", // clean 纯净排版 | native 参考原文（始终正体）
@@ -185,6 +192,16 @@ async function loadStoredSettings({ migrate = true } = {}) {
     await chrome.storage.sync.remove(legacyKeys);
   }
 
+  if (!synced.readerWhiteDefaultV1) {
+    if (!synced.readerTheme || synced.readerTheme === "envelope") synced.readerTheme = "white";
+    synced.readerWhiteDefaultV1 = true;
+    await chrome.storage.sync.set({readerTheme:synced.readerTheme, readerWhiteDefaultV1:true});
+  }
+  if (!synced.readerFontAutoV3) {
+    if (!synced.readerFont || ["system", "smiley-sans"].includes(synced.readerFont)) synced.readerFont = "auto";
+    synced.readerFontAutoV3 = true;
+    if (migrate) await chrome.storage.sync.set({readerFont:synced.readerFont, readerFontAutoV3:true});
+  }
   return Object.assign({}, DEFAULT_SETTINGS, synced, local);
 }
 
@@ -283,6 +300,9 @@ function schedulePersistCache() {
 
 // Initialize defaults and migrate stored settings.
 chrome.runtime.onInstalled.addListener(async () => {
+  const fontDefaultMigration = await chrome.storage.sync.get([
+    "readerFont", "readerFontDefaultV2", "fontFamily", "translationFontDefaultV2"
+  ]).catch(() => ({}));
   const current = await loadStoredSettings();
   const updated = Object.assign({}, DEFAULT_SETTINGS, current, { version: EXTENSION_VERSION });
   // Migrate legacy defaults without replacing explicit model choices.
@@ -295,6 +315,19 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (!current.geminiModel || current.geminiModel === "gemini-1.5-flash") updated.geminiModel = "gemini-3.6-flash";
   if (!/^https?:\/\//i.test(String(current.donationUrl || ""))) updated.donationUrl = DEFAULT_SETTINGS.donationUrl;
   if (!/^https?:\/\//i.test(String(current.projectUrl || ""))) updated.projectUrl = DEFAULT_SETTINGS.projectUrl;
+  // The former default was "system", which resolved to a heavy bundled UI
+  // family. Move only that untouched default once; later explicit choices are
+  // preserved by the migration marker.
+  if (!fontDefaultMigration.readerFontDefaultV2) {
+    if (!fontDefaultMigration.readerFont || fontDefaultMigration.readerFont === "system") updated.readerFont = "auto";
+    updated.readerFontDefaultV2 = true;
+  }
+  // Ordinary bilingual-page translations use the same calm default as Reader.
+  // Migrate only the old untouched system default; explicit font choices stay intact.
+  if (!fontDefaultMigration.translationFontDefaultV2) {
+    if (!fontDefaultMigration.fontFamily || fontDefaultMigration.fontFamily === "system") updated.fontFamily = "smiley-sans";
+    updated.translationFontDefaultV2 = true;
+  }
   // Remove only untouched legacy rules so customized domain rules survive.
   const legacyDefaultRule = { floating:true, hover:true, image:true, auto:true, selection:false };
   const sameRule = (a,b) => Object.keys(b).every(k => a?.[k] === b[k]) && Object.keys(a || {}).every(k => k in b);
@@ -2170,6 +2203,47 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const { action } = request;
 
+  if (action === "GET_READER_NOTES" || action === "SAVE_READER_NOTES") {
+    (async () => {
+      try {
+        if (!sender.tab?.id || sender.frameId !== 0) throw new Error("请在文章页面使用笔记");
+        const pageUrl = new URL(sender.url || sender.tab.url); pageUrl.hash = "";
+        if (!/^https?:$/.test(pageUrl.protocol)) throw new Error("不支持此页面");
+        const key = `readerNotes:${pageUrl.href}`;
+        if (action === "GET_READER_NOTES") {
+          const data = await chrome.storage.local.get([key, "raccoonHighlightSentences"]);
+          const legacy = (data.raccoonHighlightSentences || []).filter(item => {
+            try { const url = new URL(item.sourceUrl); url.hash = ""; return url.href === pageUrl.href; } catch { return false; }
+          });
+          sendResponse({success:true, items:data[key] ?? null, legacy});
+        } else {
+          const items = request.items;
+          if (!Array.isArray(items) || items.length > 1000 || JSON.stringify(items).length > 8000000) throw new Error("笔记过多，请先导出并清理部分截图");
+          if (items.some(item => !item || typeof item.id !== "string" || !Array.isArray(item.anchors) || (item.image && !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(item.image)))) throw new Error("笔记格式无效");
+          collectionCountsCache=null;
+          await chrome.storage.local.set({[key]:items.map(item=>({...item,articleTitle:String(request.title||sender.tab.title||pageUrl.hostname).slice(0,500)}))});
+          sendResponse({success:true});
+        }
+      } catch(error) { sendResponse({success:false,error:error.message}); }
+    })();
+    return true;
+  }
+
+  if (action === "CAPTURE_READER_SHARE") {
+    (async () => {
+      try {
+        if (!sender.tab?.id || sender.frameId !== 0) throw new Error("请在当前文章页面截图");
+        const [active] = await chrome.tabs.query({active:true, windowId:sender.tab.windowId});
+        if (active?.id !== sender.tab.id) throw new Error("页面已切换，请返回文章后重试");
+        const image = await chrome.tabs.captureVisibleTab(sender.tab.windowId, {format:"png"});
+        const [after] = await chrome.tabs.query({active:true, windowId:sender.tab.windowId});
+        if (after?.id !== sender.tab.id) throw new Error("截图时页面发生切换，请重试");
+        sendResponse({success:true, image});
+      } catch (error) { sendResponse({success:false, error:error.message || "截图失败，请重试"}); }
+    })();
+    return true;
+  }
+
   if (action === "OPEN_OPTIONS_PAGE") {
     const allowedTabs=new Set(["tab-api","tab-typography","tab-interaction","tab-local-dict","tab-vocab","tab-highlights","tab-auto-translate","tab-rules","tab-backup","tab-about"]);
     const targetTab=allowedTabs.has(String(request.tab||"")) ? String(request.tab) : "";
@@ -2303,33 +2377,34 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true, ...collectionCountsCache });
       return false;
     }
-    chrome.storage.local.get(["raccoonVocabularyList", "raccoonHighlightSentences"]).then(res => {
+    chrome.storage.local.get(null).then(res => {
       const vocabulary = Array.isArray(res.raccoonVocabularyList) ? res.raccoonVocabularyList : [];
       const highlights = Array.isArray(res.raccoonHighlightSentences) ? res.raccoonHighlightSentences : [];
-      collectionCountsCache = { vocabularyCount: vocabulary.length, highlightCount: highlights.length };
+      const ids=new Set(highlights.map(item=>item.id||item.orig));Object.entries(res).filter(([key,value])=>key.startsWith('readerNotes:')&&Array.isArray(value)).forEach(([,items])=>items.forEach(item=>ids.add(item.id)));
+      collectionCountsCache = { vocabularyCount: vocabulary.length, highlightCount: ids.size };
       sendResponse({ success: true, ...collectionCountsCache });
     }).catch(err => sendResponse({ success: false, error: err.message }));
     return true;
   }
 
   if (action === "GET_HIGHLIGHT_SENTENCES") {
-    chrome.storage.local.get("raccoonHighlightSentences").then(res => {
-      const list = Array.isArray(res.raccoonHighlightSentences) ? res.raccoonHighlightSentences : [];
-      sendResponse({ success: true, list: list });
-    }).catch(err => sendResponse({ success: false, error: err.message }));
+    chrome.storage.local.get(null).then(data => {
+      const list = Array.isArray(data.raccoonHighlightSentences) ? [...data.raccoonHighlightSentences] : [];
+      Object.entries(data).filter(([key,value])=>key.startsWith('readerNotes:')&&Array.isArray(value)).forEach(([key,items])=>{
+        items.forEach(item=>{const existing=list.findIndex(old=>old.id===item.id);if(existing>=0)list.splice(existing,1);list.push({id:item.id,orig:item.quote||'截图笔记',note:item.note,image:item.image,sourceUrl:key.slice(12),articleTitle:item.articleTitle,readerNote:true});});
+      });
+      sendResponse({success:true,list});
+    }).catch(err=>sendResponse({success:false,error:err.message}));
     return true;
   }
 
   if (action === "REMOVE_HIGHLIGHT_SENTENCE") {
-    chrome.storage.local.get("raccoonHighlightSentences").then(res => {
-      let list = Array.isArray(res.raccoonHighlightSentences) ? res.raccoonHighlightSentences : [];
-      list = request.id
-        ? list.filter(item => item.id !== request.id)
-        : list.filter(item => String(item.orig || "").trim() !== String(request.orig || "").trim());
-      chrome.storage.local.set({ raccoonHighlightSentences: list }).then(() => {
-        sendResponse({ success: true });
-      });
-    }).catch(err => sendResponse({ success: false, error: err.message }));
+    (async()=>{
+      const data=await chrome.storage.local.get(null),updates={};
+      updates.raccoonHighlightSentences=(data.raccoonHighlightSentences||[]).filter(item=>request.id?item.id!==request.id:String(item.orig||'').trim()!==String(request.orig||'').trim());
+      if(request.id)Object.entries(data).filter(([key,value])=>key.startsWith('readerNotes:')&&Array.isArray(value)).forEach(([key,items])=>{if(items.some(item=>item.id===request.id))updates[key]=items.filter(item=>item.id!==request.id);});
+      collectionCountsCache=null;await chrome.storage.local.set(updates);sendResponse({success:true});
+    })().catch(err=>sendResponse({success:false,error:err.message}));
     return true;
   }
 

@@ -83,11 +83,12 @@
             <span class="row-title">呈现排版</span>
           </div>
           <select id="select-render-style" class="visually-hidden-select" tabindex="-1" aria-hidden="true">
-            <option value="native" data-bilingual-label="参考原网页" data-replace-label="参考原文">参考原网页</option><option value="classic" data-bilingual-label="纯净对照" data-replace-label="纯净排版">纯净对照</option><option value="highlight">高亮底色</option><option value="underline">下划线</option><option value="italic">斜体</option><option value="hover-reveal">悬停显示</option><option value="blur-reveal">模糊显示</option><option value="click-reveal">点按显示</option>
+            <option value="native" data-bilingual-label="参考原网页" data-replace-label="参考原文">参考原网页</option><option value="classic" data-bilingual-label="纯净对照" data-replace-label="纯净排版">纯净对照</option><option value="card">卡片译文</option><option value="highlight">高亮底色</option><option value="underline">下划线</option><option value="italic">斜体</option><option value="hover-reveal">悬停显示</option><option value="blur-reveal">模糊显示</option><option value="click-reveal">点按显示</option>
           </select>
           <div class="popup-style-choice-grid" id="popup-render-style-grid">
             <button type="button" data-value="native"><i class="ps-native"></i><span data-bilingual-label="原网页" data-replace-label="参考原文">原网页</span></button>
             <button type="button" data-value="classic"><i class="ps-classic"></i><span data-bilingual-label="纯净" data-replace-label="纯净排版">纯净</span></button>
+            <button type="button" data-value="card"><i class="ps-card"></i><span>卡片</span></button>
             <button type="button" data-value="highlight"><i class="ps-highlight"></i><span>高亮</span></button>
             <button type="button" data-value="underline"><i class="ps-underline"></i><span>下划线</span></button>
             <button type="button" data-value="italic"><i class="ps-italic"></i><span>斜体</span></button>
@@ -262,7 +263,6 @@
 
       <button type="button" class="site-image-translation-card" id="site-image-translation-toggle" aria-pressed="false">
         <span class="site-image-translation-copy"><strong>本网站图片翻译</strong><small id="site-image-translation-domain">按网站单独控制图片入口</small></span>
-        <span class="site-image-translation-state" id="site-image-translation-state">已开启</span>
         <span class="site-image-translation-switch" aria-hidden="true"><i></i></span>
       </button>
 

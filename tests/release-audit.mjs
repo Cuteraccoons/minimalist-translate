@@ -1,8 +1,9 @@
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import process from 'node:process';
 
-const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 const fail = msg => { console.error(`FAIL ${msg}`); process.exitCode = 1; };
 const pass = msg => console.log(`PASS ${msg}`);
@@ -99,7 +100,7 @@ if (!content.includes('const placeBehind = (background) =>')) fail('translucent 
 if (!content.includes('const offset = preferredGap') || content.includes('preferredGap - hostBottom')) fail('bilingual spacing can still collapse into a negative overlap');
 if (!read('floating.css').includes('clear:none!important')) fail('float-safe bilingual layout missing');
 if (!read('floating.css').includes('ruby.raccoon-replaced-ruby')) fail('missing ruby replacement safeguard');
-if (content.includes('reader-toggle-divider') || !content.includes('data-reader-surface="column"') || !content.includes('data-reader-surface="folio"')) fail('reader finishing controls are incomplete');
+if (content.includes('reader-toggle-divider') || !content.includes('data-reader-surface="card"') || !content.includes('data-reader-surface="flat"') || content.includes('data-reader-surface="column"') || content.includes('data-reader-surface="folio"')) fail('reader finishing controls are incomplete');
 if (!read('floating.css').includes('.reader-outline-item.level-3{opacity:.72!important') || !read('floating.css').includes('border-bottom:0!important;padding-bottom:0!important;margin-bottom:28px!important')) fail('reader outline hierarchy or metadata separator regressed');
 if (!content.includes('activeReaderViewController(readerViewForDisplayMode') || !content.includes('persistDisplayMode:true') || !read('background.js').includes('changedKeys') || !read('popup.js').includes('{ notifyOnActive:true }')) fail('popup and reader presentation controls are not synchronized');
 if (!read('floating.css').includes('.reader-drawer-backdrop {\n  display: none !important;') || !read('floating.css').includes('overscroll-behavior: contain;\n  scrollbar-gutter: stable;')) fail('reader settings drawer still blocks or scroll-captures the article');
@@ -240,7 +241,7 @@ if (!content.includes('class="trigger-logo-icon trigger-translate-brand-icon" vi
 if (!popupJs.includes('function closePopupMenus') || !read('options.js').includes('model-input-row.model-menu-open')) fail('single-open menu coordination missing');
 if (!popupJs.includes('radial-gradient(circle at center') || !read('popup.html').includes('color-wheel-dot')) fail('follow-page colour icon is not a colour wheel');
 if (!read('popup.css').includes('.api-quick-drawer.is-connected') || !read('popup.css').includes('border-bottom:1px solid #dfe5e1!important')) fail('connected API drawer bottom/side border missing');
-if (!read('popup.css').includes('.site-image-translation-card{margin:0!important}') || read('popup.html').includes('site-image-translation-icon') || !read('popup.css').includes('grid-template-columns:minmax(0,1fr) auto 34px')) fail('site image translation card spacing or icon-free layout regressed');
+if (!read('popup.css').includes('.site-image-translation-card{margin:0!important}') || read('popup.html').includes('site-image-translation-icon') || read('popup.html').includes('site-image-translation-state') || !read('popup.css').includes('grid-template-columns:minmax(0,1fr) 34px')) fail('site image translation card spacing or icon-free layout regressed');
 if (!backgroundJs.includes('het?.pinyin || het?.bopomofo2') || backgroundJs.includes('het?.bopomofo2 || het?.pinyin')) fail('Chinese dictionary can prefer inaccurate Zhuyin romanisation over Hanyu Pinyin');
 if (!content.includes('if (lang === requestedLocale) score += 36') || !content.includes('cantonese|hong kong|taiwan')) fail('Chinese speech can select a mismatched regional voice');
 if (!read('popup.css').includes('#btn-open-local-dict.local-dict-link') || !read('floating.css').includes('.dict-local-tab[aria-selected="true"]') || !content.includes('dict-local-launch-choice ${i===0?\'active\':\'\'}')) fail('local dictionary actions are not aligned black inverse controls');

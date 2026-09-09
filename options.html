@@ -284,11 +284,12 @@
             <div class="form-item">
               <label class="item-label">译文呈现样式</label>
               <select id="opt-render-style" class="visually-hidden-select" tabindex="-1" aria-hidden="true">
-                <option value="native">参考原文</option><option value="classic">纯净排版</option><option value="highlight">高亮底色</option><option value="underline">下划线</option><option value="italic">斜体</option><option value="hover-reveal">悬停显示</option><option value="blur-reveal">模糊显示</option><option value="click-reveal">点按显示</option>
+                <option value="native">参考原文</option><option value="classic">纯净排版</option><option value="card">卡片译文</option><option value="highlight">高亮底色</option><option value="underline">下划线</option><option value="italic">斜体</option><option value="hover-reveal">悬停显示</option><option value="blur-reveal">模糊显示</option><option value="click-reveal">点按显示</option>
               </select>
               <div class="style-card-grid" id="render-style-card-grid">
                 <button type="button" class="style-choice-card" data-value="native"><span class="style-choice-name">参考原网页</span><span class="style-choice-demo demo-native"><b>Original</b><em>保留原站结构，文字保持正体</em></span></button>
                 <button type="button" class="style-choice-card" data-value="classic"><span class="style-choice-name">纯净对照</span><span class="style-choice-demo"><b>Original sentence</b><em>清晰的中文译文</em></span></button>
+                <button type="button" class="style-choice-card" data-value="card"><span class="style-choice-name">卡片译文</span><span class="style-choice-demo"><b>Original sentence</b><em class="demo-card">留有呼吸感的译文</em></span></button>
                 <button type="button" class="style-choice-card" data-value="highlight"><span class="style-choice-name">高亮底色</span><span class="style-choice-demo"><b>Original sentence</b><em class="demo-highlight">清晰的中文译文</em></span></button>
                 <button type="button" class="style-choice-card" data-value="underline"><span class="style-choice-name">下划线</span><span class="style-choice-demo"><b>Original sentence</b><em class="demo-underline">清晰的中文译文</em></span></button>
                 <button type="button" class="style-choice-card" data-value="italic"><span class="style-choice-name">斜体</span><span class="style-choice-demo"><b>Original sentence</b><em style="font-style:italic">清晰的中文译文</em></span></button>
@@ -799,6 +800,7 @@
         </div>
 
         <div class="macos-card project-hero-card">
+          <img class="project-promo-image" src="assets/readme/zh-CN/hero.png" alt="极简翻译：简单查词，优雅阅读">
           <div class="project-hero-copy">
             <h3 class="about-name">极简翻译</h3>
             <p class="project-intro">极简翻译是一款面向网页阅读的开源浏览器扩展，基于 Apache-2.0 协议发布。工具坚持本地优先，不设自建云端账号系统；设置、生词与本地词典数据保存在浏览器中。它提供原网页双语、沉浸阅读、本地 MDX 词典与本机图片 OCR 等功能，尽量保留网页原有的排版与交互。如果现有功能对你的日常阅读有所帮助，欢迎赞赏支持。</p>
