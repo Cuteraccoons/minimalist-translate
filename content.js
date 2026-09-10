@@ -1325,6 +1325,7 @@
         const clone = document.createElement("div");
         clone.innerHTML = storedHtml;
         clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
+      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor").forEach(node => node.remove());
         return String(clone.textContent || "").replace(/\s+/g, " ").trim();
       }
 
@@ -1335,6 +1336,7 @@
 
       const clone = el.cloneNode(true);
       clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
+      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor").forEach(node => node.remove());
       return String(clone.textContent || "").replace(/\s+/g, " ").trim();
     } catch (_) {
       return String(el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
@@ -3097,6 +3099,7 @@
       }
     });
     clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
+      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor").forEach(node => node.remove());
     // Preserve separators from nested layout wrappers before stripping host
     // markup. Wikipedia facts often place several values in sibling DIV/LI
     // nodes; blindly unwrapping them would concatenate every label.
@@ -3169,6 +3172,7 @@
         cloneWalker.currentNode.nodeValue = originalTextForNode(sourceWalker.currentNode);
       }
       clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
+      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor").forEach(node => node.remove());
       return String(clone.textContent || "").replace(/^\n+|\n+$/g, "");
     } catch (_) { return String(sourceNode.textContent || ""); }
   }
@@ -3464,7 +3468,7 @@
     readerImageInfoCache = new WeakMap();
     const bestContainer = findBestReaderContainer();
     const redditThread = /(?:^|\.)reddit\.com$/i.test(location.hostname) && /\/comments\//.test(location.pathname);
-    const title = document.querySelector("#firstHeading, main h1, article h1, h1")?.innerText?.trim()
+    const title = readerOriginalTextPreservingWhitespace(document.querySelector("#firstHeading, main h1, article h1, h1")).trim()
       || document.querySelector('meta[property="og:title"]')?.content?.trim()
       || document.title
       || "阅读文章";
@@ -3472,7 +3476,7 @@
     let contentNodes = collectReaderContentNodes(bestContainer);
     contentNodes = contentNodes.filter((node, index) => {
       if (index > 12 || readerHeadingLevel(node) < 1 || readerHeadingLevel(node) > 3) return true;
-      return !readerHeadingMatchesTitle(getHostOriginalText(node), title);
+      return !readerHeadingMatchesTitle(readerOriginalTextPreservingWhitespace(node).trim(), title);
     });
     const redditComments = redditThread ? [...document.querySelectorAll('shreddit-comment,.commentarea .thing.comment')] : [];
     if (redditThread) {
@@ -3490,7 +3494,7 @@
         while (headingStack.length && headingStack[headingStack.length - 1].level >= level) headingStack.pop();
         const heading = {
           id: `head_${idx}`,
-          text: getHostOriginalText(node),
+          text: readerOriginalTextPreservingWhitespace(node).trim(),
           level,
           ancestorIds: headingStack.map(item => item.id)
         };

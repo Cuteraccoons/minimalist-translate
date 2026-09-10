@@ -1785,3 +1785,14 @@ html:has(#raccoon-reader-root) #raccoon-selection-bubble-root .selection-tool-bt
 #raccoon-reader-root .reader-note-editor .reader-note-editor-source{display:block!important;margin-bottom:12px!important}
 #raccoon-reader-root .reader-note-editor-source blockquote{margin:0!important;padding:8px 10px!important;border:0!important;border-left:2px solid var(--reader-text)!important;font:400 13px/1.6 var(--reader-ui-font)!important;max-height:84px!important;overflow:auto!important;color:var(--reader-shell-muted)!important}
 #raccoon-reader-root .reader-note-editor-source img{max-width:100%!important;max-height:100px!important;object-fit:contain!important;border-radius:5px!important}
+
+/* Font-size stepper keeps equal outer controls and a centered value. */
+#raccoon-reader-root .reader-size-row{display:grid!important;grid-template-columns:36px minmax(0,1fr) 36px!important;width:100%!important;align-items:center!important;gap:8px!important}
+#raccoon-reader-root .reader-size-row .reader-size-value{text-align:center!important;min-width:0!important;width:100%!important;justify-self:center!important}
+#raccoon-reader-root .reader-size-row button{margin:0!important;justify-self:center!important}
+/* Keep the scrollbar at the rail edge, outside the settings content. */
+#raccoon-reader-root .reader-context-panel .reader-tools-scroll{box-sizing:border-box!important;width:calc(100% + 17px)!important;max-width:none!important;min-width:0!important;margin-right:-17px!important;padding-right:17px!important;overflow-x:hidden!important;overflow-y:auto!important;scrollbar-gutter:stable!important}
+#raccoon-reader-root .reader-context-panel[data-active-tool="format"] .reader-settings-inline>.reader-size-row{display:grid!important;grid-template-columns:36px minmax(0,1fr) 36px!important;justify-content:stretch!important;align-items:center!important;width:100%!important;padding:6px!important;box-sizing:border-box!important}
+#raccoon-reader-root .reader-context-panel .reader-size-row>#drawer-btn-font-dec{justify-self:start!important}
+#raccoon-reader-root .reader-context-panel .reader-size-row>#drawer-btn-font-inc{justify-self:end!important}
+#raccoon-reader-root .reader-context-panel .reader-size-row>#drawer-font-size-val{text-align:center!important;justify-self:stretch!important}

@@ -1455,6 +1455,6 @@ input:checked + .switch-knob:before {
 #btn-toggle-page > svg{transform:translateY(.5px)!important}
 #btn-toggle-reader > svg,#btn-toggle-sidebar > svg{transform:translateY(1px)!important}
 #btn-toggle-page > svg{transform:translateY(-.5px)!important}
-#btn-toggle-reader > svg,#btn-toggle-sidebar > svg{transform:translateY(0)!important}
+#btn-toggle-reader > svg,#btn-toggle-sidebar > svg{transform:translateY(-.5px)!important}
 #btn-donate:hover{background:#000!important;color:#fff!important}
 #btn-donate:hover *{color:#fff!important}
