@@ -1,38 +1,47 @@
 <p align="right">
-  <strong>English</strong> · <a href="./README.zh-CN.md">简体中文</a> · <a href="./README.ja.md">日本語</a>
+  <strong>简体中文</strong> · <a href="./README.en.md">English</a> · <a href="./README.ja.md">日本語</a>
 </p>
+
+<h1 align="center">极简翻译 · Minimalist Translate</h1>
 
 <p align="center">
-  <img src="./assets/readme/en/hero.png" width="100%" alt="Minimalist Translate with nine reading and translation features beside a raccoon reading at a desk.">
+  <img src="./assets/readme/zh-CN/hero.png" width="100%" alt="极简翻译的九项阅读与翻译功能，右侧是一只在书桌前阅读的浣熊。">
 </p>
 
-> **Available now:** Install Minimalist Translate from the [Chrome Web Store](https://chromewebstore.google.com/detail/pbndcgchimohkkdijfafhaljldgfkhbd), or use [Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest) for a manual installation.
+> **现已上架：** 可从 [Chrome Web Store](https://chromewebstore.google.com/detail/pbndcgchimohkkdijfafhaljldgfkhbd) 安装极简翻译，也可以通过 [Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest) 手动安装。
 
-Minimalist Translate is an open-source Chrome extension for reading foreign-language webpages without turning them into a separate translation document. It keeps links, tabs, buttons, and page structure usable while adding bilingual reading, focused reader views, dictionary lookup, and on-device image OCR.
+极简翻译是一款面向外文网页阅读的开源 Chrome 扩展。它不会把网页变成另一份割裂的翻译文档，而是在尽量保留链接、Tab、按钮与原有排版关系的前提下，加入双语阅读、沉浸阅读、本地词典与本机图片 OCR。
 
-## Read in the view that fits the page
+## 选择适合当前网页的阅读方式
 
-- **Bilingual page** adds the translation below the source text while preserving the page's original structure. Editorial link cards keep their source copy and place the translation inside the same link; compact tabs can use an in-place label with hover-to-original.
-- **Replace original** changes text nodes in place and keeps links, buttons, navigation, and tabs interactive.
-- **Immersive reader** extracts the article, removes duplicate headings, keeps safe links, and provides a three-level outline, text-to-speech, plus paper, flat, column, and folio layouts.
-- **Side-by-side view** creates an independent bilingual panel with synchronized navigation, adjustable width, and paragraph playback.
+- **原网页双语**：在原文下方生成译文，同时保留页面原有结构与交互。文章链接卡片保留原文，并把译文放在同一链接内；空间受限的 Tab 可使用原地译文，悬停时查看原文。
+- **替换原文**：只替换文字节点，链接、按钮、导航和 Tab 仍可正常使用。
+- **沉浸阅读**：提取文章正文、过滤重复标题、保留安全链接，并提供三级文章大纲、全文朗读以及纸张、铺开、Safari、论坛四种页面结构。
+- **分栏对照**：在侧边建立独立双语分栏，支持原文定位、宽度调整与段落朗读。
 
-## Look up words without leaving the page
+## 阅读、笔记与分享
 
-- Query Free Dictionary API, Jisho / JMdict, Moedict, and Wikipedia summaries.
-- Load local MDX / MDD dictionaries and their CSS, images, and audio without uploading dictionary files.
-- Add optional AI explanations and follow-up questions after configuring a supported provider.
-- Save vocabulary and highlights locally, then search, filter, or export them as Markdown and CSV.
+- 高亮和笔记按文章保存在本机，收藏页支持按文章折叠查看。
+- 截图分享支持三种版式、渐变背景、署名，以及可选的标题、链接和二维码。
+- 导出 Markdown、TXT 或保留阅读样式的 HTML／PDF；笔记可单独导出或与文章旁注一起打印。
+- 阅读器提供正文宽度、语种字体、配色、表格样式与朗读设置。
 
-## Translate text inside images locally
+## 不离开网页完成查词
 
-Image OCR runs in the browser with the Tesseract.js runtime bundled with the extension. The first use of a language downloads its model from a public model source and stores it in the browser cache. The original image is not sent to an OCR service; only recognized text is sent to the selected translation engine when translation is requested.
+- 接入 Free Dictionary API、Jisho / JMdict、萌典与维基百科摘要。
+- 直接读取本地 MDX / MDD 词典及配套 CSS、图片和发音，不上传词典文件。
+- 配置服务后可启用 AI 语境释义与连续追问。
+- 生词与高亮保存在浏览器本地，支持搜索、筛选以及 Markdown / CSV 导出。
 
-The translated image stays in the original page position. Recognized lines are written back with local alignment, neighbouring-line, and background-contrast safeguards, and the source image remains available at any time.
+## 在本机翻译图片文字
 
-## Translation engines
+图片 OCR 使用扩展随附的 Tesseract.js 在浏览器本机运行。首次使用某种语言时会从公开模型源下载对应语言模型，并由浏览器缓存复用。原图片不会发送给 OCR 服务；只有识别出的纯文本在用户继续翻译时才会发送给当前翻译引擎。
 
-Google Translate can be used as the basic engine. The following integrations require your own configuration:
+译图会保留在原网页的图片位置。识别行按原位置写回，并自动处理相邻行边界、文字对齐和背景对比；也可以随时切换回原图。
+
+## 翻译引擎
+
+Google 翻译可直接作为基础引擎使用。下列服务需要用户自行配置：
 
 - DeepL
 - DeepSeek
@@ -40,40 +49,40 @@ Google Translate can be used as the basic engine. The following integrations req
 - Claude
 - Gemini
 - Ollama
-- Custom compatible APIs
+- 自定义兼容 API
 
-## Install locally
+## 本地安装
 
-1. Download and extract the latest package from [Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest).
-2. Open `chrome://extensions/` in Chrome.
-3. Enable **Developer mode**.
-4. Choose **Load unpacked** and select the `Jijian-Translate` folder.
+1. 从 [Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest) 下载并解压最新发布包。
+2. 在 Chrome 地址栏打开 `chrome://extensions/`。
+3. 开启右上角的「开发者模式」。
+4. 点击「加载已解压的扩展程序」，选择解压后包含 `manifest.json` 的文件夹。
 
-Chrome cannot load the ZIP file directly. When updating a local installation, replace the files in the same folder and refresh the extension from `chrome://extensions/`.
+Chrome 不能直接加载 ZIP 文件。更新本地安装时，用新文件覆盖原文件夹，然后在扩展管理页点击刷新即可。
 
-## Data boundaries
+## 数据边界
 
-- API keys, custom service endpoints, and model configuration stay on the current device; ordinary interface and reading preferences may sync through Chrome Sync.
-- Vocabulary, highlights, translation cache, and local dictionary connections stay on the current device.
-- Local MDX / MDD files are not uploaded.
-- OCR runs locally; recognized text is sent to the selected translation service only when translation is requested.
-- Online translation, dictionary, and optional AI requests are governed by the selected provider's policy.
-- The project has no custom account system or cloud synchronization service.
+- API Key、自定义服务地址与模型配置仅保存在当前设备；普通界面与阅读偏好可通过 Chrome Sync 同步。
+- 生词、高亮、翻译缓存与本地词典连接信息保存在当前设备。
+- 本地 MDX / MDD 词典文件不会被上传。
+- OCR 在本机运行；只有识别出的纯文本在继续翻译时才会发送给所选翻译服务。
+- 在线翻译、在线词典与可选 AI 请求受用户所选服务商的政策约束。
+- 项目没有自建账号体系或云端同步服务。
 
-See the [privacy notice](PRIVACY.md) for the complete service and permission boundary.
+完整的服务与权限边界见 [隐私说明](PRIVACY.md)。
 
-## Project and appreciation
+## 项目与赞赏
 
-If Minimalist Translate helps with your reading, you can leave an optional appreciation through [Afdian](https://www.ifdian.net/a/longmaojun). It recognizes the open-source work already released and does not purchase exclusive features, scheduling, or maintenance commitments.
+如果极简翻译对你的日常阅读有所帮助，可以通过 [爱发电](https://www.ifdian.net/a/longmaojun) 表达赞赏。赞赏是对当前开源成果的认可，不对应专属功能、更新排期或维护承诺。
 
-## Contributing
+## 参与贡献
 
-Bug reports, compatibility examples, documentation improvements, and focused code contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Please report security issues through the process in [SECURITY.md](SECURITY.md), not through a public issue.
+欢迎提交 Bug、网页兼容案例、文档改进与边界清晰的代码贡献。提交 Pull Request 前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。安全问题请按照 [SECURITY.md](SECURITY.md) 中的方式反馈，不要在公开 Issue 中披露可被利用的细节。
 
-## Acknowledgements
+## 致谢
 
-OpenAI Codex was used as an assistive tool during development and code review.
+开发与代码审查过程中使用了 OpenAI Codex 作为辅助工具。
 
-## License
+## 开源许可
 
-Minimalist Translate is released under the [Apache License 2.0](LICENSE). Third-party components remain subject to their own licenses and notices; see [NOTICE](NOTICE) and the notice files under `vendor/`.
+极简翻译基于 [Apache License 2.0](LICENSE) 开源。第三方组件继续适用各自的许可证与声明，详见 [NOTICE](NOTICE) 与 `vendor/` 目录中的许可文件。

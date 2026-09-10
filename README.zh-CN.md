@@ -1,6 +1,8 @@
 <p align="right">
-  <a href="./README.md">English</a> · <strong>简体中文</strong> · <a href="./README.ja.md">日本語</a>
+  <strong>简体中文</strong> · <a href="./README.en.md">English</a> · <a href="./README.ja.md">日本語</a>
 </p>
+
+<h1 align="center">极简翻译 · Minimalist Translate</h1>
 
 <p align="center">
   <img src="./assets/readme/zh-CN/hero.png" width="100%" alt="极简翻译的九项阅读与翻译功能，右侧是一只在书桌前阅读的浣熊。">
@@ -14,8 +16,15 @@
 
 - **原网页双语**：在原文下方生成译文，同时保留页面原有结构与交互。文章链接卡片保留原文，并把译文放在同一链接内；空间受限的 Tab 可使用原地译文，悬停时查看原文。
 - **替换原文**：只替换文字节点，链接、按钮、导航和 Tab 仍可正常使用。
-- **沉浸阅读**：提取文章正文、过滤重复标题、保留安全链接，并提供三级文章大纲、全文朗读以及纸张、铺开、专栏、书页四种页面结构。
+- **沉浸阅读**：提取文章正文、过滤重复标题、保留安全链接，并提供三级文章大纲、全文朗读以及纸张、铺开、Safari、论坛四种页面结构。
 - **分栏对照**：在侧边建立独立双语分栏，支持原文定位、宽度调整与段落朗读。
+
+## 阅读、笔记与分享
+
+- 高亮和笔记按文章保存在本机，收藏页支持按文章折叠查看。
+- 截图分享支持三种版式、渐变背景、署名，以及可选的标题、链接和二维码。
+- 导出 Markdown、TXT 或保留阅读样式的 HTML／PDF；笔记可单独导出或与文章旁注一起打印。
+- 阅读器提供正文宽度、语种字体、配色、表格样式与朗读设置。
 
 ## 不离开网页完成查词
 
@@ -47,7 +56,7 @@ Google 翻译可直接作为基础引擎使用。下列服务需要用户自行�
 1. 从 [Releases](https://github.com/Cuteraccoons/minimalist-translate/releases/latest) 下载并解压最新发布包。
 2. 在 Chrome 地址栏打开 `chrome://extensions/`。
 3. 开启右上角的「开发者模式」。
-4. 点击「加载已解压的扩展程序」，选择 `Jijian-Translate` 文件夹。
+4. 点击「加载已解压的扩展程序」，选择解压后包含 `manifest.json` 的文件夹。
 
 Chrome 不能直接加载 ZIP 文件。更新本地安装时，用新文件覆盖原文件夹，然后在扩展管理页点击刷新即可。
 
