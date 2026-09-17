@@ -1765,7 +1765,7 @@ html:has(#raccoon-reader-root) #raccoon-selection-bubble-root .trigger-translate
 #raccoon-reader-root.reader-meta-hidden .reader-title{margin-bottom:38px!important}
 #raccoon-reader-root[data-theme="dark"] .reader-outline-item.level-1:is(.active-heading,.active-ancestor){background:color-mix(in srgb,var(--outline-fill) 20%,#222)!important;color:#eee!important}
 html:has(#raccoon-reader-root) #raccoon-selection-bubble-root .selection-tool-btn{font:400 13px/1.4 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif!important}
-html:has(#raccoon-reader-root) #raccoon-selection-bubble-root .selection-tool-btn[data-action="note"] svg{width:17px!important;height:17px!important;flex:0 0 17px!important}
+html:has(#raccoon-reader-root) #raccoon-selection-bubble-root .selection-tool-btn[data-action="note"] svg{width:16px!important;height:16px!important;flex:0 0 16px!important}
 #raccoon-reader-root .reader-context-panel[data-active-tool="info"] .reader-copy-grid button.is-copied,#raccoon-reader-root .reader-context-panel[data-active-tool="info"] #drawer-btn-copy.is-copied{background:#000!important;color:#fff!important;border-color:#000!important}
 #raccoon-reader-root .reader-note-editor button{font:400 14px/1.4 var(--reader-ui-font)!important;color:var(--reader-text)!important;background:var(--reader-card-bg)!important;border:1px solid var(--reader-shell-border)!important;border-radius:8px!important;padding:8px 12px!important;cursor:pointer!important}
 #raccoon-reader-root .reader-note-editor [data-save]{background:#000!important;color:#fff!important;border-color:#000!important}
@@ -1796,3 +1796,11 @@ html:has(#raccoon-reader-root) #raccoon-selection-bubble-root .selection-tool-bt
 #raccoon-reader-root .reader-context-panel .reader-size-row>#drawer-btn-font-dec{justify-self:start!important}
 #raccoon-reader-root .reader-context-panel .reader-size-row>#drawer-btn-font-inc{justify-self:end!important}
 #raccoon-reader-root .reader-context-panel .reader-size-row>#drawer-font-size-val{text-align:center!important;justify-self:stretch!important}
+
+/* Keep navigation counts readable only when the resizable rail has room. */
+#raccoon-reader-root .reader-outline-panel{container-type:inline-size;container-name:reader-navigation}
+#raccoon-reader-root .reader-navigator-tabs button{white-space:nowrap!important;min-width:0!important}
+#raccoon-reader-root .reader-navigator-tabs button span{white-space:nowrap!important;flex-shrink:0!important}
+@container reader-navigation (max-width:270px){
+ #raccoon-reader-root .reader-navigator-tabs button span{display:none!important}
+}
