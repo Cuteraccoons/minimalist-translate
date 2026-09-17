@@ -4344,3 +4344,6 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
 
 /* Flush the first comparison card with the toolbar divider. */
 #raccoon-sidebar-root .sidebar-list-content{padding-top:0!important}
+
+.sidebar-content-hint{margin:22px 0 4px;font:400 13px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#777}
+.sidebar-list-content:has(.raccoon-sidebar-item)>.sidebar-content-hint{display:none}

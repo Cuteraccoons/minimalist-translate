@@ -2341,7 +2341,7 @@
             </button>
           </div>
         </div>
-        <div class="sidebar-list-content" id="sidebar-list-content"><button type="button" class="sidebar-more-content" id="sidebar-more-content">显示页面其他内容</button></div>
+        <div class="sidebar-list-content" id="sidebar-list-content"><p class="sidebar-content-hint">没有看到译文？部分内容可能未被识别为正文，点击下方可展开查看。</p><button type="button" class="sidebar-more-content" id="sidebar-more-content">显示页面其他内容</button></div>
       </aside>
     `;
 

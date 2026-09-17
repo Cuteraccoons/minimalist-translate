@@ -2104,3 +2104,12 @@ input:checked + .switch-knob:before {
 /* Collection scopes share one quiet toolbar instead of nested cards. */
 .collection-filters{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:16px 0 22px;font-size:13px;color:var(--text-secondary,#666)}
 .collection-filters label{display:flex;align-items:center;gap:6px}.collection-filters input,.collection-filters select{font:inherit;background:var(--bg-main,#fff);color:var(--text-primary,#222);border:1px solid var(--border-color,#ddd);border-radius:7px;padding:7px;max-width:190px;min-width:0}.collection-filters button{font:inherit;border:0;background:var(--bg-secondary,#f2f2f2);color:var(--text-primary,#222);border-radius:7px;padding:7px 10px;cursor:pointer}.collection-filters button:hover{background:#000;color:#fff}.collection-scope-count{flex-basis:100%;font-size:13px}.highlight-collected-at{display:block;color:var(--text-secondary,#777);font-size:13px;margin-top:10px}
+
+/* Companion links use the same spacing as the project actions. */
+.project-resource-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.project-resource-links button{display:flex;align-items:center;gap:10px;min-width:0;min-height:48px;padding:12px 16px;border:0;border-radius:12px;background:#f1f1ef;color:#555;font:500 14px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;text-align:left;cursor:pointer;transition:background .18s,color .18s}
+.project-resource-links button:hover{background:#e8e8e5;color:#111}
+.project-resource-links button:focus-visible{outline:2px solid #222;outline-offset:3px}
+.project-resource-links svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.project-resource-links .resource-arrow{margin-left:auto;color:#888}
+@media(max-width:600px){.project-resource-links{grid-template-columns:1fr}}

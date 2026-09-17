@@ -2,7 +2,7 @@
   const steps = [
     {key:'start', title:'欢迎使用极简翻译！', description:'下一页，读懂一个更大的世界。'},
     {key:'translate', title:'网页翻译', description:'点一下翻译胶囊，让译文出现在原文身旁。', action:'translate', button:'翻译这篇文章'},
-    {key:'sidebar', title:'分栏对照', description:'两种语言，并排阅读。点击译文段落，回到对应原文。', action:'sidebar', button:'试试分栏对照'},
+    {key:'sidebar', title:'分栏对照', description:'两种语言，并排阅读。没有看到译文时，点击右侧“显示页面其他内容”。', action:'sidebar', button:'试试分栏对照'},
     {key:'reader', title:'沉浸阅读', description:'把页面里的干扰收起来，留下文章、大纲和配图。', action:'reader', button:'进入阅读模式'},
     {key:'notes', title:'高亮与笔记', description:'划选一句话，留下高亮，也写下自己的想法。', action:'reader', button:'进入文章做笔记'},
     {key:'lookup', title:'双击查词', description:'双击 curiosity，看看词义；点星标就能加入生词本。'},
