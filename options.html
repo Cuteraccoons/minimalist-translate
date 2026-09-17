@@ -686,7 +686,14 @@
               <button type="button" class="active" data-view="list" title="列表" aria-label="列表"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
               <button type="button" data-view="gallery" title="画廊" aria-label="画廊"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></svg></button>
             </div>
-            <button type="button" id="btn-export-vocab-csv" class="test-btn vocab-export">导出 CSV</button>
+            <button type="button" id="btn-export-vocab-csv" class="test-btn vocab-export">导出当前 CSV</button>
+          </div>
+          <div class="collection-filters" id="vocab-scope" aria-label="时间与网站筛选">
+            <label>从 <input type="datetime-local" data-filter="from"></label><label>至 <input type="datetime-local" data-filter="until"></label>
+            <label>网站 <select data-filter="site"><option value="">全部网站</option></select></label>
+            <label>排序 <select data-filter="sort"><option value="newest">最近收藏</option><option value="oldest">最早收藏</option><option value="name">按文字</option></select></label>
+            <button type="button" data-period="today">今天</button><button type="button" data-period="week">近 7 天</button><button type="button" data-period="all">重置</button>
+            <span class="collection-scope-count" aria-live="polite"></span>
           </div>
           <div class="vocab-list-box" id="vocab-list-container" data-view="list">
             <div class="vocab-empty">生词本暂无记录。在网页查词卡片中点击收藏即可收录。</div>
@@ -701,9 +708,16 @@
             <input type="text" id="input-highlight-search" class="apple-input" placeholder="搜索高亮内容">
             <span class="highlight-count" id="highlight-count">0 条</span>
             <div class="highlight-export-actions">
-              <button type="button" id="btn-copy-highlights" class="test-btn compact-action">复制全部</button>
-              <button type="button" id="btn-export-highlights-md" class="test-btn compact-action">导出 Markdown</button>
+              <button type="button" id="btn-copy-highlights" class="test-btn compact-action">复制当前结果</button>
+              <button type="button" id="btn-export-highlights-md" class="test-btn compact-action">导出当前 Markdown</button>
             </div>
+          </div>
+          <div class="collection-filters" id="highlight-scope" aria-label="时间与网站筛选">
+            <label>从 <input type="datetime-local" data-filter="from"></label><label>至 <input type="datetime-local" data-filter="until"></label>
+            <label>网站 <select data-filter="site"><option value="">全部网站</option></select></label>
+            <label>排序 <select data-filter="sort"><option value="newest">最近收藏</option><option value="oldest">最早收藏</option><option value="name">按文字</option></select></label>
+            <button type="button" data-period="today">今天</button><button type="button" data-period="week">近 7 天</button><button type="button" data-period="all">重置</button>
+            <span class="collection-scope-count" aria-live="polite"></span>
           </div>
           <div class="highlight-manager-list" id="highlight-manager-list"><div class="vocab-empty">还没有高亮收藏。</div></div>
         </div>
@@ -811,6 +825,7 @@
           </div>
         </div>
 
+        <button type="button" id="btn-open-welcome" class="test-btn">重新打开使用指南</button><button id="btn-open-reading-lab" type="button" class="test-btn">阅读测试台 ↗</button>
         <div class="support-links-panel">
           <button type="button" class="support-link-row support-action-donate" id="btn-open-donation-url">
             <span class="support-link-copy"><strong>请开发者喝一杯茶</strong></span>
@@ -828,6 +843,7 @@
 
   <script src="vendor/pako_inflate.min.js"></script>
   <script src="vendor/mdict-lite.js"></script>
+  <script src="collection-filters.js"></script>
   <script src="options.js?v=1.0-ui-fix"></script>
 </body>
 </html>

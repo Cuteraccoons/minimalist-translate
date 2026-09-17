@@ -203,11 +203,20 @@
     } catch (_) {}
   }
 
+  const isWelcomePage = location.href === chrome.runtime.getURL('welcome.html');
+  if(isWelcomePage) document.addEventListener('jijian-welcome-action',event=>{
+    const action=event.detail;
+    if(action==='reset'){if(isReaderOpen)closeReaderMode();if(isSidebarOpen)closeSidebar();if(isPageTranslated||isTranslating)restoreOriginalPage();readerContainerCache={url:'',element:null};}
+    if(action==='translate')togglePageTranslation();
+    if(action==='sidebar')toggleSidebar();
+    if(action==='reader')toggleReaderMode();
+  });
   // 1. 初始化
   chrome.runtime.sendMessage({ action: "GET_SETTINGS" }, (res) => {
     if (chrome.runtime.lastError) return;
     if (res && res.settings) {
       currentSettings = Object.assign({}, currentSettings, res.settings);
+      if(isWelcomePage)Object.assign(currentSettings,{targetLang:"zh-CN",sourceLang:"en",displayMode:"bilingual",autoTranslateEnabled:false,autoTranslateDomainList:[],autoDetectPageLanguage:false,enableFloatingBall:true});
 
       detectHostDarkTheme();
       applyDynamicStyles(currentSettings);
@@ -216,7 +225,7 @@
       if (!isCurrentHostExcluded("floating")) initFloatingPillSmart();
       if (!isCurrentHostExcluded("hover")) initHoverSingleParagraphTranslate();
       if (canUseImageTranslationHere()) initImageTranslation();
-      resumeTabTranslationSession().then(resumed => {
+      if(!isWelcomePage)resumeTabTranslationSession().then(resumed => {
         if (!resumed && !isCurrentHostExcluded("auto")) checkAutoTranslate();
       });
       if (!isCurrentHostExcluded("selection")) initSelectionAndDoubleClick();
@@ -344,6 +353,12 @@
         combinedText += " " + t;
         sampled += t.length;
       }
+    }
+
+    const unstructuredBook=document.querySelector('.main_text');
+    if(unstructuredBook||combinedText.length<100){
+      const fallback=unstructuredBook||document.querySelector('main,article')||document.body;
+      combinedText=String(fallback?.innerText||combinedText).slice(0,1800);
     }
 
     if (!combinedText || combinedText.length < 25) {
@@ -1325,7 +1340,7 @@
         const clone = document.createElement("div");
         clone.innerHTML = storedHtml;
         clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor").forEach(node => node.remove());
+      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
         return String(clone.textContent || "").replace(/\s+/g, " ").trim();
       }
 
@@ -1336,7 +1351,7 @@
 
       const clone = el.cloneNode(true);
       clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor").forEach(node => node.remove());
+      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
       return String(clone.textContent || "").replace(/\s+/g, " ").trim();
     } catch (_) {
       return String(el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
@@ -2799,6 +2814,7 @@
   }
 
   function findBestReaderContainer() {
+    if(isWelcomePage)return document.querySelector("[data-welcome-article]");
     if (readerContainerCache.url === location.href && readerContainerCache.element?.isConnected) {
       return readerContainerCache.element;
     }
@@ -2807,7 +2823,12 @@
       return readerContainerCache.element;
     };
     const host = window.location.hostname.toLowerCase();
+    if(/(^|\.)gutenberg\.org$/.test(host))return remember(document.body);
     const siteSelectors = [
+      [/wikisource\.org/, '#mw-content-text .mw-parser-output'],
+      [/aozora\.gr\.jp/, '.main_text'],
+      [/standardebooks\.org/, 'article, main'],
+      [/marxists\.org/, '#content, .document, body'],
       [/(?:medium\.com|substack\.com|wordpress\.com|blogspot\.com|ghost\.io)/, "article, .pw-post-body-paragraph, .body.markup, .entry-content, .post-content, .gh-content"],
       [/(?:zhihu\.com|zhuanlan\.zhihu\.com)/, ".Post-RichText, .QuestionAnswer-content, .RichContent-inner, .RichText.ztext"],
       [/douban\.com/, ".note-content, .review-content, #link-report, .topic-content"],
@@ -2975,9 +2996,35 @@
   }
 
   function collectReaderContentNodes(container) {
+    // Aozora interleaves chapter wrappers and bare text/ruby separated by BR.
+    // Querying only P elements drops most of the novel.
+    if(/(^|\.)aozora\.gr\.jp$/.test(location.hostname)&&container.matches('.main_text')){
+      const blocks=[];
+      const walk=parent=>{
+        let paragraph=document.createElement('p');
+        const flush=()=>{if(paragraph.textContent.trim())blocks.push(paragraph);paragraph=document.createElement('p');};
+        for(const child of parent.childNodes){
+          if(child.nodeType===Node.ELEMENT_NODE&&child.tagName==='BR'){flush();continue;}
+          if(child.nodeType===Node.ELEMENT_NODE&&/^(DIV|SECTION|H[1-6]|P|BLOCKQUOTE|TABLE|FIGURE|PRE)$/.test(child.tagName)){
+            flush();if(/^(DIV|SECTION)$/.test(child.tagName))walk(child);else blocks.push(child);continue;
+          }
+          if(child.nodeType===Node.TEXT_NODE||child.nodeType===Node.ELEMENT_NODE&&!/^(SCRIPT|STYLE)$/.test(child.tagName))paragraph.append(child.cloneNode(true));
+        }flush();
+      };
+      walk(container);return blocks;
+    }
     const selector = "figure, table, details, video, audio, iframe[src], hr, p, h1, h2, h3, h4, h5, h6, [role='heading'][aria-level], blockquote, pre, li, dt, dd, figcaption, a[download], a[href$='.pdf'], a[href$='.epub'], a[href$='.zip'], a[href*='.mp4'], a[href*='.webm'], a[href*='.ogv'], img";
     const seenText = new Set();
+    const bookPage=/(?:gutenberg\.org|wikisource\.org|aozora\.gr\.jp|standardebooks\.org|marxists\.org)$/.test(location.hostname);
+    const gutenberg=/(^|\.)gutenberg\.org$/.test(location.hostname);
+    const boundary=[...container.children];
+    const bookStart=gutenberg&&(container.querySelector('#pg-start-separator')||boundary.find(node=>/^\*{3}\s*START OF/i.test(node.textContent.trim())));
+    const bookEnd=gutenberg&&(container.querySelector('#pg-end-separator')||boundary.find(node=>/^\*{3}\s*END OF/i.test(node.textContent.trim())));
     const raw = Array.from(container.querySelectorAll(selector));
+    // Old electronic books often use text + BR in otherwise empty DIVs.
+    const loose=[container,...container.querySelectorAll('div,section')].filter(node=>!node.closest('nav,footer,header,aside,script,style')&&!node.querySelector('p,div,section,table,pre,li,h1,h2,h3,h4,h5,h6')&&node.textContent.trim().length>80);
+    loose.forEach(node=>{if(!raw.includes(node))raw.push(node);});
+    raw.sort((a,b)=>a===b?0:a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING?-1:1);
     const result = [];
     let accumulatedText = 0;
     let tailReached = false;
@@ -2986,6 +3033,8 @@
 
     for (const node of raw) {
       if (tailReached) break;
+      if(bookStart&&!(bookStart.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING))continue;
+      if(bookEnd&&(node===bookEnd||bookEnd.contains(node)||(bookEnd.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING)))continue;
       if (node.closest("nav, header, footer, aside, [role='navigation'], [aria-hidden='true'], #raccoon-sidebar-root, #raccoon-floating-ball-root, #raccoon-selection-bubble-root, .raccoon-translated-block, .raccoon-translated-inline, #raccoon-hover-trigger-root")) continue;
       if (isReaderMaintenanceContainer(node)) continue;
       const semanticParent = node.parentElement?.closest("figure,table,details");
@@ -3052,23 +3101,37 @@
       const text = getHostOriginalText(node);
       const isHeading = readerHeadingLevel(node) > 0;
       if (text.length < (isHeading ? 2 : (node.tagName === "LI" ? 6 : 10))) continue;
-      if (seenText.has(text)) continue;
+      if (!bookPage && seenText.has(text)) continue;
 
       const linkText = Array.from(node.querySelectorAll?.("a") || []).reduce((n,a) => n + ((a.innerText || a.textContent || "").trim().length), 0);
       const linkDensity = text.length ? linkText / text.length : 0;
       // A recommendation heading after substantial article text is a strong end-of-article signal.
-      if (accumulatedText > 650 && isHeading && tailHeadingRe.test(text)) {
+      if (!bookPage && accumulatedText > 650 && isHeading && tailHeadingRe.test(text)) {
         tailReached = true;
         break;
       }
       // Lists made mostly of links near the tail are usually related stories / navigation rather than article prose.
-      if (accumulatedText > 900 && node.tagName === "LI" && linkDensity > .8) continue;
+      if (!bookPage && accumulatedText > 900 && node.tagName === "LI" && linkDensity > .8) continue;
 
       seenText.add(text);
       result.push(node);
       accumulatedText += text.length;
     }
-    return result;
+    return result.flatMap(node=>{
+      if(!bookPage)return [node];
+      if(node.tagName==='PRE'&&!node.querySelector('code')&&node.textContent.length>600){
+        return node.textContent.split(/\n\s*\n/).filter(text=>text.trim()).map((text,index)=>{const paragraph=document.createElement('p');paragraph.textContent=text.replace(/\n/g,' ');if(index===0&&node.id)paragraph.id=node.id;return paragraph;});
+      }
+      const breaks=['DIV','SECTION'].includes(node.tagName)?[...node.querySelectorAll('br')]:[];
+      if(breaks.length<4)return [node];
+      const paragraphs=[];let previous=null;
+      for(const end of [...breaks,null]){
+        const range=document.createRange();previous?range.setStartAfter(previous):range.setStart(node,0);end?range.setEndBefore(end):range.setEnd(node,node.childNodes.length);
+        const paragraph=document.createElement('p');paragraph.append(range.cloneContents());
+        if(paragraph.textContent.trim()){if(!paragraphs.length&&node.id)paragraph.id=node.id;paragraphs.push(paragraph);}previous=end;
+      }
+      return paragraphs.length?paragraphs:[node];
+    });
   }
 
   function readerInlineHtml(sourceNode) {
@@ -3099,7 +3162,7 @@
       }
     });
     clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor").forEach(node => node.remove());
+      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
     // Preserve separators from nested layout wrappers before stripping host
     // markup. Wikipedia facts often place several values in sibling DIV/LI
     // nodes; blindly unwrapping them would concatenate every label.
@@ -3172,7 +3235,7 @@
         cloneWalker.currentNode.nodeValue = originalTextForNode(sourceWalker.currentNode);
       }
       clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor").forEach(node => node.remove());
+      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
       return String(clone.textContent || "").replace(/^\n+|\n+$/g, "");
     } catch (_) { return String(sourceNode.textContent || ""); }
   }
@@ -3257,7 +3320,7 @@
     if (!raw) return "";
     try {
       const resolved = new URL(raw, location.href);
-      return ["http:", "https:", "blob:", "data:"].includes(resolved.protocol) ? resolved.href : "";
+      return (["http:", "https:", "blob:", "data:"].includes(resolved.protocol)||(isWelcomePage&&resolved.href.startsWith(chrome.runtime.getURL("assets/")))) ? resolved.href : "";
     } catch (_) { return ""; }
   }
 
@@ -3468,7 +3531,7 @@
     readerImageInfoCache = new WeakMap();
     const bestContainer = findBestReaderContainer();
     const redditThread = /(?:^|\.)reddit\.com$/i.test(location.hostname) && /\/comments\//.test(location.pathname);
-    const title = readerOriginalTextPreservingWhitespace(document.querySelector("#firstHeading, main h1, article h1, h1")).trim()
+    const title = (isWelcomePage ? "A place to read" : readerOriginalTextPreservingWhitespace(document.querySelector("#firstHeading, main h1, article h1, h1")).trim())
       || document.querySelector('meta[property="og:title"]')?.content?.trim()
       || document.title
       || "阅读文章";
@@ -3662,7 +3725,7 @@
                 const headingLevel = readerHeadingLevel(node);
                 const isHeading = headingLevel > 0;
                 const isFigcaption = node.tagName === "FIGCAPTION";
-                const isCode = node.tagName === "PRE";
+                const isCode = node.tagName === "PRE" && !(node.textContent.length>600&&!node.querySelector("code")&&/gutenberg\.org|wikisource\.org|marxists\.org/.test(location.hostname));
                 const isQuote = node.tagName === "BLOCKQUOTE";
                 const isListItem = node.tagName === "LI";
                 const wrapperClass = isCode ? "reader-code-block" : isQuote ? "reader-blockquote" : isListItem ? "reader-list-block" : "";
@@ -4353,10 +4416,10 @@
         if (statusText) statusText.textContent = "纯净原文阅读";
       } else if (mode === "bilingual") {
         if (statusText) statusText.textContent = "双语对照精排";
-        requestReaderTranslation();
+        requestReaderTranslation(true);
       } else {
         if (statusText) statusText.textContent = "纯中文精排阅读";
-        requestReaderTranslation();
+        requestReaderTranslation(true);
         const titleEl = root.querySelector(".reader-title");
         sendDictionaryRuntimeMessage({action:"TRANSLATE_SINGLE_BLOCK",text:title,sl:"auto",tl:currentSettings.targetLang || "zh-CN"}, res => {
           if (titleEl && res?.success && res.text && res.text.trim().length < 180 && root.getAttribute("data-reader-view") === "trans") { titleEl.textContent = res.text.trim(); titleEl.lang = currentSettings.targetLang || "zh-CN"; }
@@ -4919,6 +4982,11 @@
     const applyAccent=value=>{root.dataset.readerOutlineAccent=value;const palette={neutral:['#555','#ededed'],blue:['#355b86','#e8eef7'],green:['#3c6654','#e7efea'],purple:['#72577e','#eee7f2']}[value]||['#555','#ededed'];root.style.setProperty('--outline-ink',palette[0]);root.style.setProperty('--outline-fill',palette[1]);};
     accentSelect.value=currentSettings.readerOutlineAccent||'neutral';applyAccent(accentSelect.value);
     accentSelect.addEventListener('change',()=>{currentSettings.readerOutlineAccent=accentSelect.value;applyAccent(accentSelect.value);chrome.runtime.sendMessage({action:'UPDATE_SETTINGS',settings:{readerOutlineAccent:accentSelect.value}});});
+    const sourceAnchors=new Map();
+    contentNodes.forEach((node,index)=>{const target=root.querySelector(`#${readerHeadingLevel(node)?'head':'r'}_${index}`)||root.querySelector(`#reader_table_${index}`);if(!target)return;
+      [node,...node.querySelectorAll('[id],a[name]'),node.closest('.footnote')].filter(Boolean).forEach(source=>{const id=source.id||source.getAttribute('name');if(id&&!sourceAnchors.has(id))sourceAnchors.set(id,target);});
+    });
+    root.querySelector('#reader-content').addEventListener('click',event=>{const link=event.target.closest('a[href]');if(!link)return;try{const url=new URL(link.href);if(url.origin!==location.origin||url.pathname!==location.pathname||!url.hash)return;const target=sourceAnchors.get(decodeURIComponent(url.hash.slice(1)));if(target){event.preventDefault();scrollReaderTarget(target);}}catch{}});
     const copyLink = root.querySelector("#reader-copy-link");
     copyLink.addEventListener("click", async () => {
       const label = copyLink.querySelector(".reader-source-copy");
@@ -4931,6 +4999,18 @@
     });
 
     let hasTriggeredTranslation = false;
+    const readerPairs=[...root.querySelectorAll('.reader-paragraph-pair')];
+    const longReader=readerPairs.length>250;
+    const nearbyPairs=new Set(),attemptedPairs=new Set();
+    let readerTranslationObserver;
+    if(longReader){
+      readerTranslationObserver=new IntersectionObserver(entries=>{
+        entries.forEach(entry=>entry.isIntersecting?nearbyPairs.add(entry.target):nearbyPairs.delete(entry.target));
+        if(root.getAttribute('data-reader-view')!=='orig')requestReaderTranslation();
+      },{root:scrollArea,rootMargin:'700px 0px'});
+      readerPairs.forEach(pair=>readerTranslationObserver.observe(pair));
+      root.cleanupReaderTranslation=()=>readerTranslationObserver.disconnect();
+    }
 
     async function triggerReaderTranslationIfNeeded() {
       if (hasTriggeredTranslation || !root?.isConnected) return;
@@ -4946,7 +5026,8 @@
           if (key && val?.transText && !translationByOriginal.has(key)) translationByOriginal.set(key, val.transText);
         });
 
-        root.querySelectorAll(".reader-paragraph-pair").forEach(pair => {
+        readerPairs.forEach(pair => {
+          if(longReader&&(!nearbyPairs.has(pair)||attemptedPairs.has(pair)))return;
           // textContent is intentional here: a reader can start translating
           // before its opening layout has painted. innerText is layout-aware
           // and can be empty during that short transition, leaving every
@@ -4961,6 +5042,7 @@
             setReaderTranslationText(pairEl, matchedTrans);
             pairEl.dataset.loaded = "true";
           } else if (pairEl) {
+            if(longReader)attemptedPairs.add(pair);
             uncachedItems.push({ id: pairId, text: raw });
           }
         });
@@ -4988,6 +5070,7 @@
 
         const worker = async () => {
           while (root?.isConnected && nextChunk < chunks.length) {
+            if(longReader&&root.getAttribute("data-reader-view")==="orig"){chunks.slice(nextChunk).flat().forEach(item=>{const pair=root.querySelector(`[data-para-id="${item.id}"]`);attemptedPairs.delete(pair);});break;}
             const chunk = chunks[nextChunk++];
             const transRes = await sendBatchWithIds(chunk);
             if (!root?.isConnected) return;
@@ -5023,10 +5106,16 @@
       } catch (err) {
         hasTriggeredTranslation = false;
         console.warn("Jijian reader translation failed safely:", err);
+      } finally {
+        if(longReader){
+          hasTriggeredTranslation=false;
+          if(root.isConnected&&root.getAttribute('data-reader-view')!=='orig'&&[...nearbyPairs].some(pair=>!attemptedPairs.has(pair)&&pair.querySelector('.reader-trans-p')?.dataset.loaded!=='true'))setTimeout(requestReaderTranslation,0);
+        }
       }
     }
 
-    const requestReaderTranslation = () => {
+    const requestReaderTranslation = (retry = false) => {
+      if(retry&&longReader&&!hasTriggeredTranslation)attemptedPairs.clear();
       void triggerReaderTranslationIfNeeded().catch((err) => {
         hasTriggeredTranslation = false;
         console.warn("Jijian reader translation request failed safely:", err);
@@ -5041,6 +5130,7 @@
   }
 
   function closeReaderMode() {
+    readerRoot?.cleanupReaderTranslation?.();
     readerRoot?.cleanupReaderNotes?.();
     readerRoot?.cleanupReaderVoices?.();
     globalThis.CSS?.highlights?.delete("reader-search-match");
@@ -5286,11 +5376,8 @@
       const hinted = nearbyHint || mapLanguageToOcrKey(currentSettings.sourceLang)
         || mapLanguageToOcrKey(document.documentElement?.lang)
         || "eng";
-      const uiLang = String(navigator.language || "").toLowerCase();
-      // Chinese users commonly translate mixed screenshots. Loading the paired
-      // model is slower only on first use, but avoids turning existing Han text
-      // into Latin gibberish and gives the renderer reliable word geometry.
-      key = hinted === "eng" && uiLang.startsWith("zh") ? "eng+chi_sim" : hinted;
+      // Use the image/page language; UI language is not image content.
+      key = hinted;
     }
     const meta = JIJIAN_OCR_LANGUAGES[key] || JIJIAN_OCR_LANGUAGES.eng;
     return { key, label: meta.label, langs: [...meta.langs] };
@@ -5355,11 +5442,19 @@
     if (jijianOcrMessageBound) return;
     jijianOcrMessageBound = true;
     window.addEventListener("message", (event) => {
-      if (jijianOcrSandboxFrame?.contentWindow && event.source !== jijianOcrSandboxFrame.contentWindow) return;
+      if (!jijianOcrSandboxFrame?.contentWindow || event.source !== jijianOcrSandboxFrame.contentWindow) return;
       const data = event?.data;
       if (!data || data.source !== "jijian-ocr-sandbox" || !data.id) return;
       const pending = jijianOcrPending.get(data.id);
       if (!pending) return;
+      if(data.type === 'model-request'){
+        if(!pending.meta?.langs?.includes(data.language))return;
+        const target=event.source;
+        chrome.runtime.sendMessage({action:'GET_OCR_MODEL',language:data.language},response=>{
+          if(target!==jijianOcrSandboxFrame?.contentWindow)return;
+          target.postMessage({source:'jijian-translate',type:'model-response',requestId:data.requestId,...(chrome.runtime.lastError?{success:false,error:'模型下载服务暂不可用，请重试'}:response)},'*');
+        });return;
+      }
       if (data.type === "progress") {
         pending.onProgress?.({ phase: "tesseract", status: data.status || "", detail:data.detail || "", percent: Math.round(Number(data.progress || 0) * 100) });
         return;
@@ -5434,6 +5529,8 @@
     return await new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         jijianOcrPending.delete(id);
+        frame.remove();
+        jijianOcrSandboxFrame = null;
         reject(new Error("本地 OCR 超过 120 秒，已自动停止；请检查网络后重试或在设置中选择单一识别语言"));
       }, 120000);
       jijianOcrPending.set(id, { resolve, reject, onProgress, timer, meta });
@@ -7222,6 +7319,7 @@
           translation: currentEntry.translation || "",
           definitions: currentEntry.definitions || [],
           sourceName: currentEntry.sourceName || "",
+          sourceUrl: location.href, articleTitle: document.title,
           localDictionarySummary: Array.isArray(currentEntry.localDictionaryEntries) ? currentEntry.localDictionaryEntries.slice(0,2).map(entry => {
             const box = document.createElement("div"); box.innerHTML = entry.html || "";
             return { name: entry.dictionaryName || "本地词典", text: String(box.textContent || "").replace(/\s+/g," ").trim().slice(0,320) };

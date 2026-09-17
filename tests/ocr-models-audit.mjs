@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const stored=new Map(),calls=[];
+const context={Response,Uint8Array,AbortController,setTimeout,clearTimeout,btoa,caches:{open:async()=>({match:async key=>stored.get(key)?.clone(),put:async(key,value)=>stored.set(key,value),delete:async key=>stored.delete(key)})},fetch:async url=>{calls.push(url);if(url.includes('jsdelivr'))throw new Error('primary unavailable');return new Response(new Uint8Array([31,139,8,0,1,2,3]));}};
+vm.runInNewContext(fs.readFileSync(new URL('../ocr-models.js',import.meta.url),'utf8'),context);
+const first=await context.loadJijianOcrModel('eng');assert.equal(first.cached,false);assert.equal(calls.length,2);
+context.fetch=async()=>{throw new Error('offline');};
+const cached=await context.loadJijianOcrModel('eng');assert.equal(cached.cached,true);assert.equal(cached.data,first.data);
+await assert.rejects(context.loadJijianOcrModel('../../private'),/不支持/);
+await assert.rejects(context.loadJijianOcrModel('jpn'),/三个下载源/);
+context.caches.open=async()=>{throw new Error('storage disabled');};context.fetch=async()=>new Response(new Uint8Array([31,139,8,0]));
+assert.equal((await context.loadJijianOcrModel('chi_sim')).cached,false);
+console.log('PASS OCR model mirror fallback, cache-first offline reuse, allowlist, failure reporting and cache-unavailable fallback (mock transport)');

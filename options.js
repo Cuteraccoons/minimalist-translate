@@ -751,6 +751,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     filterAndRenderVocabulary();
   }));
 
+  let visibleVocabList=[],visibleHighlightList=[];
+  const collectionFilter=globalThis.JijianCollectionFilters;
+  function applyCollectionScope(kind,items){
+    const scope=document.getElementById(`${kind}-scope`),site=scope.querySelector('[data-filter="site"]');
+    const value=site.value;
+    const websites=[...new Set((kind==='vocab'?cachedVocabList:cachedHighlightList).map(item=>collectionFilter.website(item)||'unknown'))].sort();
+    site.replaceChildren(new Option('全部网站',''),...websites.map(host=>new Option(host==='unknown'?'未知来源':host,host)));
+    if(websites.includes(value))site.value=value;
+    const options=Object.fromEntries([...scope.querySelectorAll('[data-filter]')].map(input=>[input.dataset.filter,input.value]));
+    const filtered=collectionFilter.filter(items,options);
+    scope.querySelector('.collection-scope-count').textContent=`当前 ${filtered.length} 条 · 导出与复制仅包含当前筛选结果${options.from||options.until?' · 无日期的旧记录不计入时间筛选':''}`;
+    return filtered;
+  }
+  for(const kind of ['vocab','highlight']){
+    const scope=document.getElementById(`${kind}-scope`),refresh=()=>kind==='vocab'?filterAndRenderVocabulary():renderHighlightCollection();
+    scope.addEventListener('change',refresh);
+    scope.querySelectorAll('[data-period]').forEach(button=>button.addEventListener('click',()=>{
+      const start=scope.querySelector('[data-filter="from"]'),end=scope.querySelector('[data-filter="until"]');
+      if(button.dataset.period==='all'){start.value='';end.value='';scope.querySelector('[data-filter="site"]').value='';scope.querySelector('[data-filter="sort"]').value='newest';}
+      else{
+        const now=new Date(),from=new Date();from.setHours(0,0,0,0);if(button.dataset.period==='week')from.setDate(from.getDate()-6);now.setHours(23,59,0,0);
+        const local=date=>new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);start.value=local(from);end.value=local(now);
+      }refresh();
+    }));
+  }
+
   function filterAndRenderVocabulary() {
     const query = String(inputVocabSearch?.value || "").toLowerCase().trim();
     let list = cachedVocabList;
@@ -769,7 +795,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     }
 
-    renderVocabularyList(list);
+    visibleVocabList=applyCollectionScope("vocab",list);
+    renderVocabularyList(visibleVocabList);
   }
 
   function formatVocabDate(value) {
@@ -790,7 +817,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           : (Array.isArray(d.senses) ? d.senses.map(x => x.zh || x.en) : []))
         .filter(Boolean)
       : [];
-    return standard.slice(0, limit);
+    return [...new Set([...standard,...local])].slice(0, limit);
   }
 
   function renderVocabularyList(list) {
@@ -805,7 +832,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const langName = vocabLangName(item.lang);
       const phonetic = String(item.phonetic || "").trim();
       const meaning = String(item.translation || "暂无简明释义").trim();
-      const date = formatVocabDate(item.date);
+      const date = formatVocabDate(item.createdAt||item.created||item.date);
       const source = String(item.sourceName || "").trim();
       const preview = view === "gallery" ? vocabDetailPreview(item, 2) : [];
       const index = cachedVocabList.indexOf(item);
@@ -890,17 +917,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   btnExportVocabCsv.addEventListener("click", () => {
-    if (!cachedVocabList.length) {
+    if (!visibleVocabList.length) {
       alert("生词本为空，无需导出");
       return;
     }
-    let csv = "Word,Language,Phonetic,Translation,Details,Source,Date\n";
-    cachedVocabList.forEach(i => {
+    let csv = "Word,Language,Phonetic,Translation,Details,Source,URL,Date\n";
+    visibleVocabList.forEach(i => {
       const standardDetails = Array.isArray(i.definitions) ? i.definitions.flatMap(d => Array.isArray(d.terms) ? d.terms : (Array.isArray(d.senses) ? d.senses.map(x => x.zh || x.en) : [])).filter(Boolean) : [];
       const localDetails = Array.isArray(i.localDictionarySummary) ? i.localDictionarySummary.map(x => `${x.name || "本地词典"}: ${x.text || ""}`).filter(Boolean) : [];
       const details = [...standardDetails, ...localDetails].join("；");
       const esc = v => String(v || "").replace(/"/g, '""').replace(/\r?\n/g, " ");
-      csv += `"${esc(i.word)}","${esc(i.lang || "und")}","${esc(i.phonetic)}","${esc(i.translation)}","${esc(details)}","${esc(i.sourceName)}","${esc(i.date)}"\n`;
+      csv += `"${esc(i.word)}","${esc(i.lang || "und")}","${esc(i.phonetic)}","${esc(i.translation)}","${esc(details)}","${esc(i.sourceName)}","${esc(i.sourceUrl||i.url)}","${esc(i.createdAt||i.created||i.date)}"\n`;
     });
     const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -911,10 +938,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     URL.revokeObjectURL(url);
   });
 
-  function buildHighlightMarkdown(list = cachedHighlightList) {
+  function buildHighlightMarkdown(list = visibleHighlightList) {
     let md = `# 极简翻译 · 高亮收藏\n\n`;
     (list || []).forEach((item, idx) => {
       md += `${idx + 1}. ${String(item.orig || "").trim()}\n`;
+      if (item.createdAt||item.created||item.date) md += `   - 收藏时间：${item.createdAt||item.created||item.date}\n`;
+      if (item.image && /^data:image\/png;base64,/.test(item.image)) md += `\n   ![截图笔记](${item.image})\n`;
       if (item.note) md += `   - 笔记：${String(item.note).trim()}\n`;
       if (item.sourceUrl) md += `   - 来源：${item.articleTitle || item.title || ""} · ${item.sourceUrl}\n`;
       if (item.trans) md += `   - ${String(item.trans).trim()}\n`;
@@ -924,13 +953,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     return md;
   }
   btnCopyHighlights?.addEventListener("click", async () => {
-    if (!cachedHighlightList.length) return alert("高亮收藏为空");
-    await navigator.clipboard.writeText(cachedHighlightList.map(x=>x.orig||"").filter(Boolean).join("\n"));
+    if (!visibleHighlightList.length) return alert("高亮收藏为空");
+    await navigator.clipboard.writeText(visibleHighlightList.map(x=>x.orig||"").filter(Boolean).join("\n"));
     btnCopyHighlights.textContent="已复制";
-    setTimeout(()=>btnCopyHighlights.textContent="复制全部",1000);
+    setTimeout(()=>btnCopyHighlights.textContent="复制当前结果",1000);
   });
   btnExportHighlightsMd?.addEventListener("click", () => {
-    if (!cachedHighlightList.length) return alert("高亮收藏为空");
+    if (!visibleHighlightList.length) return alert("高亮收藏为空");
     const blob=new Blob([buildHighlightMarkdown()],{type:"text/markdown;charset=utf-8"});
     const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`jijian-highlights-${new Date().toISOString().slice(0,10)}.md`; a.click(); URL.revokeObjectURL(url);
   });
@@ -944,7 +973,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderHighlightCollection() {
     if (!highlightManagerList) return;
     const q = String(inputHighlightSearch?.value || "").trim().toLowerCase();
-    const list = cachedHighlightList.filter(x => !q || String(x.orig || "").toLowerCase().includes(q) || String(x.trans || "").toLowerCase().includes(q) || String(x.note || "").toLowerCase().includes(q) || String(x.articleTitle || "").toLowerCase().includes(q));
+    const searched = cachedHighlightList.filter(x => !q || String(x.orig || "").toLowerCase().includes(q) || String(x.trans || "").toLowerCase().includes(q) || String(x.note || "").toLowerCase().includes(q) || String(x.articleTitle || "").toLowerCase().includes(q));
+    const list=visibleHighlightList=applyCollectionScope("highlight",searched);
     if (highlightCount) highlightCount.textContent = `${list.length} 条`;
     if (!list.length) { highlightManagerList.innerHTML = `<div class="vocab-empty">没有符合条件的高亮收藏。</div>`; return; }
     const groups=new Map();
@@ -952,7 +982,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     highlightManagerList.innerHTML=[...groups].map(([url,items])=>{
       const title=items.find(item=>item.articleTitle)?.articleTitle||items.find(item=>item.title)?.title||items[0].hostname||url||'未命名文章';
       const safeUrl=/^https?:\/\//i.test(url)?url:'';
-      return `<details class="highlight-article-group" open><summary>${escapeHtml(title)} <span>${items.length} 条</span></summary>${safeUrl?`<a class="highlight-article-link" href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">打开原文</a>`:''}${items.map(item=>`<article class="highlight-manager-item"><div class="highlight-quote">${item.image&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(item.image)?`<img src="${item.image}" alt="截图笔记">`:escapeHtml(item.orig||'')}</div>${item.note?`<p>${escapeHtml(item.note)}</p>`:''}${item.trans?`<div class="highlight-translation">${escapeHtml(item.trans)}</div>`:''}<button type="button" class="highlight-delete" data-id="${escapeHtml(item.id||'')}" data-orig="${escapeHtml(item.orig||'')}" title="删除"><svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M9 11v6M15 11v6M7 7l1 13h8l1-13"/></svg></button></article>`).join('')}</details>`;
+      return `<details class="highlight-article-group" open><summary>${escapeHtml(title)} <span>${items.length} 条</span></summary>${safeUrl?`<a class="highlight-article-link" href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">打开原文</a>`:''}${items.map(item=>`<article class="highlight-manager-item"><div class="highlight-quote">${item.image&&/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(item.image)?`<img src="${item.image}" alt="截图笔记">`:escapeHtml(item.orig||'')}</div>${item.note?`<p>${escapeHtml(item.note)}</p>`:''}${item.createdAt||item.created||item.date?`<time class="highlight-collected-at">${escapeHtml(formatVocabDate(item.createdAt||item.created||item.date))}</time>`:""}${item.trans?`<div class="highlight-translation">${escapeHtml(item.trans)}</div>`:''}<button type="button" class="highlight-delete" data-id="${escapeHtml(item.id||'')}" data-orig="${escapeHtml(item.orig||'')}" title="删除"><svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V5h6v2M9 11v6M15 11v6M7 7l1 13h8l1-13"/></svg></button></article>`).join('')}</details>`;
     }).join('');
     highlightManagerList.querySelectorAll(".highlight-delete").forEach(btn => btn.addEventListener("click", async () => {
       if (!confirm("确定删除这条高亮收藏吗？")) return;
@@ -1880,3 +1910,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replace(/'/g, "&#039;");
   }
 });
+
+document.getElementById("btn-open-welcome")?.addEventListener("click",()=>chrome.tabs.create({url:chrome.runtime.getURL("welcome.html")}));
+
+document.getElementById("btn-open-reading-lab")?.addEventListener("click",()=>chrome.tabs.create({url:chrome.runtime.getURL("reading-lab.html")}));

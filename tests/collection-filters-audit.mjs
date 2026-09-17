@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const context={URL};vm.runInNewContext(fs.readFileSync(new URL('../collection-filters.js',import.meta.url),'utf8'),context);
+const {filter}=context.JijianCollectionFilters;
+const data=[{word:'old',createdAt:'2026-09-01T08:00:00Z',sourceUrl:'https://a.example/one'},{word:'new',created:'2026-09-17T08:00:00Z',sourceUrl:'https://a.example/two'},{word:'legacy',date:'invalid',url:'https://b.example/'}];
+assert.equal(filter(data)[0].word,'new');assert.equal(filter(data).length,3);
+assert.equal(filter(data,{site:'a.example'}).length,2);
+assert.equal(filter(data,{from:'2026-09-17T07:00:00Z',until:'2026-09-17T09:00:00Z'})[0].word,'new');
+assert.equal(filter(data,{from:'2026-09-18T00:00:00Z'}).length,0);
+assert.equal(filter(data,{site:'b.example',from:'2026-09-01T00:00:00Z'}).length,0);
+assert.equal(filter(data,{sort:'oldest'})[0].word,'old');assert.equal(data[0].word,'old');
+console.log('PASS collection time/source filtering, ordering and unknown legacy dates');

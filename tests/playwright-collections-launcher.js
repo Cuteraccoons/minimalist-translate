@@ -1,0 +1,29 @@
+async page=>{
+ const worker=page.context().serviceWorkers()[0];
+ await worker.evaluate(async()=>{await chrome.storage.local.set({raccoonVocabularyList:[{word:'older',lang:'en',translation:'较早',createdAt:'2026-09-01T08:00:00Z',sourceUrl:'https://a.example/one'},{word:'newer',lang:'en',translation:'较新',createdAt:'2026-09-17T08:00:00Z',sourceUrl:'https://b.example/two'}],raccoonHighlightSentences:[{id:'h-one',orig:'Older selection',createdAt:'2026-09-01T08:00:00Z',sourceUrl:'https://a.example/one',title:'One'},{id:'h-two',orig:'Newer selection',createdAt:'2026-09-17T08:00:00Z',sourceUrl:'https://b.example/two',title:'Two'}]});});
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto(worker.url().replace('background.js','options.html'));
+ await page.locator('[data-tab="tab-vocab"]').click();
+ await page.waitForFunction(()=>document.querySelector('#vocab-scope [data-filter="site"]').options.length===3);
+ await page.locator('#vocab-scope [data-filter="site"]').selectOption('b.example');
+ const vocab=await page.locator('#vocab-list-container').innerText();
+ if(vocab.includes('older')||!vocab.includes('newer'))throw Error('Vocabulary source filter failed');
+ await page.evaluate(()=>{const create=URL.createObjectURL;URL.createObjectURL=blob=>{globalThis.__exportBlob=blob;return create(blob);};});
+ const csvDownload=page.waitForEvent('download');await page.locator('#btn-export-vocab-csv').click();const csv=await csvDownload;
+ const csvText=await page.evaluate(()=>globalThis.__exportBlob.text());if(csvText.includes("older")||!csvText.includes("newer")||!csvText.includes("b.example"))throw Error("CSV scope mismatch");
+ await page.locator('[data-tab="tab-highlights"]').click();
+ await page.waitForFunction(()=>document.querySelector('#highlight-scope [data-filter="site"]').options.length===3);
+ await page.locator('#highlight-scope [data-filter="site"]').selectOption('a.example');
+ const highlights=await page.locator('#highlight-manager-list').innerText();
+ if(!highlights.includes('Older selection')||highlights.includes('Newer selection'))throw Error('Highlight source filter failed');
+ const mdDownload=page.waitForEvent('download');await page.locator('#btn-export-highlights-md').click();const md=await mdDownload;
+ const mdText=await page.evaluate(()=>globalThis.__exportBlob.text());if(!mdText.includes("Older selection")||mdText.includes("Newer selection"))throw Error("Markdown scope mismatch");
+ await page.goto(worker.url().replace('background.js','reading-lab.html'));
+ await page.waitForSelector('.lab-card');
+ const cards=await page.locator('.lab-card').count();
+ await page.locator('.lab-card select').first().selectOption('issue');await page.locator('.lab-card textarea').first().fill('第 3 章待检查');
+ await page.reload();await page.waitForSelector('.lab-card');
+ const saved=await page.locator('.lab-card textarea').first().inputValue();
+ if(cards!==12||saved!=='第 3 章待检查'||errors.length)throw Error(JSON.stringify({cards,saved,errors}));
+ return {vocabularyFiltered:true,highlightsFiltered:true,csv:csv.suggestedFilename(),markdown:md.suggestedFilename(),launcherSites:cards,notesPersisted:true,errors};
+}

@@ -2100,3 +2100,7 @@ input:checked + .switch-knob:before {
 .highlight-article-group summary span{font-size:13px;font-weight:400;color:#777;margin-left:8px}
 .highlight-article-link{display:inline-block;margin:8px 0;color:#666;font-size:13px}
 .highlight-quote img{display:block;max-width:100%;max-height:360px;object-fit:contain}
+
+/* Collection scopes share one quiet toolbar instead of nested cards. */
+.collection-filters{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:16px 0 22px;font-size:13px;color:var(--text-secondary,#666)}
+.collection-filters label{display:flex;align-items:center;gap:6px}.collection-filters input,.collection-filters select{font:inherit;background:var(--bg-main,#fff);color:var(--text-primary,#222);border:1px solid var(--border-color,#ddd);border-radius:7px;padding:7px;max-width:190px;min-width:0}.collection-filters button{font:inherit;border:0;background:var(--bg-secondary,#f2f2f2);color:var(--text-primary,#222);border-radius:7px;padding:7px 10px;cursor:pointer}.collection-filters button:hover{background:#000;color:#fff}.collection-scope-count{flex-basis:100%;font-size:13px}.highlight-collected-at{display:block;color:var(--text-secondary,#777);font-size:13px;margin-top:10px}

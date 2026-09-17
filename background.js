@@ -1,4 +1,4 @@
-importScripts("vendor/pako_inflate.min.js", "vendor/mdict-lite.js");
+importScripts("vendor/pako_inflate.min.js", "vendor/mdict-lite.js", "welcome-samples.js", "ocr-models.js");
 
 /* Extension service worker. */
 
@@ -299,7 +299,7 @@ function schedulePersistCache() {
 }
 
 // Initialize defaults and migrate stored settings.
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async details => {
   const fontDefaultMigration = await chrome.storage.sync.get([
     "readerFont", "readerFontDefaultV2", "fontFamily", "translationFontDefaultV2"
   ]).catch(() => ({}));
@@ -344,6 +344,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
   await saveSettingsByStorage(updated).catch(() => {});
   createContextMenus();
+  if(details.reason === "install") await chrome.tabs.create({url:chrome.runtime.getURL("welcome.html")});
 });
 
 function createContextMenus() {
@@ -2202,13 +2203,25 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const { action } = request;
+  const welcomeSender=sender.id===chrome.runtime.id && sender.url===chrome.runtime.getURL('welcome.html');
+  const sampleText=text=>globalThis.JijianWelcomeSamples[String(text||'').trim()];
+  if(welcomeSender&&action==='TRANSLATE_BATCH_IDS'&&Array.isArray(request.items)&&request.items.every(item=>sampleText(item.text))){sendResponse({success:true,data:request.items.map(item=>({id:item.id,text:sampleText(item.text)}))});return false;}
+  if(welcomeSender&&action==='TRANSLATE_SINGLE_BLOCK'&&sampleText(request.text)){sendResponse({success:true,text:sampleText(request.text),detectedLang:'en'});return false;}
+
+
+  if (action === "GET_OCR_MODEL") {
+    if(sender.id!==chrome.runtime.id){sendResponse({success:false,error:'不支持的请求'});return false;}
+    loadJijianOcrModel(request.language).then(model=>sendResponse({success:true,...model}),error=>sendResponse({success:false,error:error.message}));
+    return true;
+  }
 
   if (action === "GET_READER_NOTES" || action === "SAVE_READER_NOTES") {
     (async () => {
       try {
-        if (!sender.tab?.id || sender.frameId !== 0) throw new Error("请在文章页面使用笔记");
+        const welcome = !!sender.id && sender.id === chrome.runtime?.id && sender.url === chrome.runtime?.getURL?.("welcome.html");
+        if (!welcome && (!sender.tab?.id || sender.frameId !== 0)) throw new Error("请在文章页面使用笔记");
         const pageUrl = new URL(sender.url || sender.tab.url); pageUrl.hash = "";
-        if (!/^https?:$/.test(pageUrl.protocol)) throw new Error("不支持此页面");
+        if (!welcome && !/^https?:$/.test(pageUrl.protocol)) throw new Error("不支持此页面");
         const key = `readerNotes:${pageUrl.href}`;
         if (action === "GET_READER_NOTES") {
           const data = await chrome.storage.local.get([key, "raccoonHighlightSentences"]);
@@ -2221,7 +2234,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           if (!Array.isArray(items) || items.length > 1000 || JSON.stringify(items).length > 8000000) throw new Error("笔记过多，请先导出并清理部分截图");
           if (items.some(item => !item || typeof item.id !== "string" || !Array.isArray(item.anchors) || (item.image && !/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(item.image)))) throw new Error("笔记格式无效");
           collectionCountsCache=null;
-          await chrome.storage.local.set({[key]:items.map(item=>({...item,articleTitle:String(request.title||sender.tab.title||pageUrl.hostname).slice(0,500)}))});
+          await chrome.storage.local.set({[key]:items.map(item=>({...item,articleTitle:String(request.title||sender.tab?.title||pageUrl.hostname).slice(0,500)}))});
           sendResponse({success:true});
         }
       } catch(error) { sendResponse({success:false,error:error.message}); }
@@ -2361,7 +2374,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const list = Array.isArray(res.raccoonHighlightSentences) ? res.raccoonHighlightSentences : [];
       const isExist = list.some(item => (item.orig || "").trim() === (request.item.orig || "").trim());
       if (!isExist) {
-        list.unshift(request.item);
+        list.unshift({...request.item,createdAt:new Date().toISOString()});
         chrome.storage.local.set({ raccoonHighlightSentences: list }).then(() => {
           sendResponse({ success: true, added: true });
         });
@@ -2391,7 +2404,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.storage.local.get(null).then(data => {
       const list = Array.isArray(data.raccoonHighlightSentences) ? [...data.raccoonHighlightSentences] : [];
       Object.entries(data).filter(([key,value])=>key.startsWith('readerNotes:')&&Array.isArray(value)).forEach(([key,items])=>{
-        items.forEach(item=>{const existing=list.findIndex(old=>old.id===item.id);if(existing>=0)list.splice(existing,1);list.push({id:item.id,orig:item.quote||'截图笔记',note:item.note,image:item.image,sourceUrl:key.slice(12),articleTitle:item.articleTitle,readerNote:true});});
+        items.forEach(item=>{const existing=list.findIndex(old=>old.id===item.id);if(existing>=0)list.splice(existing,1);list.push({id:item.id,orig:item.quote||'截图笔记',note:item.note,image:item.image,sourceUrl:key.slice(12),articleTitle:item.articleTitle,created:item.created,readerNote:true});});
       });
       sendResponse({success:true,list});
     }).catch(err=>sendResponse({success:false,error:err.message}));
@@ -2416,6 +2429,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return false;
     }
     entry.lang = lang;
+    entry.createdAt = new Date().toISOString();
     chrome.storage.local.get("raccoonVocabularyList").then(res => {
       const list = Array.isArray(res.raccoonVocabularyList) ? res.raccoonVocabularyList : [];
       if (!list.some(item => String(item.word || "").toLowerCase() === String(entry.word).toLowerCase() && String(item.lang || 'und').toLowerCase() === lang)) {

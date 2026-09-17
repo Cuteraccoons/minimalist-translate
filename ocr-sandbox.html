@@ -177,6 +177,7 @@
   function makeWorkerOptions(langPath) {
     const opts={
       workerPath:LOCAL_WORKER,
+      workerBlobURL:false,
       corePath:LOCAL_CORE,
       cacheMethod:'write',
       logger:m=>{
@@ -192,8 +193,26 @@
     return opts;
   }
 
+  const modelRequests=new Map();
+  function requestModel(language){
+    const requestId=`${self.__jijianActiveOcrId}:${language}`;
+    return new Promise((resolve,reject)=>{
+      const timer=setTimeout(()=>{modelRequests.delete(requestId);reject(new Error('语言模型下载超时，请检查网络后重试'));},60000);
+      modelRequests.set(requestId,{resolve,reject,timer});
+      post('model-request',{id:self.__jijianActiveOcrId,requestId,language});
+    });
+  }
+
   async function makeWorker(langs) {
     const T=await ensureLib();
+    let languageData=langs;
+    if(location.protocol==='chrome-extension:'){
+      languageData=await Promise.all(langs.map(async code=>{
+        post('progress',{id:self.__jijianActiveOcrId,status:'loading language traineddata',progress:0,detail:code});
+        const model=await requestModel(code);
+        return {code,data:Uint8Array.from(atob(model.data),char=>char.charCodeAt(0))};
+      }));
+    }
     const attempts=[
       {langPath:TESSDATA_CDN,label:'jsDelivr'},
       {langPath:TESSDATA_PROJECT,label:'Project Naptha'},
@@ -204,13 +223,28 @@
       const attempt=attempts[i];
       post('progress',{status:`loading language source ${i+1}/${attempts.length}`,progress:.03+i*.02,id:self.__jijianActiveOcrId||'',detail:attempt.label});
       try{
-        const controller=new AbortController();
-        const probeTimer=setTimeout(()=>controller.abort(),6500);
-        try{
-          const probe=await fetch(`${attempt.langPath}/${langs[0]}.traineddata.gz`,{method:'HEAD',cache:'no-store',signal:controller.signal});
-          if(!probe.ok)throw new Error(`模型源返回 ${probe.status}`);
-        }finally{clearTimeout(probeTimer);}
-        return await T.createWorker(langs,1,makeWorkerOptions(attempt.langPath));
+        let timer;
+        const workers=new Set();
+        const NativeWorker=window.Worker;
+        // Track only workers created by this attempt, so a failed download can
+        // actually be stopped before the next mirror starts.
+        window.Worker=class extends NativeWorker {
+          constructor(...args){super(...args);workers.add(this);}
+          postMessage(message,...args){
+            // The bundled runtime loads {code,data} language records correctly,
+            // but its initialize path treats data as the language name.
+            if(message?.action==='initialize'&&Array.isArray(message.payload?.langs))message={...message,payload:{...message.payload,langs:message.payload.langs.map(lang=>typeof lang==='string'?lang:lang.code)}};
+            super.postMessage(message,...args);
+          }
+        };
+        let pending,failStartup;
+        const startupFailure=new Promise((_,reject)=>{failStartup=reject;});
+        try { pending=T.createWorker(languageData,1,{...makeWorkerOptions(attempt.langPath),errorHandler:error=>failStartup(new Error(readableOcrError(error))),...(languageData!==langs?{cacheMethod:"none"}:{})}); }
+        finally { window.Worker=NativeWorker; }
+        try {
+          return await Promise.race([pending,startupFailure,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('模型加载超时')),30000);})]);
+        } catch(error) { workers.forEach(worker=>worker.terminate());throw error; }
+        finally { clearTimeout(timer); }
       }catch(err){
         lastErr=err;
       }
@@ -321,8 +355,15 @@
   }
 
   window.addEventListener('message',async event=>{
-    const msg=event?.data; if(!msg||msg.source!=='jijian-translate')return;
+    const msg=event?.data; if(event.source!==parent||!msg||msg.source!=='jijian-translate')return;
+    if(msg.type==='model-response'){
+      const request=modelRequests.get(msg.requestId);if(!request)return;
+      clearTimeout(request.timer);modelRequests.delete(msg.requestId);
+      if(msg.success)request.resolve(msg);else request.reject(new Error(msg.error||'模型下载失败'));
+      return;
+    }
     if(msg.type==='ping'){post('ready');return;} if(msg.type!=='recognize'||!msg.id)return;
+    if(self.__jijianActiveOcrId){post('error',{id:msg.id,error:'已有图片正在识别，请完成后再试'});return;}
     self.__jijianActiveOcrId=msg.id;
     try{
       const langs=normalizeLangs(msg.langs||msg.lang||'eng');
