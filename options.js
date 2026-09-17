@@ -1741,6 +1741,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const dictionaries=[...folderDicts,...imported.filter(x=>!folderNames.has(x.name))].sort((a,b)=>a.name.localeCompare(b.name));
       const next={...meta,dictionaries,updatedAt:Date.now()};
       await chrome.storage.local.set({jijianLocalDictionaryMeta:next});
+      if(next.dictionaries?.some(dict=>dict.enabled!==false))await chrome.storage.sync.set({localDictionaryEnabled:true});
       renderLocalDictionaries(next);
       if(localDictStatus) localDictStatus.textContent=`已接入 ${imported.length} 本本地词典`;
       setLocalDictTestStatus(imported.length ? `文件接入完成。可在上方输入单词测试。` : "没有找到可用的 MDX 文件；MDD 与 CSS 需要和对应 MDX 一起使用。", imported.length ? "success" : "warn");
@@ -1828,6 +1829,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const stored=await chrome.storage.local.get("jijianLocalDictionaryMeta").catch(()=>({}));
       const remembered={...(stored.jijianLocalDictionaryMeta||{}),folderName:handle.name,folderHandleSavedAt:Date.now(),updatedAt:Date.now()};
       await chrome.storage.local.set({jijianLocalDictionaryMeta:remembered});
+      await chrome.storage.sync.set({localDictionaryEnabled:true});
       renderLocalDictionaries(remembered);
       if(!granted){
         if(localDictStatus) localDictStatus.textContent=`${handle.name} · 已记录 · 待恢复读取授权`;

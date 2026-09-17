@@ -206,7 +206,7 @@
   const isWelcomePage = location.href === chrome.runtime.getURL('welcome.html');
   if(isWelcomePage) document.addEventListener('jijian-welcome-action',event=>{
     const action=event.detail;
-    if(action==='reset'){if(isReaderOpen)closeReaderMode();if(isSidebarOpen)closeSidebar();if(isPageTranslated||isTranslating)restoreOriginalPage();readerContainerCache={url:'',element:null};}
+    if(action==='reset'){if(imageTranslateOverlayCleanup)imageTranslateOverlayCleanup();disposeActiveDictionaryCard();if(selectionRoot)selectionRoot.innerHTML='';if(isReaderOpen)closeReaderMode();if(isSidebarOpen)closeSidebar();if(isPageTranslated||isTranslating)restoreOriginalPage();readerContainerCache={url:'',element:null};}
     if(action==='translate')togglePageTranslation();
     if(action==='sidebar')toggleSidebar();
     if(action==='reader')toggleReaderMode();
@@ -216,7 +216,7 @@
     if (chrome.runtime.lastError) return;
     if (res && res.settings) {
       currentSettings = Object.assign({}, currentSettings, res.settings);
-      if(isWelcomePage)Object.assign(currentSettings,{targetLang:"zh-CN",sourceLang:"en",displayMode:"bilingual",autoTranslateEnabled:false,autoTranslateDomainList:[],autoDetectPageLanguage:false,enableFloatingBall:true});
+      if(isWelcomePage)Object.assign(currentSettings,{targetLang:"zh-CN",sourceLang:"en",displayMode:"bilingual",autoTranslateEnabled:false,autoTranslateDomainList:[],autoDetectPageLanguage:false,enableFloatingBall:true,dictTriggerMode:"both",dictionaryLookupMode:"standard",enableImageTranslation:true,imageOcrLanguage:"eng",imageTranslationDisabledDomains:[],excludeDomainList:[],excludeDomainRules:{}});
 
       detectHostDarkTheme();
       applyDynamicStyles(currentSettings);
@@ -3531,7 +3531,7 @@
     readerImageInfoCache = new WeakMap();
     const bestContainer = findBestReaderContainer();
     const redditThread = /(?:^|\.)reddit\.com$/i.test(location.hostname) && /\/comments\//.test(location.pathname);
-    const title = (isWelcomePage ? "A place to read" : readerOriginalTextPreservingWhitespace(document.querySelector("#firstHeading, main h1, article h1, h1")).trim())
+    const title = (isWelcomePage ? document.querySelector("[data-welcome-article]")?.dataset.title || "A place to read" : readerOriginalTextPreservingWhitespace(document.querySelector("#firstHeading, main h1, article h1, h1")).trim())
       || document.querySelector('meta[property="og:title"]')?.content?.trim()
       || document.title
       || "阅读文章";
@@ -6027,6 +6027,7 @@
 
       overlay.classList.add("is-ready"); overlay.classList.remove("controls-visible","is-preparing","is-recognizing"); actions.hidden=false; result.hidden=true; result.innerHTML=""; setProgress(100,false);
       status.textContent="翻译完成"; positionImageOverlay(overlay,img);
+      if(isWelcomePage)document.dispatchEvent(new CustomEvent("jijian-welcome-success",{detail:"image"}));
 
       const selectView=name=>{if(disposed)return;currentView=name;const original=name==="original";if(original)restoreImageSource();else showImageSource(translatedDataUrl);overlay.classList.toggle("show-original",original);overlay.querySelectorAll('.image-translate-view-switch button').forEach(b=>b.classList.toggle('active',b.dataset.act===name));showControls();positionImageOverlay(overlay,img);};
       overlay.querySelector('[data-act="original"]').addEventListener("click",()=>selectView("original"));
@@ -6617,8 +6618,11 @@
     root.id = "raccoon-selection-bubble-root";
     document.documentElement.appendChild(root);
     selectionRoot = root;
+    let selectionMouseUpTimer=0;
 
     document.addEventListener("mouseup", (e) => {
+      clearTimeout(selectionMouseUpTimer);
+      if(e.detail>1)return;
       if (isCurrentHostExcluded("selection")) return;
       const mode = currentSettings.dictTriggerMode || "both";
       if (selectionRoot.contains(e.target)) return;
@@ -6633,7 +6637,7 @@
       }
       if (mode === "none" || mode === "double_click") return;
 
-      setTimeout(() => {
+      selectionMouseUpTimer=setTimeout(() => {
         const selection = window.getSelection();
         const text = selection ? selection.toString().trim() : "";
 
@@ -6653,6 +6657,7 @@
     });
 
     document.addEventListener("dblclick", (e) => {
+      clearTimeout(selectionMouseUpTimer);
       if (isCurrentHostExcluded("selection")) return;
       const mode = currentSettings.dictTriggerMode || "both";
       if (mode === "none") return;
@@ -7171,6 +7176,7 @@
     const latestSettings = await new Promise(resolve => sendDictionaryRuntimeMessage({ action:"GET_SETTINGS" }, resolve));
     if (openToken !== cardOpenedTimestamp) return;
     if (latestSettings?.success && latestSettings.settings) currentSettings = Object.assign({}, currentSettings, latestSettings.settings);
+    if(isWelcomePage)Object.assign(currentSettings,{dictionaryLookupMode:"standard",sourceLang:"en",targetLang:"zh-CN",dictTriggerMode:"both",imageOcrLanguage:"eng"});
 
     const passageLike = options.forcePassage === true || isPassageSelection(text);
     const estimatedWidth = Math.min(passageLike ? 580 : 520, Math.max(300, window.innerWidth - 20));
@@ -7651,6 +7657,7 @@
 
               if (res && res.success && res.data) {
                 currentEntry = res.data;
+                if(isWelcomePage)document.dispatchEvent(new CustomEvent("jijian-welcome-success",{detail:"lookup"}));
                 syncStarState();
                 const d = res.data;
                 const titleEl = selectionRoot.querySelector(".dict-word-title");
@@ -8457,7 +8464,7 @@
     const note = document.createElement("div");
     note.className = "dict-local-status-note";
     if (!enabledCount) {
-      note.innerHTML = `<span>还没有配置本地词典</span><button type="button" data-open-local-dict>去配置</button>`;
+      return; // Local dictionaries are optional; keep the standard lookup free of setup prompts.
     } else if (data?.localDictionaryPermission === false) {
       note.innerHTML = `<span>本地词典读取权限已失效，请在设置里点“继续授权”</span><button type="button" data-open-local-dict>去设置</button>`;
     } else if (errors.length) {

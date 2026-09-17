@@ -79,6 +79,7 @@ const DEFAULT_SETTINGS = {
   dictionaryAiPosition: "first", // first | last
   dictionaryAiConceptRigor: true,
   dictionaryAiCustomPrompt: "",
+  localDictionaryEnabled: false,
   localDictionaryPriority: false,
   dictionaryAiMode: "manual", // Retained for settings-schema compatibility.
   enableImageTranslation: true, // 图片角落显示本机识字翻译入口
@@ -201,6 +202,11 @@ async function loadStoredSettings({ migrate = true } = {}) {
     if (!synced.readerFont || ["system", "smiley-sans"].includes(synced.readerFont)) synced.readerFont = "auto";
     synced.readerFontAutoV3 = true;
     if (migrate) await chrome.storage.sync.set({readerFont:synced.readerFont, readerFontAutoV3:true});
+  }
+  if (typeof synced.localDictionaryEnabled !== "boolean") {
+    const meta = await chrome.storage.local.get("jijianLocalDictionaryMeta");
+    synced.localDictionaryEnabled = (meta.jijianLocalDictionaryMeta?.dictionaries || []).some(dict => dict.enabled !== false);
+    if(migrate) await chrome.storage.sync.set({localDictionaryEnabled:synced.localDictionaryEnabled});
   }
   return Object.assign({}, DEFAULT_SETTINGS, synced, local);
 }
@@ -919,7 +925,8 @@ function normalizeLocalDictionaryRecords(definitions) {
   return clean;
 }
 
-async function lookupLocalDictionaries(word, aliases = []) {
+async function lookupLocalDictionaries(word, aliases = [], force = false) {
+  if(!force && !(await loadStoredSettings()).localDictionaryEnabled) return {entries:[],permission:true,enabledCount:0,errors:[]};
   if (!word || String(word).trim().length > 120) return { entries: [], permission: true, enabledCount: 0, errors: [] };
   const { handle, dictionaries, permission } = await getLocalDictionaryMetaAndHandle();
   if (!permission || !dictionaries.length) return { entries: [], permission, enabledCount: dictionaries.length, errors: [] };
@@ -2205,6 +2212,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   const { action } = request;
   const welcomeSender=sender.id===chrome.runtime.id && sender.url===chrome.runtime.getURL('welcome.html');
   const sampleText=text=>globalThis.JijianWelcomeSamples[String(text||'').trim()];
+  if(welcomeSender && action==='LOOKUP_DICTIONARY' && String(request.text||'').trim().toLowerCase()==='curiosity') {
+    sendResponse({success:true,data:{original:'curiosity',lookupForm:'curiosity',detectedLang:'en',translation:'好奇心；求知欲',phonetic:'/ˌkjʊəriˈɒsəti/',sourceName:'内置体验词条',briefGroups:[{pos:'n.',meanings:['好奇心','求知欲']}],definitions:[{pos:'n.',terms:['好奇心','求知欲']}],localDictionaryEntries:[],localDictionaryEnabledCount:0}});
+    return false;
+  }
   if(welcomeSender&&action==='TRANSLATE_BATCH_IDS'&&Array.isArray(request.items)&&request.items.every(item=>sampleText(item.text))){sendResponse({success:true,data:request.items.map(item=>({id:item.id,text:sampleText(item.text)}))});return false;}
   if(welcomeSender&&action==='TRANSLATE_SINGLE_BLOCK'&&sampleText(request.text)){sendResponse({success:true,text:sampleText(request.text),detectedLang:'en'});return false;}
 
@@ -2299,7 +2310,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 
   if (action === "LOOKUP_LOCAL_DICTIONARIES_TEST") {
-    lookupLocalDictionaries(request.text || "")
+    lookupLocalDictionaries(request.text || "", [], true)
       .then(res => sendResponse({ success: true, ...res }))
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true;

@@ -54,6 +54,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     black:["#111827","黑色"], slate:["#5f6063","石墨灰"], accent:["#2563eb","蓝色"], green:["#27835d","绿色"],
     purple:["#7c5ac7","紫色"], red:["#b84a4a","红色"], orange:["#b86d24","橙色"], teal:["#207f7a","青色"], brown:["#8a6448","棕色"], inherit:["radial-gradient(circle at center,#fff 0 27%,transparent 30%),conic-gradient(from -30deg,#ff453a,#ffd60a,#30d158,#64d2ff,#0a84ff,#5e5ce6,#bf5af2,#ff375f,#ff453a)","跟随网页"]
   };
+  const toggleLocalDictEnabled = document.getElementById("toggle-local-dict-enabled");
+  const localDictOptions = document.getElementById("popup-local-dict-options");
   const toggleLocalDictPriority = document.getElementById("toggle-local-dict-priority");
   const btnOpenLocalDict = document.getElementById("btn-open-local-dict");
   const selectFontFamily = document.getElementById("select-font-family");
@@ -1072,6 +1074,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       saveSetting(patch);
     });
   }
+  toggleLocalDictEnabled?.addEventListener("change", e => {
+    const enabled=!!e.target.checked;
+    currentSettings.localDictionaryEnabled=enabled;
+    if(localDictOptions)localDictOptions.hidden=!enabled;
+    saveSetting({localDictionaryEnabled:enabled});
+  });
   toggleLocalDictPriority?.addEventListener("change", e => { currentSettings.localDictionaryPriority=!!e.target.checked; saveSetting({localDictionaryPriority:!!e.target.checked}); });
   toggleHoverTranslate.addEventListener("change", (e) => saveSetting({ enableParagraphHoverTranslate: e.target.checked }));
   toggleParagraphActions?.addEventListener("change", (e) => saveSetting({ enableParagraphActions: e.target.checked }));
@@ -1216,6 +1224,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       labelFontSize.textContent = `${s.fontSizeRatio}%`;
     }
 
+    if(toggleLocalDictEnabled)toggleLocalDictEnabled.checked=!!s.localDictionaryEnabled;
+    if(localDictOptions)localDictOptions.hidden=!s.localDictionaryEnabled;
     if (toggleLocalDictPriority) toggleLocalDictPriority.checked = !!s.localDictionaryPriority;
     syncPopupRenderModeAvailability();
 

@@ -4341,3 +4341,6 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
 .raccoon-dark-host :is(.raccoon-translated-block,.raccoon-translated-inline)[data-render-style="card"]{
   border-color:rgba(255,255,255,.10)!important;background:rgba(255,255,255,.065)!important
 }
+
+/* Flush the first comparison card with the toolbar divider. */
+#raccoon-sidebar-root .sidebar-list-content{padding-top:0!important}

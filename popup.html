@@ -249,11 +249,12 @@
           <select id="select-dictionary-mode" class="apple-select"><option value="standard">标准词典</option><option value="ai">AI 查词（需配置 API）</option></select>
         </div>
         <div class="list-row">
-          <div class="row-label"><span class="row-title">本地词典优先</span></div>
-          <div class="inline-action-group">
-            <button type="button" id="btn-open-local-dict" class="text-action-btn local-dict-link">进入本地词典</button>
-            <label class="apple-switch"><input type="checkbox" id="toggle-local-dict-priority"><span class="switch-knob"></span></label>
-          </div>
+          <div class="row-label"><span class="row-title">加载本地词典</span></div>
+          <label class="apple-switch"><input type="checkbox" id="toggle-local-dict-enabled" aria-label="加载本地词典"><span class="switch-knob"></span></label>
+        </div>
+        <div id="popup-local-dict-options" hidden>
+          <div class="list-row"><span class="row-title">词典文件</span><button type="button" id="btn-open-local-dict" class="text-action-btn local-dict-link">配置本地词典 ↗</button></div>
+          <div class="list-row"><div class="row-label"><span class="row-title">本地词典优先</span></div><label class="apple-switch"><input type="checkbox" id="toggle-local-dict-priority" aria-label="本地词典优先"><span class="switch-knob"></span></label></div>
         </div>
         <div class="list-row popup-highlight-style-row">
           <div class="row-label"><span class="row-title">高亮样式</span></div>
