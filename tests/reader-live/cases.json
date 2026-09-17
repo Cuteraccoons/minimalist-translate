@@ -1,0 +1,352 @@
+[
+  {
+    "id": 1,
+    "category": "百科",
+    "title": "日本（英文）",
+    "url": "https://en.wikipedia.org/wiki/Japan",
+    "selector": "#mw-content-text .mw-parser-output"
+  },
+  {
+    "id": 2,
+    "category": "百科",
+    "title": "咖啡（英文）",
+    "url": "https://en.wikipedia.org/wiki/Coffee",
+    "selector": "#mw-content-text .mw-parser-output"
+  },
+  {
+    "id": 3,
+    "category": "百科",
+    "title": "人工智能（英文）",
+    "url": "https://en.wikipedia.org/wiki/Artificial_intelligence",
+    "selector": "#mw-content-text .mw-parser-output"
+  },
+  {
+    "id": 4,
+    "category": "百科",
+    "title": "人类学（中文）",
+    "url": "https://zh.wikipedia.org/wiki/人类学",
+    "selector": "#mw-content-text .mw-parser-output"
+  },
+  {
+    "id": 5,
+    "category": "百科",
+    "title": "民俗学（日文）",
+    "url": "https://ja.wikipedia.org/wiki/民俗学",
+    "selector": "#mw-content-text .mw-parser-output"
+  },
+  {
+    "id": 6,
+    "category": "百科",
+    "title": "巴黎（法文）",
+    "url": "https://fr.wikipedia.org/wiki/Paris",
+    "selector": "#mw-content-text .mw-parser-output"
+  },
+  {
+    "id": 7,
+    "category": "百科",
+    "title": "柏林（德文）",
+    "url": "https://de.wikipedia.org/wiki/Berlin",
+    "selector": "#mw-content-text .mw-parser-output"
+  },
+  {
+    "id": 8,
+    "category": "科普图文",
+    "title": "NASA 月球",
+    "url": "https://science.nasa.gov/moon/facts/",
+    "selector": "main"
+  },
+  {
+    "id": 9,
+    "category": "科普图文",
+    "title": "NASA 太阳",
+    "url": "https://science.nasa.gov/sun/facts/",
+    "selector": "main"
+  },
+  {
+    "id": 10,
+    "category": "科普图文",
+    "title": "NASA 从月球了解地球",
+    "url": "https://science.nasa.gov/solar-system/moon/10-things-what-we-learn-about-earth-by-studying-the-moon/",
+    "selector": "main"
+  },
+  {
+    "id": 11,
+    "category": "技术文档",
+    "title": "MDN JavaScript 入门",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Introduction",
+    "selector": "main"
+  },
+  {
+    "id": 12,
+    "category": "技术文档",
+    "title": "MDN CSS 网格",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout/Basic_concepts_of_grid_layout",
+    "selector": "main"
+  },
+  {
+    "id": 13,
+    "category": "技术文档",
+    "title": "MDN Fetch",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+    "selector": "main"
+  },
+  {
+    "id": 14,
+    "category": "技术文档",
+    "title": "React 快速入门",
+    "url": "https://react.dev/learn",
+    "selector": "main"
+  },
+  {
+    "id": 15,
+    "category": "技术文档",
+    "title": "React 共享状态",
+    "url": "https://react.dev/learn/sharing-state-between-components",
+    "selector": "main"
+  },
+  {
+    "id": 16,
+    "category": "技术文档",
+    "title": "Python 数据结构",
+    "url": "https://docs.python.org/3/tutorial/datastructures.html",
+    "selector": ".body"
+  },
+  {
+    "id": 17,
+    "category": "技术文档",
+    "title": "Rust 所有权",
+    "url": "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html",
+    "selector": "main"
+  },
+  {
+    "id": 18,
+    "category": "技术文档",
+    "title": "Effective Go",
+    "url": "https://go.dev/doc/effective_go",
+    "selector": "main"
+  },
+  {
+    "id": 19,
+    "category": "技术文档",
+    "title": "Kubernetes 概述",
+    "url": "https://kubernetes.io/docs/concepts/overview/",
+    "selector": ".td-content"
+  },
+  {
+    "id": 20,
+    "category": "技术文档",
+    "title": "Docker 简介",
+    "url": "https://docs.docker.com/get-started/docker-overview/",
+    "selector": "main"
+  },
+  {
+    "id": 21,
+    "category": "技术文档",
+    "title": "Requests 快速入门",
+    "url": "https://requests.readthedocs.io/en/latest/user/quickstart/",
+    "selector": ".body"
+  },
+  {
+    "id": 22,
+    "category": "技术文档",
+    "title": "Django 教程",
+    "url": "https://docs.djangoproject.com/en/5.2/intro/tutorial01/",
+    "selector": "#docs-content"
+  },
+  {
+    "id": 23,
+    "category": "社区讨论",
+    "title": "VS Code 项目说明",
+    "url": "https://github.com/microsoft/vscode",
+    "selector": "article.markdown-body"
+  },
+  {
+    "id": 24,
+    "category": "社区讨论",
+    "title": "Discourse 欢迎帖",
+    "url": "https://meta.discourse.org/t/welcome-to-meta-discourse-org/1",
+    "selector": ".topic-body"
+  },
+  {
+    "id": 25,
+    "category": "社区讨论",
+    "title": "Stack Overflow 数组排序",
+    "url": "https://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-processing-an-unsorted-array",
+    "selector": ".question"
+  },
+  {
+    "id": 26,
+    "category": "社区讨论",
+    "title": "Hacker News Dropbox",
+    "url": "https://news.ycombinator.com/item?id=8863",
+    "selector": "body"
+  },
+  {
+    "id": 27,
+    "category": "社区讨论",
+    "title": "Reddit 阅读泰勒",
+    "url": "https://www.reddit.com/r/AskAnthropology/comments/gys71o/",
+    "selector": "main"
+  },
+  {
+    "id": 28,
+    "category": "旅行",
+    "title": "京都旅行指南",
+    "url": "https://en.wikivoyage.org/wiki/Kyoto",
+    "selector": "#mw-content-text .mw-parser-output"
+  },
+  {
+    "id": 29,
+    "category": "长篇书籍",
+    "title": "原始文化",
+    "url": "https://www.gutenberg.org/files/70458/70458-h/70458-h.htm",
+    "selector": "body"
+  },
+  {
+    "id": 30,
+    "category": "长篇书籍",
+    "title": "傲慢与偏见",
+    "url": "https://www.gutenberg.org/files/1342/1342-h/1342-h.htm",
+    "selector": "body"
+  },
+  {
+    "id": 31,
+    "category": "长篇书籍",
+    "title": "爱丽丝梦游仙境",
+    "url": "https://www.gutenberg.org/files/11/11-h/11-h.htm",
+    "selector": "body"
+  },
+  {
+    "id": 32,
+    "category": "长篇书籍",
+    "title": "我是猫",
+    "url": "https://www.aozora.gr.jp/cards/000148/files/789_14547.html",
+    "selector": ".main_text"
+  },
+  {
+    "id": 33,
+    "category": "长篇书籍",
+    "title": "维基文库原始文化",
+    "url": "https://en.wikisource.org/wiki/Primitive_Culture/Chapter_1",
+    "selector": "#mw-content-text .mw-parser-output"
+  },
+  {
+    "id": 34,
+    "category": "长篇书籍",
+    "title": "共产党宣言",
+    "url": "https://www.marxists.org/archive/marx/works/1848/communist-manifesto/ch01.htm",
+    "selector": "body"
+  },
+  {
+    "id": 35,
+    "category": "学术",
+    "title": "SEP Culture",
+    "url": "https://plato.stanford.edu/entries/culture/",
+    "selector": "#main-text"
+  },
+  {
+    "id": 36,
+    "category": "学术",
+    "title": "SEP Culture and Cognitive Science",
+    "url": "https://plato.stanford.edu/entries/culture-cogsci/",
+    "selector": "#main-text"
+  },
+  {
+    "id": 37,
+    "category": "学术",
+    "title": "Attention Is All You Need",
+    "url": "https://arxiv.org/abs/1706.03762",
+    "selector": "#abs"
+  },
+  {
+    "id": 38,
+    "category": "学术",
+    "title": "PubMed 摘要",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/32939066/",
+    "selector": "#article-details"
+  },
+  {
+    "id": 39,
+    "category": "学术",
+    "title": "Nature AlphaFold",
+    "url": "https://www.nature.com/articles/s41586-021-03819-2",
+    "selector": "article"
+  },
+  {
+    "id": 40,
+    "category": "中文博客",
+    "title": "少数派 笔记管理",
+    "url": "https://sspai.com/post/80781",
+    "selector": "article"
+  },
+  {
+    "id": 41,
+    "category": "中文博客",
+    "title": "少数派 阅读入门",
+    "url": "https://sspai.com/post/68331",
+    "selector": "article"
+  },
+  {
+    "id": 42,
+    "category": "中文博客",
+    "title": "博客园 CSS Grid",
+    "url": "https://www.cnblogs.com/adiynil/p/22570706",
+    "selector": "#cnblogs_post_body"
+  },
+  {
+    "id": 43,
+    "category": "中文博客",
+    "title": "阮一峰 CSS Grid",
+    "url": "https://www.ruanyifeng.com/blog/2019/03/grid-layout-tutorial.html",
+    "selector": "#main-content"
+  },
+  {
+    "id": 44,
+    "category": "英文博客",
+    "title": "Paul Graham How to Do Great Work",
+    "url": "https://paulgraham.com/greatwork.html",
+    "selector": "body"
+  },
+  {
+    "id": 45,
+    "category": "英文博客",
+    "title": "Martin Fowler Refactoring",
+    "url": "https://martinfowler.com/articles/refactoring-2nd-ed.html",
+    "selector": "article"
+  },
+  {
+    "id": 46,
+    "category": "英文博客",
+    "title": "Mozilla JavaScript 30 年",
+    "url": "https://developer.mozilla.org/en-US/blog/javascript-30/",
+    "selector": "main"
+  },
+  {
+    "id": 47,
+    "category": "英文博客",
+    "title": "freeCodeCamp 学习 JavaScript",
+    "url": "https://www.freecodecamp.org/news/learn-javascript-full-course/",
+    "selector": "article"
+  },
+  {
+    "id": 48,
+    "category": "英文博客",
+    "title": "Smashing CSS Grid",
+    "url": "https://www.smashingmagazine.com/2017/06/building-production-ready-css-grid-layout/",
+    "selector": "article"
+  },
+  {
+    "id": 49,
+    "category": "新闻",
+    "title": "AP 月球新陨石坑",
+    "url": "https://apnews.com/article/80eea242ad275fda1f7a88587cdccd2f",
+    "selector": "main"
+  },
+  {
+    "id": 50,
+    "category": "新闻",
+    "title": "BBC 旅行专题",
+    "url": "https://www.bbc.com/travel",
+    "selector": "main"
+  }
+]

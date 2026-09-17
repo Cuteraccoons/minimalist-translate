@@ -39,6 +39,6 @@ async page=>{
  await page.locator('.lab-card select').first().selectOption('issue');await page.locator('.lab-card details summary').first().click();await page.locator('.lab-card textarea').first().fill('第 3 章待检查');
  await page.reload();await page.waitForSelector('.lab-card');
  const saved=await page.locator('.lab-card textarea').first().inputValue();
- if(cards!==15||saved!=='第 3 章待检查'||errors.length)throw Error(JSON.stringify({cards,saved,errors}));
+ if(cards!==51||saved!=='第 3 章待检查'||errors.length)throw Error(JSON.stringify({cards,saved,errors}));
  return {sortOrderVerified:true,independentSortRestored:true,vocabularyFiltered:true,highlightsFiltered:true,csv:csv.suggestedFilename(),markdown:md.suggestedFilename(),launcherSites:cards,notesPersisted:true,errors};
 }

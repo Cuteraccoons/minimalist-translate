@@ -1340,7 +1340,7 @@
         const clone = document.createElement("div");
         clone.innerHTML = storedHtml;
         clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
+      clone.querySelectorAll?.("script,style,noscript,template,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
         return String(clone.textContent || "").replace(/\s+/g, " ").trim();
       }
 
@@ -1351,7 +1351,7 @@
 
       const clone = el.cloneNode(true);
       clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
+      clone.querySelectorAll?.("script,style,noscript,template,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
       return String(clone.textContent || "").replace(/\s+/g, " ").trim();
     } catch (_) {
       return String(el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
@@ -2824,7 +2824,11 @@
     };
     const host = window.location.hostname.toLowerCase();
     if(/(^|\.)gutenberg\.org$/.test(host))return remember(document.body);
+    if(host==='arxiv.org'&&document.querySelector('#abs'))return remember(document.querySelector('#abs'));
+    if(host==='news.ycombinator.com'&&document.querySelector('#hnmain'))return remember(document.querySelector('#hnmain'));
     const siteSelectors = [
+      [/arxiv\.org/, "#abs"],
+      [/news\.ycombinator\.com/, "#hnmain"],
       [/wikisource\.org/, '#mw-content-text .mw-parser-output'],
       [/aozora\.gr\.jp/, '.main_text'],
       [/standardebooks\.org/, 'article, main'],
@@ -3013,6 +3017,17 @@
       };
       walk(container);return blocks;
     }
+    const layoutTables=new WeakMap();
+    const isLayoutTable=table=>{
+      if(layoutTables.has(table))return layoutTables.get(table);
+      const text=String(table.innerText||'').trim();
+      const dataTable=table.matches('.infobox,.wikitable,[data-infobox],[role="grid"]')||!!table.querySelector('th,caption');
+      const cells=[...table.rows].flatMap(row=>[...row.cells]);
+      const dominant=cells.some(cell=>cell.textContent.trim().length>text.length*.75&&(cell.querySelectorAll('p,br').length>=4));
+      const layout=!dataTable&&(table.getAttribute('role')==='presentation'||!!table.querySelector('table')||dominant);
+      layoutTables.set(table,layout);return layout;
+    };
+    const isHackerNews=location.hostname==='news.ycombinator.com';
     const selector = "figure, table, details, video, audio, iframe[src], hr, p, h1, h2, h3, h4, h5, h6, [role='heading'][aria-level], blockquote, pre, li, dt, dd, figcaption, a[download], a[href$='.pdf'], a[href$='.epub'], a[href$='.zip'], a[href*='.mp4'], a[href*='.webm'], a[href*='.ogv'], img";
     const seenText = new Set();
     const bookPage=/(?:gutenberg\.org|wikisource\.org|aozora\.gr\.jp|standardebooks\.org|marxists\.org)$/.test(location.hostname);
@@ -3021,27 +3036,32 @@
     const bookStart=gutenberg&&(container.querySelector('#pg-start-separator')||boundary.find(node=>/^\*{3}\s*START OF/i.test(node.textContent.trim())));
     const bookEnd=gutenberg&&(container.querySelector('#pg-end-separator')||boundary.find(node=>/^\*{3}\s*END OF/i.test(node.textContent.trim())));
     const raw = Array.from(container.querySelectorAll(selector));
+    if(isHackerNews)raw.push(...container.querySelectorAll('.commtext,.toptext'));
+    const legacyBlocks=[...container.querySelectorAll('font,td')].filter(node=>node.querySelectorAll('br').length>=4&&!node.querySelector('p,div,section,table,pre,li,h1,h2,h3,h4,h5,h6')&&node.textContent.trim().length>180);
+    raw.push(...legacyBlocks.filter(node=>!legacyBlocks.some(other=>other!==node&&other.contains(node))));
     // Old electronic books often use text + BR in otherwise empty DIVs.
     const loose=[container,...container.querySelectorAll('div,section')].filter(node=>!node.closest('nav,footer,header,aside,script,style')&&!node.querySelector('p,div,section,table,pre,li,h1,h2,h3,h4,h5,h6')&&node.textContent.trim().length>80);
     loose.forEach(node=>{if(!raw.includes(node))raw.push(node);});
     raw.sort((a,b)=>a===b?0:a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING?-1:1);
     const result = [];
     let accumulatedText = 0;
-    let tailReached = false;
+
     const noiseContainerRe = /(?:^|[-_\s])(related|recommend|recommended|suggest|suggested|more-stories|more-from|next-article|prev-article|newsletter|comments?|responses?|discussion|outbrain|taboola|sidebar|footer|social|share|promo|sponsored|advertisement|ads?|banner|popup|modal|subscribe|signup)(?:$|[-_\s])/i;
-    const tailHeadingRe = /^(?:related|recommended|read more|more stories|you may also like|more from|keep reading|further reading|most read|popular now|相关推荐|相关阅读|推荐阅读|更多文章|相关文章|猜你喜欢|延伸阅读|更多推荐|関連記事|おすすめ|こちらもおすすめ|あわせて読みたい|次の記事|関連コンテンツ|人気記事|관련 기사|추천 기사|더보기|articles connexes|à lire aussi|artículos relacionados|te puede interesar|articoli correlati|ähnliche artikel|weiterlesen|похожие статьи|читайте также)/i;
 
     for (const node of raw) {
-      if (tailReached) break;
+
       if(bookStart&&!(bookStart.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING))continue;
       if(bookEnd&&(node===bookEnd||bookEnd.contains(node)||(bookEnd.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING)))continue;
       if (node.closest("nav, header, footer, aside, [role='navigation'], [aria-hidden='true'], #raccoon-sidebar-root, #raccoon-floating-ball-root, #raccoon-selection-bubble-root, .raccoon-translated-block, .raccoon-translated-inline, #raccoon-hover-trigger-root")) continue;
       if (isReaderMaintenanceContainer(node)) continue;
-      const semanticParent = node.parentElement?.closest("figure,table,details");
-      if (semanticParent && semanticParent !== node) continue;
+      if(isHackerNews&&node.parentElement?.closest('.commtext,.toptext'))continue;
+      let semanticParent=node.parentElement?.closest('figure,table,details');
+      while(semanticParent?.tagName==='TABLE'&&isLayoutTable(semanticParent))semanticParent=semanticParent.parentElement?.closest('figure,table,details');
+      if(semanticParent&&semanticParent!==node)continue;
+      if(node.tagName==='TABLE'&&isLayoutTable(node))continue;
       const ancestor = node.closest("section, div, ul, ol");
       const noiseHint = `${ancestor?.id || ""} ${typeof ancestor?.className === "string" ? ancestor.className : ""}`.trim();
-      if (noiseContainerRe.test(noiseHint)) continue;
+      if (noiseContainerRe.test(noiseHint)&&!isHackerNews) continue;
 
       if (node.tagName === "FIGURE") {
         const media = Array.from(node.querySelectorAll("img")).some(img => !!getReaderImageInfo(img).src);
@@ -3083,7 +3103,8 @@
 
       if (node.tagName === "IMG") {
         const imageInfo = getReaderImageInfo(node);
-        if(imageInfo.isIcon || node.closest("p,li,dt,dd")) continue;
+        const textParent=node.closest('p,li,dt,dd');
+        if(imageInfo.isIcon || (textParent&&getHostOriginalText(textParent).length>=10)) continue;
         const src = imageInfo.src;
         const hint = `${src} ${node.alt || ""} ${node.className || ""} ${node.id || ""}`.toLowerCase();
         if (!src || /icon|avatar|logo|emoji|sprite|tracking|pixel|badge|button|chevron|favicon|placeholder|loading|spinner|divider|separator|advert|promo|sponsor|banner|watermark|qrcode|qr-code/.test(hint)) continue;
@@ -3097,7 +3118,7 @@
 
       // A list item that already contains semantic paragraphs/headings is only a
       // wrapper. Keep its children, not both parent and child copies.
-      if (node.tagName === "LI" && node.querySelector(":scope > p, :scope > blockquote, :scope > pre, :scope > div > p")) continue;
+      if (["LI","BLOCKQUOTE"].includes(node.tagName) && node.querySelector(":scope > p, :scope > blockquote, :scope > pre, :scope > div > p")) continue;
       const text = getHostOriginalText(node);
       const isHeading = readerHeadingLevel(node) > 0;
       if (text.length < (isHeading ? 2 : (node.tagName === "LI" ? 6 : 10))) continue;
@@ -3105,11 +3126,8 @@
 
       const linkText = Array.from(node.querySelectorAll?.("a") || []).reduce((n,a) => n + ((a.innerText || a.textContent || "").trim().length), 0);
       const linkDensity = text.length ? linkText / text.length : 0;
-      // A recommendation heading after substantial article text is a strong end-of-article signal.
-      if (!bookPage && accumulatedText > 650 && isHeading && tailHeadingRe.test(text)) {
-        tailReached = true;
-        break;
-      }
+      // Section names such as "Related work" and "Related projects" are valid
+      // article chapters. Only structural noise filtering may discard them.
       // Lists made mostly of links near the tail are usually related stories / navigation rather than article prose.
       if (!bookPage && accumulatedText > 900 && node.tagName === "LI" && linkDensity > .8) continue;
 
@@ -3118,11 +3136,10 @@
       accumulatedText += text.length;
     }
     return result.flatMap(node=>{
-      if(!bookPage)return [node];
-      if(node.tagName==='PRE'&&!node.querySelector('code')&&node.textContent.length>600){
+      if(bookPage&&node.tagName==='PRE'&&!node.querySelector('code')&&node.textContent.length>600){
         return node.textContent.split(/\n\s*\n/).filter(text=>text.trim()).map((text,index)=>{const paragraph=document.createElement('p');paragraph.textContent=text.replace(/\n/g,' ');if(index===0&&node.id)paragraph.id=node.id;return paragraph;});
       }
-      const breaks=['DIV','SECTION'].includes(node.tagName)?[...node.querySelectorAll('br')]:[];
+      const breaks=['DIV','SECTION','FONT','TD'].includes(node.tagName)?[...node.querySelectorAll('br')]:[];
       if(breaks.length<4)return [node];
       const paragraphs=[];let previous=null;
       for(const end of [...breaks,null]){
@@ -3162,7 +3179,7 @@
       }
     });
     clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
+      clone.querySelectorAll?.("script,style,noscript,template,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
     // Preserve separators from nested layout wrappers before stripping host
     // markup. Wikipedia facts often place several values in sibling DIV/LI
     // nodes; blindly unwrapping them would concatenate every label.
@@ -3235,7 +3252,7 @@
         cloneWalker.currentNode.nodeValue = originalTextForNode(sourceWalker.currentNode);
       }
       clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.(".mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
+      clone.querySelectorAll?.("script,style,noscript,template,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
       return String(clone.textContent || "").replace(/^\n+|\n+$/g, "");
     } catch (_) { return String(sourceNode.textContent || ""); }
   }
@@ -3531,7 +3548,8 @@
     readerImageInfoCache = new WeakMap();
     const bestContainer = findBestReaderContainer();
     const redditThread = /(?:^|\.)reddit\.com$/i.test(location.hostname) && /\/comments\//.test(location.pathname);
-    const title = (isWelcomePage ? document.querySelector("[data-welcome-article]")?.dataset.title || "A place to read" : readerOriginalTextPreservingWhitespace(document.querySelector("#firstHeading, main h1, article h1, h1")).trim())
+    const articleHeading=document.querySelector('#firstHeading') || bestContainer.querySelector('h1') || bestContainer.closest('article')?.querySelector('h1') || document.querySelector('#cb_post_title_url,.entry-title') || document.querySelector('main h1,article h1');
+    const title = (isWelcomePage ? document.querySelector("[data-welcome-article]")?.dataset.title || "A place to read" : (location.hostname === "arxiv.org" ? document.querySelector('meta[name="citation_title"]')?.content : "") || readerOriginalTextPreservingWhitespace(articleHeading).trim())
       || document.querySelector('meta[property="og:title"]')?.content?.trim()
       || document.title
       || "阅读文章";
@@ -3726,7 +3744,7 @@
                 const isHeading = headingLevel > 0;
                 const isFigcaption = node.tagName === "FIGCAPTION";
                 const isCode = node.tagName === "PRE" && !(node.textContent.length>600&&!node.querySelector("code")&&/gutenberg\.org|wikisource\.org|marxists\.org/.test(location.hostname));
-                const isQuote = node.tagName === "BLOCKQUOTE";
+                const isQuote = node.tagName === "BLOCKQUOTE" || !!node.closest("blockquote");
                 const isListItem = node.tagName === "LI";
                 const wrapperClass = isCode ? "reader-code-block" : isQuote ? "reader-blockquote" : isListItem ? "reader-list-block" : "";
                 let listMarker="";

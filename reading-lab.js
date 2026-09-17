@@ -1,26 +1,315 @@
 (() => {
   const sites=[
-    ['长篇书籍','《原始文化》卷一','https://www.gutenberg.org/files/70458/70458-h/70458-h.htm','完整章节、页码、长段落和脚注。'],
-    ['长篇书籍','《傲慢与偏见》','https://www.gutenberg.org/files/1342/1342-h/1342-h.htm','整本小说：章节目录、连续阅读和插图。'],
-    ['长篇书籍','《原始文化》第一章','https://en.wikisource.org/wiki/Primitive_Culture/Chapter_1','维基文库：页码、脚注，以及与整本书页面的区别。'],
-    ['长篇书籍','《我是猫》','https://www.aozora.gr.jp/cards/000148/files/789_14547.html','青空文库：日文长篇、注音与用换行组织的段落。'],
-    ['学术与社会科学','《共产党宣言》第一章','https://www.marxists.org/archive/marx/works/1848/communist-manifesto/ch01.htm','旧式网页：段落、引用、脚注和两侧留白。'],
-    ['学术与社会科学','《德意志意识形态》第一章','https://www.marxists.org/archive/marx/works/1845/german-ideology/ch01.htm','长篇社会科学文本：多层标题与连续段落。'],
-    ['学术与社会科学','Culture','https://plato.stanford.edu/entries/culture/','斯坦福哲学百科：多层大纲、引文与参考文献。'],
-    ['学术与社会科学','Culture and Cognitive Science','https://plato.stanford.edu/entries/culture-cogsci/','长篇学术文章：大纲定位、列表和参考文献。'],
-    ['百科与图文','Japan','https://en.wikipedia.org/wiki/Japan','资料卡、地图、小图标、表格与杂志双栏。'],
-    ['百科与图文','民俗学','https://ja.wikipedia.org/wiki/民俗学','日文百科：语言字体、编辑标记与图文混排。'],
-    ['文档与讨论','JavaScript Introduction','https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Introduction','MDN：代码块、列表与正文提取边界。'],
-    ['文档与讨论','Should I read E. B. Tylor?','https://www.reddit.com/r/AskAnthropology/comments/gys71o/','Reddit：主帖和层级回复；可能要求登录或限制访问。']
-  ];
-  // Familiar everyday pages come first; keep existing book records available below.
-  sites.push(
-    ['日常阅读','NASA · 太阳','https://science.nasa.gov/sun/facts/','科普 · 图文与小标题'],
-    ['日常阅读','京都旅行指南','https://en.wikivoyage.org/wiki/Kyoto','旅行 · 地图与地点列表'],
-    ['文档与讨论','Visual Studio Code','https://github.com/microsoft/vscode','项目说明 · 列表与图片']
-  );
+  [
+    "百科与图文",
+    "日本（英文）",
+    "https://en.wikipedia.org/wiki/Japan",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "百科与图文",
+    "咖啡（英文）",
+    "https://en.wikipedia.org/wiki/Coffee",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "百科与图文",
+    "人工智能（英文）",
+    "https://en.wikipedia.org/wiki/Artificial_intelligence",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "百科与图文",
+    "人类学（中文）",
+    "https://zh.wikipedia.org/wiki/人类学",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "百科与图文",
+    "民俗学（日文）",
+    "https://ja.wikipedia.org/wiki/民俗学",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "百科与图文",
+    "巴黎（法文）",
+    "https://fr.wikipedia.org/wiki/Paris",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "百科与图文",
+    "柏林（德文）",
+    "https://de.wikipedia.org/wiki/Berlin",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "NASA 月球",
+    "https://science.nasa.gov/moon/facts/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "NASA 太阳",
+    "https://science.nasa.gov/sun/facts/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "NASA 从月球了解地球",
+    "https://science.nasa.gov/solar-system/moon/10-things-what-we-learn-about-earth-by-studying-the-moon/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "MDN JavaScript 入门",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Introduction",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "MDN CSS 网格",
+    "https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout/Basic_concepts_of_grid_layout",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "MDN Fetch",
+    "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "React 快速入门",
+    "https://react.dev/learn",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "React 共享状态",
+    "https://react.dev/learn/sharing-state-between-components",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Python 数据结构",
+    "https://docs.python.org/3/tutorial/datastructures.html",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Rust 所有权",
+    "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Effective Go",
+    "https://go.dev/doc/effective_go",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Kubernetes 概述",
+    "https://kubernetes.io/docs/concepts/overview/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Docker 简介",
+    "https://docs.docker.com/get-started/docker-overview/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Requests 快速入门",
+    "https://requests.readthedocs.io/en/latest/user/quickstart/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Django 教程",
+    "https://docs.djangoproject.com/en/5.2/intro/tutorial01/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "VS Code 项目说明",
+    "https://github.com/microsoft/vscode",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Discourse 欢迎帖",
+    "https://meta.discourse.org/t/welcome-to-meta-discourse-org/1",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Stack Overflow 数组排序",
+    "https://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-processing-an-unsorted-array",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Hacker News Dropbox",
+    "https://news.ycombinator.com/item?id=8863",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "文档与讨论",
+    "Reddit 阅读泰勒",
+    "https://www.reddit.com/r/AskAnthropology/comments/gys71o/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "京都旅行指南",
+    "https://en.wikivoyage.org/wiki/Kyoto",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "长篇书籍",
+    "原始文化",
+    "https://www.gutenberg.org/files/70458/70458-h/70458-h.htm",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "长篇书籍",
+    "傲慢与偏见",
+    "https://www.gutenberg.org/files/1342/1342-h/1342-h.htm",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "长篇书籍",
+    "爱丽丝梦游仙境",
+    "https://www.gutenberg.org/files/11/11-h/11-h.htm",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "长篇书籍",
+    "我是猫",
+    "https://www.aozora.gr.jp/cards/000148/files/789_14547.html",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "长篇书籍",
+    "维基文库原始文化",
+    "https://en.wikisource.org/wiki/Primitive_Culture/Chapter_1",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "长篇书籍",
+    "共产党宣言",
+    "https://www.marxists.org/archive/marx/works/1848/communist-manifesto/ch01.htm",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "学术与社会科学",
+    "SEP Culture",
+    "https://plato.stanford.edu/entries/culture/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "学术与社会科学",
+    "SEP Culture and Cognitive Science",
+    "https://plato.stanford.edu/entries/culture-cogsci/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "学术与社会科学",
+    "Attention Is All You Need",
+    "https://arxiv.org/abs/1706.03762",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "学术与社会科学",
+    "PubMed 摘要",
+    "https://pubmed.ncbi.nlm.nih.gov/32939066/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "学术与社会科学",
+    "Nature AlphaFold",
+    "https://www.nature.com/articles/s41586-021-03819-2",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "少数派 笔记管理",
+    "https://sspai.com/post/80781",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "少数派 阅读入门",
+    "https://sspai.com/post/68331",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "博客园 CSS Grid",
+    "https://www.cnblogs.com/adiynil/p/22570706",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "阮一峰 CSS Grid",
+    "https://www.ruanyifeng.com/blog/2019/03/grid-layout-tutorial.html",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "Paul Graham How to Do Great Work",
+    "https://paulgraham.com/greatwork.html",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "Martin Fowler Refactoring",
+    "https://martinfowler.com/articles/refactoring-2nd-ed.html",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "Mozilla JavaScript 30 年",
+    "https://developer.mozilla.org/en-US/blog/javascript-30/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "freeCodeCamp 学习 JavaScript",
+    "https://www.freecodecamp.org/news/learn-javascript-full-course/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "Smashing CSS Grid",
+    "https://www.smashingmagazine.com/2017/06/building-production-ready-css-grid-layout/",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "AP 月球新陨石坑",
+    "https://apnews.com/article/80eea242ad275fda1f7a88587cdccd2f",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "日常阅读",
+    "BBC 旅行专题",
+    "https://www.bbc.com/travel",
+    "检查正文完整性、大纲定位、代码与配图。"
+  ],
+  [
+    "学术与社会科学",
+    "《德意志意识形态》第一章",
+    "https://www.marxists.org/archive/marx/works/1845/german-ideology/ch01.htm",
+    "保留的历史测试页；本轮未测试。"
+  ]
+];
   const order=['百科与图文','日常阅读','文档与讨论','长篇书籍','学术与社会科学'];
   sites.sort((a,b)=>order.indexOf(a[0])-order.indexOf(b[0]));
+  const automaticResults={"https://en.wikipedia.org/wiki/Japan": "结构检查通过", "https://en.wikipedia.org/wiki/Coffee": "结构检查通过", "https://en.wikipedia.org/wiki/Artificial_intelligence": "结构检查通过", "https://zh.wikipedia.org/wiki/人类学": "结构检查通过", "https://ja.wikipedia.org/wiki/民俗学": "结构检查通过", "https://fr.wikipedia.org/wiki/Paris": "结构检查通过", "https://de.wikipedia.org/wiki/Berlin": "结构检查通过", "https://science.nasa.gov/moon/facts/": "结构检查通过", "https://science.nasa.gov/sun/facts/": "结构检查通过", "https://science.nasa.gov/solar-system/moon/10-things-what-we-learn-about-earth-by-studying-the-moon/": "结构检查通过", "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Introduction": "结构检查通过", "https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout/Basic_concepts_of_grid_layout": "结构检查通过", "https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch": "结构检查通过", "https://react.dev/learn": "结构检查通过", "https://react.dev/learn/sharing-state-between-components": "结构检查通过", "https://docs.python.org/3/tutorial/datastructures.html": "结构检查通过", "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html": "结构检查通过", "https://go.dev/doc/effective_go": "结构检查通过", "https://kubernetes.io/docs/concepts/overview/": "结构检查通过", "https://docs.docker.com/get-started/docker-overview/": "结构检查通过", "https://requests.readthedocs.io/en/latest/user/quickstart/": "结构检查通过", "https://docs.djangoproject.com/en/5.2/intro/tutorial01/": "结构检查通过", "https://github.com/microsoft/vscode": "结构检查通过", "https://meta.discourse.org/t/welcome-to-meta-discourse-org/1": "无法访问正文", "https://stackoverflow.com/questions/11227809/why-is-processing-a-sorted-array-faster-than-processing-an-unsorted-array": "无法访问正文", "https://news.ycombinator.com/item?id=8863": "结构检查通过", "https://www.reddit.com/r/AskAnthropology/comments/gys71o/": "无法访问正文", "https://en.wikivoyage.org/wiki/Kyoto": "结构检查通过", "https://www.gutenberg.org/files/70458/70458-h/70458-h.htm": "结构检查通过", "https://www.gutenberg.org/files/1342/1342-h/1342-h.htm": "结构检查通过", "https://www.gutenberg.org/files/11/11-h/11-h.htm": "结构检查通过", "https://www.aozora.gr.jp/cards/000148/files/789_14547.html": "结构检查通过", "https://en.wikisource.org/wiki/Primitive_Culture/Chapter_1": "结构检查通过", "https://www.marxists.org/archive/marx/works/1848/communist-manifesto/ch01.htm": "结构检查通过", "https://plato.stanford.edu/entries/culture/": "结构检查通过", "https://plato.stanford.edu/entries/culture-cogsci/": "结构检查通过", "https://arxiv.org/abs/1706.03762": "结构检查通过", "https://pubmed.ncbi.nlm.nih.gov/32939066/": "无法访问正文", "https://www.nature.com/articles/s41586-021-03819-2": "结构检查通过", "https://sspai.com/post/80781": "结构检查通过", "https://sspai.com/post/68331": "结构检查通过", "https://www.cnblogs.com/adiynil/p/22570706": "结构检查通过", "https://www.ruanyifeng.com/blog/2019/03/grid-layout-tutorial.html": "结构检查通过", "https://paulgraham.com/greatwork.html": "结构检查通过", "https://martinfowler.com/articles/refactoring-2nd-ed.html": "结构检查通过", "https://developer.mozilla.org/en-US/blog/javascript-30/": "无法访问正文", "https://www.freecodecamp.org/news/learn-javascript-full-course/": "待人工复查", "https://www.smashingmagazine.com/2017/06/building-production-ready-css-grid-layout/": "结构检查通过", "https://apnews.com/article/80eea242ad275fda1f7a88587cdccd2f": "无法访问正文", "https://www.bbc.com/travel": "结构检查通过"};
   const key='readingLabResults';let records={};
   const storage=globalThis.chrome?.storage?.local;
   const read=async()=>{try{return storage?(await storage.get(key))[key]||{}:JSON.parse(localStorage.getItem(key)||'{}');}catch{return {};}};
@@ -37,7 +326,7 @@
         const label=el('label','检查结果'),select=el('select');[['pending','尚未检查'],['ok','正常'],['issue','有问题']].forEach(([value,text])=>{const option=el('option',text);option.value=value;select.append(option);});select.value=record.status;label.append(select);
         const note=el('textarea');note.placeholder='记录遇到的问题…';note.setAttribute('aria-label',`${title}的检查备注`);note.value=record.note||'';
         const update=()=>{records[url]={status:select.value,note:note.value,updated:new Date().toISOString()};card.dataset.status=select.value;void save();updateCount();};select.addEventListener('change',()=>{update();if(document.querySelector('#lab-filter').value!=='all')render();});note.addEventListener('input',update);
-        const detail=el('details');detail.append(el('summary','备注'),el('p',hint),note);card.append(el('small',new URL(url).hostname),el('h3',title),link,label,detail);grid.append(card);
+        const detail=el('details');detail.append(el('summary','备注'),el('p',hint),note);card.append(el('small',new URL(url).hostname),el('h3',title),el('small',automaticResults[url]?'自动：'+automaticResults[url]:'历史页面 · 本轮未测试'),link,label,detail);grid.append(card);
       });
     }updateCount();
   }
