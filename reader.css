@@ -1804,3 +1804,27 @@ html:has(#raccoon-reader-root) #raccoon-selection-bubble-root .selection-tool-bt
 @container reader-navigation (max-width:270px){
  #raccoon-reader-root .reader-navigator-tabs button span{display:none!important}
 }
+
+/* Reader content must not inherit host clipping or syntax-theme contrast. */
+#raccoon-reader-root .reader-outline-label{display:block!important;-webkit-line-clamp:unset!important;overflow:visible!important;padding-bottom:4px!important;overflow-wrap:anywhere!important}
+#raccoon-reader-root .reader-code-block{background:#20242a!important;color:#edf1f5!important;max-width:100%!important;box-sizing:border-box!important;overflow:auto!important}
+#raccoon-reader-root .reader-code-block .reader-paragraph-pair .reader-orig-p,
+#raccoon-reader-root .reader-code-block .reader-paragraph-pair .reader-trans-p{color:#edf1f5!important;background:transparent!important;font:400 14px/1.75 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;white-space:pre!important;overflow-wrap:normal!important;word-break:normal!important;text-align:left!important}
+#raccoon-reader-root .reader-blockquote{position:relative!important;background:transparent!important;border:0!important;border-radius:0!important;padding:8px 0 8px 28px!important}
+#raccoon-reader-root .reader-blockquote::before{content:'“'!important;position:absolute!important;left:0!important;top:-4px!important;font:36px/1.2 Georgia,serif!important;color:var(--reader-shell-muted)!important}
+#raccoon-reader-root .reader-blockquote .reader-orig-p{color:var(--reader-shell-muted)!important}
+#raccoon-reader-root .reader-structural-heading{border-bottom:0!important;text-decoration:none!important}
+#raccoon-reader-root .reader-structural-heading::after{content:none!important;display:none!important}
+#raccoon-reader-root .reader-orig-p:has(ruby){line-height:2.25!important}
+#raccoon-reader-root .reader-img-wrap{min-width:0!important;box-sizing:border-box!important;overflow:visible!important}
+#raccoon-reader-root .reader-img-wrap img{display:block!important;min-width:0!important;box-sizing:border-box!important;transform:none!important;clip-path:none!important;aspect-ratio:auto!important}
+#raccoon-reader-root .reader-media-block{align-items:flex-start!important}
+#raccoon-reader-root .reader-forum-reply{padding:16px!important;border:0!important;background:var(--reader-card-bg)!important;border-radius:12px!important;min-width:0!important}
+#raccoon-reader-root .reader-forum-reply>summary{display:flex!important;align-items:center!important;gap:10px!important;list-style:none!important;padding:4px 0 12px!important;min-width:0!important}
+#raccoon-reader-root .reader-forum-reply>summary::-webkit-details-marker{display:none!important}
+#raccoon-reader-root .reader-forum-reply>summary::before{content:'›'!important;flex:0 0 16px!important;font-size:20px!important;transform:rotate(0deg)!important;text-align:center!important}
+#raccoon-reader-root .reader-forum-reply[open]>summary::before{transform:rotate(90deg)!important}
+#raccoon-reader-root .reader-forum-reply summary small{float:none!important;margin-left:auto!important;white-space:nowrap!important}
+#raccoon-reader-root .reader-forum-author{overflow-wrap:anywhere!important;min-width:0!important}
+#raccoon-reader-root .reader-forum-avatar{width:26px!important;height:26px!important;flex:0 0 26px!important;border-radius:50%!important;object-fit:cover!important}
+#raccoon-reader-root .reader-forum-reply .reader-forum-reply{margin:12px 0 0 8px!important;padding:8px 0 0 12px!important;border-left:1px solid var(--reader-shell-border)!important;border-radius:0!important}

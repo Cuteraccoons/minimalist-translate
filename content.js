@@ -2824,6 +2824,7 @@
     };
     const host = window.location.hostname.toLowerCase();
     if(/(^|\.)gutenberg\.org$/.test(host))return remember(document.body);
+    if(host==='science.nasa.gov'&&document.querySelector('.entry-content'))return remember(document.querySelector('.entry-content'));
     if(host==='arxiv.org'&&document.querySelector('#abs'))return remember(document.querySelector('#abs'));
     if(host==='news.ycombinator.com'&&document.querySelector('#hnmain'))return remember(document.querySelector('#hnmain'));
     const siteSelectors = [
@@ -2964,7 +2965,8 @@
     const mediaContainer=node.closest('figure,.thumb,.tright,.tleft') || node;
     const alignmentHint=`${mediaContainer.className || ''} ${getComputedStyle(mediaContainer).float}`;
     const side=/left|right|mw-halign/.test(alignmentHint);
-    const isIcon=(layoutWidth>0 && layoutHeight>0 && (Math.max(layoutWidth,layoutHeight)<=72 || (layoutHeight<=36&&layoutWidth<=160))) || node.closest('.mw-indicator,.mw-editsection,.noprint')!==null;
+    const illustrated=!!node.closest('figure,.thumb,.tright,.tleft,.infobox,.mw-halign-center');
+    const isIcon=(layoutWidth>0 && layoutHeight>0 && Math.max(layoutWidth,layoutHeight)<=(illustrated?32:48)) || node.closest('.mw-indicator,.mw-editsection')!==null;
     const compact=!isIcon && (side || (relativeWidth<.58 && layoutWidth<520));
     const wide=!compact && !isIcon;
     const classes=[animatedSource?'reader-img-animated':'',wide?'reader-img-wide':'',compact?'reader-img-inline':'',isIcon?'reader-img-icon':''].filter(Boolean).join(' ');
@@ -3049,11 +3051,14 @@
     const noiseContainerRe = /(?:^|[-_\s])(related|recommend|recommended|suggest|suggested|more-stories|more-from|next-article|prev-article|newsletter|comments?|responses?|discussion|outbrain|taboola|sidebar|footer|social|share|promo|sponsored|advertisement|ads?|banner|popup|modal|subscribe|signup)(?:$|[-_\s])/i;
 
     for (const node of raw) {
+      if(node.tagName!=="PRE"&&node.closest("pre"))continue;
 
       if(bookStart&&!(bookStart.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING))continue;
       if(bookEnd&&(node===bookEnd||bookEnd.contains(node)||(bookEnd.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING)))continue;
-      if (node.closest("nav, header, footer, aside, [role='navigation'], [aria-hidden='true'], #raccoon-sidebar-root, #raccoon-floating-ball-root, #raccoon-selection-bubble-root, .raccoon-translated-block, .raccoon-translated-inline, #raccoon-hover-trigger-root")) continue;
+      if (node.closest("nav, header, footer, aside, [role='navigation'], #raccoon-sidebar-root, #raccoon-floating-ball-root, #raccoon-selection-bubble-root, .raccoon-translated-block, .raccoon-translated-inline, #raccoon-hover-trigger-root")) continue;
+      if(node.closest("[aria-hidden='true']")&&!(location.hostname==='science.nasa.gov'&&node.closest('.quick-facts-slide')))continue;
       if (isReaderMaintenanceContainer(node)) continue;
+      if(location.hostname==='science.nasa.gov'&&node.closest('.usa-article-scroll-wrapper,.slick-cloned,.swiper-slide-duplicate,.hds-topic-cards'))continue;
       if(isHackerNews&&node.parentElement?.closest('.commtext,.toptext'))continue;
       let semanticParent=node.parentElement?.closest('figure,table,details');
       while(semanticParent?.tagName==='TABLE'&&isLayoutTable(semanticParent))semanticParent=semanticParent.parentElement?.closest('figure,table,details');
@@ -3071,6 +3076,9 @@
       }
 
       if (node.tagName === "TABLE") {
+        const codeLines=node.querySelectorAll('td.code .line,.code .line');
+        if(node.closest('.syntaxhighlighter')&&codeLines.length){const pre=document.createElement('pre');const code=document.createElement('code');code.textContent=[...codeLines].map(line=>line.textContent.replace(/\u00a0/g,' ')).join('\n');pre.append(code);result.push(pre);continue;}
+        if(node.matches('.regionlistitem-table')){const cell=node.querySelector('.regionlistitem-textholder');if(cell){const paragraph=document.createElement('p');paragraph.innerHTML=readerInlineHtml(cell);result.push(paragraph);}continue;}
         const rows = Array.from(node.rows || []).filter(row => {
           const hasText = String(row.innerText || "").trim().length >= 3;
           const hasInlineMedia = Array.from(row.querySelectorAll?.("img") || []).some(image => !!getReaderImageInfo(image).src);
@@ -3107,10 +3115,9 @@
         if(imageInfo.isIcon || (textParent&&getHostOriginalText(textParent).length>=10)) continue;
         const src = imageInfo.src;
         const hint = `${src} ${node.alt || ""} ${node.className || ""} ${node.id || ""}`.toLowerCase();
-        if (!src || /icon|avatar|logo|emoji|sprite|tracking|pixel|badge|button|chevron|favicon|placeholder|loading|spinner|divider|separator|advert|promo|sponsor|banner|watermark|qrcode|qr-code/.test(hint)) continue;
+        if (!src || /icon|avatar|logo|emoji|sprite|tracking|pixel|badge|button|chevron|favicon|placeholder|loading|spinner|divider|separator|advert|promo|sponsor|watermark|qrcode|qr-code/.test(hint)) continue;
         const w = Number(node.getAttribute("width")) || node.naturalWidth || 0;
         const h = Number(node.getAttribute("height")) || node.naturalHeight || 0;
-        if (w > 0 && h > 0 && Math.max(w,h) / Math.max(1,Math.min(w,h)) > 12) continue;
         if (!(w >= 180 || h >= 120 || (!w && !h))) continue;
         result.push(node);
         continue;
@@ -3175,7 +3182,7 @@
       if(source.hidden || source.getAttribute('aria-hidden')==='true' || css.display==='none' || css.visibility==='hidden' || /(?:^|\s)(?:geo-nondefault|geo-multi-punct)(?:\s|$)/.test(source.className||'')){copy.remove();return;}
       if(source.tagName==='IMG'){
         const info=getReaderImageInfo(source);copy.setAttribute('src',info.src);
-        copy.setAttribute('width',String(info.displayWidth||info.width));copy.setAttribute('height',String(info.displayHeight||info.height));
+        copy.setAttribute('data-reader-inline-icon',info.isIcon?'true':'false');copy.setAttribute('width',String(info.displayWidth||info.width));copy.setAttribute('height',String(info.displayHeight||info.height));
       }
     });
     clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
@@ -3203,8 +3210,7 @@
         const width = Math.max(0, Number(node.getAttribute("width")) || 0);
         const height = Math.max(0, Number(node.getAttribute("height")) || 0);
         const imageHint = `${src} ${alt} ${node.className || ""}`.toLowerCase();
-        const isCompactAsset = (width > 0 && height > 0 && Math.max(width, height) <= 72)
-          || /(?:^|[\s_./-])(icon|flag|logo|badge|emoji|avatar)(?:[\s_./-]|$)/i.test(imageHint);
+        const isCompactAsset = node.getAttribute('data-reader-inline-icon') === 'true';
         Array.from(node.attributes || []).forEach(attr => node.removeAttribute(attr.name));
         if (!src) { node.remove(); return; }
         node.setAttribute("src", src);
@@ -3244,6 +3250,10 @@
 
   function readerOriginalTextPreservingWhitespace(sourceNode) {
     if (!sourceNode) return "";
+    if(sourceNode.tagName==='PRE'){
+      const lines=sourceNode.querySelectorAll('.hljs-ln-code,td.code .line');
+      if(lines.length)return [...lines].map(line=>readerOriginalTextPreservingWhitespace(line).replace(/\u00a0/g,' ')).join('\n');
+    }
     try {
       const clone = sourceNode.cloneNode(true);
       const sourceWalker = document.createTreeWalker(sourceNode, NodeFilter.SHOW_TEXT);
@@ -3278,7 +3288,7 @@
       const info = getReaderImageInfo(image);
       if (!info.src || info.isIcon || seen.has(info.src)) return;
       const hint = `${info.src} ${info.alt} ${image.className || ""}`.toLowerCase();
-      if (/icon|avatar|logo|emoji|sprite|tracking|pixel|badge|button|chevron|favicon|placeholder|loading|spinner|divider|separator|advert|promo|sponsor|banner|watermark|qrcode|qr-code/.test(hint)) return;
+      if (/icon|avatar|logo|emoji|sprite|tracking|pixel|badge|button|chevron|favicon|placeholder|loading|spinner|divider|separator|advert|promo|sponsor|watermark|qrcode|qr-code/.test(hint)) return;
       seen.add(info.src);
       entries.push({ image, info, caption:String(caption || info.alt || "文章配图").trim() });
     };
@@ -3555,6 +3565,10 @@
       || "阅读文章";
     const detectedWritingMode = detectReaderWritingMode(bestContainer);
     let contentNodes = collectReaderContentNodes(bestContainer);
+    if(/(^|\.)sspai\.com$/.test(location.hostname)){
+      const cover=document.querySelector('img.article__header__banner__image');
+      if(cover&&!contentNodes.some(node=>node===cover||node.contains(cover)))contentNodes.unshift(cover);
+    }
     contentNodes = contentNodes.filter((node, index) => {
       if (index > 12 || readerHeadingLevel(node) < 1 || readerHeadingLevel(node) > 3) return true;
       return !readerHeadingMatchesTitle(readerOriginalTextPreservingWhitespace(node).trim(), title);
@@ -3754,7 +3768,7 @@
                   for(const sibling of siblings){if(sibling.hasAttribute('value'))number=Number(sibling.value);if(sibling===node)break;number+=reverse?-1:1;}listMarker=String(number)+'.';
                 }
                 const originalHtml = isCode
-                  ? escapeHtml(readerOriginalTextPreservingWhitespace(node)).replace(/\n/g, "<br>")
+                  ? escapeHtml(readerOriginalTextPreservingWhitespace(node))
                   : (readerInlineHtml(node) || escapeHtml(getHostOriginalText(node)));
                 return readerPairHtml({ id:`r_${idx}`, originalHtml, headingLevel, pairClass:isFigcaption ? "reader-figcaption" : "", wrapperClass, listMarker, renderStyle:savedRenderStyle, canTranslateOne:!isFigcaption && !isCode });
               }).join("")}
@@ -4027,7 +4041,9 @@
         const body=candidates.find(node=>node.closest('shreddit-comment,.thing.comment')===comment);
         const children=redditComments.filter(child=>child.parentElement?.closest('shreddit-comment,.thing.comment')===comment);
         const index=commentIndex++;
-        return `<details class="reader-forum-reply" open><summary>${escapeHtml(author)}<small>${children.length?`${children.length} 条回复`:'回复'}</small></summary>${body?readerPairHtml({id:`reddit_${index}`,originalHtml:readerInlineHtml(body)||escapeHtml(body.textContent),renderStyle:savedRenderStyle}):''}${children.map(renderComment).join('')}</details>`;
+        const avatar=[...comment.querySelectorAll('img')].find(img=>img.closest('shreddit-comment,.thing.comment')===comment&&/avatar|snoovatar/i.test(`${img.alt} ${img.className} ${img.src}`));
+        const avatarSrc=avatar?readerSafeMediaUrl(avatar.currentSrc||avatar.src):'';
+        return `<details class="reader-forum-reply" open><summary>${avatarSrc?`<img class="reader-forum-avatar" src="${escapeHtml(avatarSrc)}" alt="" loading="lazy">`:""}<span class="reader-forum-author">${escapeHtml(author)}</span><small>${children.length?`${children.length} 条回复`:'回复'}</small></summary>${body?readerPairHtml({id:`reddit_${index}`,originalHtml:readerInlineHtml(body)||escapeHtml(body.textContent),renderStyle:savedRenderStyle}):''}${children.map(renderComment).join('')}</details>`;
       };
       const section=document.createElement('section');section.className='reader-forum-discussion';section.innerHTML='<h2>讨论</h2>'+redditComments.filter(comment=>!commentSet.has(comment.parentElement?.closest('shreddit-comment,.thing.comment'))).map(renderComment).join('');
       root.querySelector('#reader-content').append(section);

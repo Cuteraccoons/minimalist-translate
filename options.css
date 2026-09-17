@@ -2113,3 +2113,5 @@ input:checked + .switch-knob:before {
 .project-resource-links svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
 .project-resource-links .resource-arrow{margin-left:auto;color:#888}
 @media(max-width:600px){.project-resource-links{grid-template-columns:1fr}}
+
+.project-resource-links{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.project-resource-links button{background:#f5f5f3;padding:16px 12px;gap:8px}.project-resource-links .resource-arrow{font-size:13px;white-space:nowrap;background:white;color:#222;border-radius:6px;padding:5px 8px}.project-resource-links button:hover{background:#ececea;color:#111}@media(max-width:1050px){.project-resource-links{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:550px){.project-resource-links{grid-template-columns:1fr}}
