@@ -766,10 +766,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   for(const kind of ['vocab','highlight']){
     const scope=document.getElementById(`${kind}-scope`),refresh=()=>kind==='vocab'?filterAndRenderVocabulary():renderHighlightCollection();
-    scope.addEventListener('change',refresh);
+    const sortControl=scope.querySelector('[data-filter="sort"]');
+    const sortKey=`collectionSort:${kind}`;
+    let sortChanged=false;
+    scope.addEventListener('change',async event=>{
+      refresh();
+      if(event.target!==sortControl)return;
+      sortChanged=true;
+      try{await chrome.storage.local.set({[sortKey]:sortControl.value});}catch(_){/* Keep the selected order usable even if storage is full. */}
+    });
+    void (async()=>{
+      try{
+        const saved=await chrome.storage.local.get(sortKey);
+        if(!sortChanged&&['newest','oldest','name'].includes(saved[sortKey])){sortControl.value=saved[sortKey];refresh();}
+      }catch(_){/* Default to newest when no preference can be read. */}
+    })();
     scope.querySelectorAll('[data-period]').forEach(button=>button.addEventListener('click',()=>{
       const start=scope.querySelector('[data-filter="from"]'),end=scope.querySelector('[data-filter="until"]');
-      if(button.dataset.period==='all'){start.value='';end.value='';scope.querySelector('[data-filter="site"]').value='';scope.querySelector('[data-filter="sort"]').value='newest';}
+      if(button.dataset.period==='all'){start.value='';end.value='';scope.querySelector('[data-filter="site"]').value='';}
       else{
         const now=new Date(),from=new Date();from.setHours(0,0,0,0);if(button.dataset.period==='week')from.setDate(from.getDate()-6);now.setHours(23,59,0,0);
         const local=date=>new Date(date.getTime()-date.getTimezoneOffset()*60000).toISOString().slice(0,16);start.value=local(from);end.value=local(now);

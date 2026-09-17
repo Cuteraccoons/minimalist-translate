@@ -5,6 +5,12 @@ async page=>{
  await page.goto(worker.url().replace('background.js','options.html'));
  await page.locator('[data-tab="tab-vocab"]').click();
  await page.waitForFunction(()=>document.querySelector('#vocab-scope [data-filter="site"]').options.length===3);
+ const vocabSort=page.locator('#vocab-scope [data-filter="sort"]');
+ await vocabSort.selectOption('oldest');
+ let ordered=await page.locator('#vocab-list-container').innerText();if(ordered.indexOf('older')>ordered.indexOf('newer'))throw Error('Oldest-first order failed');
+ await vocabSort.selectOption('newest');
+ ordered=await page.locator('#vocab-list-container').innerText();if(ordered.indexOf('newer')>ordered.indexOf('older'))throw Error('Newest-first order failed');
+ await vocabSort.selectOption('oldest');
  await page.locator('#vocab-scope [data-filter="site"]').selectOption('b.example');
  const vocab=await page.locator('#vocab-list-container').innerText();
  if(vocab.includes('older')||!vocab.includes('newer'))throw Error('Vocabulary source filter failed');
@@ -18,6 +24,15 @@ async page=>{
  if(!highlights.includes('Older selection')||highlights.includes('Newer selection'))throw Error('Highlight source filter failed');
  const mdDownload=page.waitForEvent('download');await page.locator('#btn-export-highlights-md').click();const md=await mdDownload;
  const mdText=await page.evaluate(()=>globalThis.__exportBlob.text());if(!mdText.includes("Older selection")||mdText.includes("Newer selection"))throw Error("Markdown scope mismatch");
+ await page.locator('#highlight-scope [data-filter="sort"]').selectOption('name');
+ await page.waitForFunction(async()=>{const value=await chrome.storage.local.get(['collectionSort:vocab','collectionSort:highlight']);return value['collectionSort:vocab']==='oldest'&&value['collectionSort:highlight']==='name';});
+ await page.reload();
+ await page.locator('[data-tab="tab-vocab"]').click();
+ await page.waitForFunction(()=>document.querySelector('#vocab-scope [data-filter="sort"]').value==='oldest');
+ await page.locator('#vocab-scope [data-period="all"]').click();
+ if(await page.locator('#vocab-scope [data-filter="sort"]').inputValue()!=='oldest')throw Error('Clearing filters reset sort');
+ await page.locator('[data-tab="tab-highlights"]').click();
+ if(await page.locator('#highlight-scope [data-filter="sort"]').inputValue()!=='name')throw Error('Independent highlight sort was not restored');
  await page.goto(worker.url().replace('background.js','reading-lab.html'));
  await page.waitForSelector('.lab-card');
  const cards=await page.locator('.lab-card').count();
@@ -25,5 +40,5 @@ async page=>{
  await page.reload();await page.waitForSelector('.lab-card');
  const saved=await page.locator('.lab-card textarea').first().inputValue();
  if(cards!==12||saved!=='第 3 章待检查'||errors.length)throw Error(JSON.stringify({cards,saved,errors}));
- return {vocabularyFiltered:true,highlightsFiltered:true,csv:csv.suggestedFilename(),markdown:md.suggestedFilename(),launcherSites:cards,notesPersisted:true,errors};
+ return {sortOrderVerified:true,independentSortRestored:true,vocabularyFiltered:true,highlightsFiltered:true,csv:csv.suggestedFilename(),markdown:md.suggestedFilename(),launcherSites:cards,notesPersisted:true,errors};
 }
