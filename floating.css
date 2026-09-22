@@ -4347,3 +4347,6 @@ html.raccoon-paragraph-actions-disabled .raccoon-translated-inline .raccoon-bloc
 
 .sidebar-content-hint{margin:22px 0 4px;font:400 13px/1.8 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#777}
 .sidebar-list-content:has(.raccoon-sidebar-item)>.sidebar-content-hint{display:none}
+
+.raccoon-translation-text .raccoon-citation{font-size:13px!important;line-height:0!important;vertical-align:super!important;white-space:nowrap!important}
+.raccoon-translation-text .raccoon-citation a{font-size:inherit!important;color:inherit!important;text-decoration:none!important}

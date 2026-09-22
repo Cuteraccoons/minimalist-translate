@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS = {
   readerWidth: "920", // 默认宽敞舒适版面 (已记忆)
   readerTheme: "white", // envelope | white | dark | mint | mist | lavender | stone
   readerSurface: "card", // card | flat | safari | forum
+  readerLinkStyle: "underline",
   readerTableStyle: "clean", // clean | three-line | striped
   readerRenderStyle: "classic", // classic | card
   readerFont: "auto",

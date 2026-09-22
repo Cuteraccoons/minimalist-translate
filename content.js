@@ -1997,7 +1997,7 @@
 
     const translationTextNode = document.createElement("span");
     translationTextNode.className = "raccoon-translation-text";
-    translationTextNode.textContent = translatedText;
+    appendTranslatedCitations(translationTextNode, translatedText, origEl);
     transNode.appendChild(translationTextNode);
 
     if (!isInline && !attachShortLabel) {
@@ -2720,6 +2720,8 @@
   let readerKeydownHandler = null;
   let readerContainerCache = { url:"", element:null };
   let readerImageInfoCache = new WeakMap();
+  let readerCompositeNodes = new WeakSet();
+  let readerCompositeHtmlCache = new WeakMap();
   let readerStylesheetPromise = null;
   let readerSpeechController = null;
 
@@ -2750,11 +2752,44 @@
     return 0;
   }
 
-  function setReaderTranslationText(element, text) {
+  function appendTranslatedCitations(target, text, source) {
+    const refs=[];
+    source?.querySelectorAll('sup a[href*="#"],a[role="doc-noteref"][href]').forEach(link=>{
+      const label=link.textContent.trim();
+      const href=readerSafeMediaUrl(link.href);
+      if(label&&href&&!refs.some(ref=>ref.label===label&&ref.href===href))refs.push({label,href});
+    });
+    const value=String(text||'');
+    if(!refs.length){target.textContent=value;return;}
+    const escaped=value=>value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const alternatives=refs.flatMap(ref=>{const bare=ref.label.replace(/^[\[［]|[\]］]$/g,'');return /[\[［]/.test(ref.label)?[ref.label,`[${bare}]`,`［${bare}］`]:[`[${bare}]`,`［${bare}］`];}).filter((label,index,all)=>all.indexOf(label)===index).sort((a,b)=>b.length-a.length);
+    // Only replace markers that exist as linked source references. Ordinary
+    // numbers, years, exponents and bracketed prose remain text.
+    const pattern=new RegExp(alternatives.map(escaped).join('|'),'g');
+    const canonical=label=>label.replace(/［/g,'[').replace(/］/g,']');
+    const seen=new Set();let cursor=0;
+    const append=ref=>{const sup=document.createElement('sup');sup.className='raccoon-citation';const a=document.createElement('a');a.href=ref.href;a.textContent=ref.label;a.target='_blank';a.rel='noopener noreferrer';sup.append(a);target.append(sup);seen.add(ref.href);};
+    for(const match of value.matchAll(pattern)){
+      const ref=refs.find(ref=>canonical(ref.label)===canonical(match[0])||canonical(`[${ref.label}]`)===canonical(match[0]));
+      if(!ref)continue;
+      target.append(document.createTextNode(value.slice(cursor,match.index)));
+      cursor=match.index+match[0].length;
+      const punctuation=value.slice(cursor).match(/^[。！？.!?]/)?.[0];
+      if(punctuation){target.append(document.createTextNode(punctuation));cursor+=punctuation.length;}
+      append(ref);
+    }
+    target.append(document.createTextNode(value.slice(cursor)));
+    // If a provider drops a marker, keep its source at paragraph end rather
+    // than silently deleting the reference or inventing sentence alignment.
+    refs.filter(ref=>!seen.has(ref.href)).forEach(append);
+  }
+
+  function setReaderTranslationText(element, text, withCitations=true) {
     if (!element) return;
     const span = document.createElement("span");
     span.className = "reader-translation-text";
-    span.textContent = String(text || "").replace(/(?:\s*(?:\[\d{1,3}\]|［\d{1,3}］|\(\d{1,3}\)|（\d{1,3}）|[¹²³⁴⁵⁶⁷⁸⁹⁰]))+\s*$/u, "").trim();
+    const source=withCitations?element.closest('.reader-paragraph-pair')?.querySelector('.reader-orig-p'):null;
+    appendTranslatedCitations(span,text,source);
     element.replaceChildren(span);
   }
 
@@ -3001,6 +3036,64 @@
     return /(?:^|\s)(?:box-|mbox-)[^\s]*/i.test(className);
   }
 
+  function readerCompositeAncestor(node) {
+    for(let current=node;current;current=current.parentElement)if(readerCompositeNodes.has(current))return current;
+    return null;
+  }
+
+  function discoverReaderComposites(container) {
+    const candidates=new Set();
+    container.querySelectorAll('.chess-pieces').forEach(board=>candidates.add(board.closest('table')||board));
+    container.querySelectorAll('figure,[role="img"],[class*="mockup"],[class*="diagram"],div[style*="position"]').forEach(node=>{
+      const box=node.getBoundingClientRect();
+      if(box.width<60||box.height<40||box.width>1800||box.height>1800||node.textContent.length>1200||node.querySelector('form,iframe,video,article'))return;
+      const parts=[...node.querySelectorAll('img,div,span')];
+      const layers=parts.filter(part=>getComputedStyle(part).position==='absolute');
+      if(layers.length>=2&&node.querySelector('img'))candidates.add(node);
+    });
+    const roots=[...candidates].filter(node=>![...candidates].some(parent=>parent!==node&&parent.contains(node)));
+    roots.forEach(node=>readerCompositeNodes.add(node));
+    return roots;
+  }
+
+  function readerCompositeHtml(source) {
+    if(readerCompositeHtmlCache.has(source))return readerCompositeHtmlCache.get(source);
+    const properties=('display box-sizing position top right bottom left width height min-width max-width min-height max-height margin-top margin-right margin-bottom margin-left padding-top padding-right padding-bottom padding-left border-top border-right border-bottom border-left border-radius border-collapse border-spacing table-layout background-color background-image background-size background-position background-repeat color font-family font-size font-weight font-style line-height letter-spacing text-align vertical-align white-space word-break overflow-wrap object-fit object-position transform transform-origin opacity overflow z-index flex-direction flex-wrap flex-grow flex-shrink flex-basis align-items align-self justify-content gap grid-template-columns grid-template-rows grid-row grid-column').split(' ');
+    const allowed=new Set('DIV SPAN TABLE TBODY THEAD TFOOT TR TD TH CAPTION IMG P FIGURE FIGCAPTION A B STRONG I EM SMALL SUP SUB BR'.split(' '));
+    const cloneNode=node=>{
+      if(node.nodeType===Node.TEXT_NODE)return document.createTextNode(originalTextForNode(node));
+      if(node.nodeType!==Node.ELEMENT_NODE||!allowed.has(node.tagName)||node.matches(TRANSLATION_EXTENSION_SELECTOR))return document.createTextNode('');
+      const css=getComputedStyle(node);
+      if(css.display==='none'||css.visibility==='hidden'||node.hidden)return document.createTextNode('');
+      const copy=document.createElement(node.tagName.toLowerCase());
+      properties.forEach(property=>{
+        let value=css.getPropertyValue(property);
+        if(property==='position'&&value==='fixed')value='absolute';
+        if(property==='background-image'&&/url\(/i.test(value)&&!/^(?:none|(?:url\(["']?(?:https?:|data:image\/)[\s\S]*\)))$/i.test(value))value='none';
+        if(value)copy.style.setProperty(property,value,'important');
+      });
+      copy.style.setProperty('animation','none','important');copy.style.setProperty('transition','none','important');
+      for(const name of ['colspan','rowspan','alt','title'])if(node.hasAttribute(name))copy.setAttribute(name,node.getAttribute(name));
+      if(node.tagName==='IMG'){
+        const src=readerSafeMediaUrl(node.currentSrc||node.src||node.getAttribute('data-src'));
+        if(!src)return document.createTextNode('');
+        copy.src=src;copy.loading='eager';copy.decoding='async';
+      }
+      if(node.tagName==='A'){
+        const href=readerSafeMediaUrl(node.href);if(href){copy.href=href;copy.target='_blank';copy.rel='noopener noreferrer';}
+      }
+      node.childNodes.forEach(child=>copy.append(cloneNode(child)));
+      return copy;
+    };
+    const clone=cloneNode(source);
+    if(!clone.style)return '';
+    const width=Math.max(1,source.offsetWidth||source.getBoundingClientRect().width);
+    const height=Math.max(1,source.offsetHeight||source.getBoundingClientRect().height);
+    for(const [key,value] of Object.entries({position:'relative',float:'none',margin:'0',top:'auto',left:'auto',right:'auto',bottom:'auto',transform:'none'}))clone.style.setProperty(key,value,'important');
+    const html=`<span class="reader-composite" role="group" aria-label="文章图示" data-composite-width="${width}" data-composite-height="${height}"><span class="reader-composite-stage" style="width:${width}px;height:${height}px">${clone.outerHTML}</span></span>`;
+    readerCompositeHtmlCache.set(source,html);return html;
+  }
+
   function collectReaderContentNodes(container) {
     // Aozora interleaves chapter wrappers and bare text/ruby separated by BR.
     // Querying only P elements drops most of the novel.
@@ -3019,6 +3112,7 @@
       };
       walk(container);return blocks;
     }
+    const composites=discoverReaderComposites(container);
     const layoutTables=new WeakMap();
     const isLayoutTable=table=>{
       if(layoutTables.has(table))return layoutTables.get(table);
@@ -3037,7 +3131,7 @@
     const boundary=[...container.children];
     const bookStart=gutenberg&&(container.querySelector('#pg-start-separator')||boundary.find(node=>/^\*{3}\s*START OF/i.test(node.textContent.trim())));
     const bookEnd=gutenberg&&(container.querySelector('#pg-end-separator')||boundary.find(node=>/^\*{3}\s*END OF/i.test(node.textContent.trim())));
-    const raw = Array.from(container.querySelectorAll(selector));
+    const raw = Array.from(new Set([...container.querySelectorAll(selector),...composites]));
     if(isHackerNews)raw.push(...container.querySelectorAll('.commtext,.toptext'));
     const legacyBlocks=[...container.querySelectorAll('font,td')].filter(node=>node.querySelectorAll('br').length>=4&&!node.querySelector('p,div,section,table,pre,li,h1,h2,h3,h4,h5,h6')&&node.textContent.trim().length>180);
     raw.push(...legacyBlocks.filter(node=>!legacyBlocks.some(other=>other!==node&&other.contains(node))));
@@ -3052,6 +3146,8 @@
 
     for (const node of raw) {
       if(node.tagName!=="PRE"&&node.closest("pre"))continue;
+      const composite=readerCompositeAncestor(node);
+      if(composite&&composite!==node)continue;
 
       if(bookStart&&!(bookStart.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING))continue;
       if(bookEnd&&(node===bookEnd||bookEnd.contains(node)||(bookEnd.compareDocumentPosition(node)&Node.DOCUMENT_POSITION_FOLLOWING)))continue;
@@ -3063,6 +3159,7 @@
       let semanticParent=node.parentElement?.closest('figure,table,details');
       while(semanticParent?.tagName==='TABLE'&&isLayoutTable(semanticParent))semanticParent=semanticParent.parentElement?.closest('figure,table,details');
       if(semanticParent&&semanticParent!==node)continue;
+      if(readerCompositeNodes.has(node)){result.push(node);continue;}
       if(node.tagName==='TABLE'&&isLayoutTable(node))continue;
       const ancestor = node.closest("section, div, ul, ol");
       const noiseHint = `${ancestor?.id || ""} ${typeof ancestor?.className === "string" ? ancestor.className : ""}`.trim();
@@ -3160,6 +3257,7 @@
 
   function readerInlineHtml(sourceNode) {
     if (!sourceNode) return "";
+    if(readerCompositeNodes.has(sourceNode))return readerCompositeHtml(sourceNode);
     const holder = document.createElement("div");
     const clone = sourceNode.cloneNode(true);
     holder.appendChild(clone);
@@ -3176,6 +3274,8 @@
       }
     } catch (_) {}
     const sourceElements=[...sourceNode.querySelectorAll('*')],cloneElements=[...clone.querySelectorAll('*')];
+    const preservedComposites=[];
+    sourceElements.forEach((source,index)=>{if(readerCompositeNodes.has(source)){const token=`JJCOMPOSITEPLACEHOLDER${preservedComposites.length}END`;preservedComposites.push(readerCompositeHtml(source));cloneElements[index].replaceWith(document.createTextNode(token));}});
     sourceElements.forEach((source,index)=>{
       const copy=cloneElements[index];if(!copy)return;
       const css=getComputedStyle(source);
@@ -3235,7 +3335,7 @@
         } catch (_) { node.replaceWith(...Array.from(node.childNodes)); }
       }
     });
-    const inner = String(clone.innerHTML || "").trim();
+    const inner = String(clone.innerHTML || "").trim().replace(/JJCOMPOSITEPLACEHOLDER(\d+)END/g,(_,index)=>preservedComposites[Number(index)]||'');
     if (sourceNode.tagName === "A") {
       const sourceHref = sourceNode.getAttribute("href") || "";
       try {
@@ -3285,6 +3385,7 @@
     const entries = [];
     const seen = new Set();
     const add = (image, caption = "") => {
+      if(readerCompositeAncestor(image))return;
       const info = getReaderImageInfo(image);
       if (!info.src || info.isIcon || seen.has(info.src)) return;
       const hint = `${info.src} ${info.alt} ${image.className || ""}`.toLowerCase();
@@ -3556,6 +3657,8 @@
 
     await Promise.all([ensureReaderStylesheet(), warmReaderLazyContent()]);
     readerImageInfoCache = new WeakMap();
+    readerCompositeNodes = new WeakSet();
+    readerCompositeHtmlCache = new WeakMap();
     const bestContainer = findBestReaderContainer();
     const redditThread = /(?:^|\.)reddit\.com$/i.test(location.hostname) && /\/comments\//.test(location.pathname);
     const articleHeading=document.querySelector('#firstHeading') || bestContainer.querySelector('h1') || bestContainer.closest('article')?.querySelector('h1') || document.querySelector('#cb_post_title_url,.entry-title') || document.querySelector('main h1,article h1');
@@ -3743,6 +3846,7 @@
             </div>
             <div class="reader-content" id="reader-content">
               ${contentNodes.map((node, idx) => {
+                if(readerCompositeNodes.has(node))return `<div id="r_${idx}">${readerCompositeHtml(node)}</div>`;
                 if (node.tagName === "IMG") {
                   const mediaIndex = mediaIndexByNode.get(node);
                   const media = mediaEntries[mediaIndex]?.info;
@@ -4048,6 +4152,16 @@
       const section=document.createElement('section');section.className='reader-forum-discussion';section.innerHTML='<h2>讨论</h2>'+redditComments.filter(comment=>!commentSet.has(comment.parentElement?.closest('shreddit-comment,.thing.comment'))).map(renderComment).join('');
       root.querySelector('#reader-content').append(section);
     }
+    const compositeResize=new ResizeObserver(entries=>entries.forEach(({target})=>{
+      const stage=target.querySelector(':scope > .reader-composite-stage');if(!stage)return;
+      const width=Number(target.dataset.compositeWidth),height=Number(target.dataset.compositeHeight);
+      const scale=Math.min(1,target.clientWidth/width);
+      stage.style.setProperty('transform',`scale(${scale})`,'important');
+      target.style.setProperty('height',`${height*scale}px`,'important');
+    }));
+    root.querySelectorAll('.reader-composite').forEach(node=>compositeResize.observe(node));
+    const compositeRemoval=new MutationObserver(()=>{if(!root.isConnected){compositeResize.disconnect();compositeRemoval.disconnect();}});
+    compositeRemoval.observe(document.documentElement,{childList:true});
     initializeReaderCharts(root);
     globalThis.JijianReaderShare?.attach(root, { title, url:location.href });
     isReaderOpen = true;
@@ -4675,7 +4789,7 @@
         sendDictionaryRuntimeMessage({action:"TRANSLATE_SINGLE_BLOCK", text:orig, sl:"auto", tl:currentSettings.targetLang || "zh-CN"}, res => {
           btn.classList.remove("is-loading");
           if (res?.success && res.text) { setReaderTranslationText(transEl, res.text); transEl.dataset.loaded = "true"; }
-          else setReaderTranslationText(transEl, "这一段暂时没有翻译结果。");
+          else setReaderTranslationText(transEl, "这一段暂时没有翻译结果。", false);
         });
       });
     });
@@ -5016,6 +5130,13 @@
     const applyAccent=value=>{root.dataset.readerOutlineAccent=value;const palette={neutral:['#555','#ededed'],blue:['#355b86','#e8eef7'],green:['#3c6654','#e7efea'],purple:['#72577e','#eee7f2']}[value]||['#555','#ededed'];root.style.setProperty('--outline-ink',palette[0]);root.style.setProperty('--outline-fill',palette[1]);};
     accentSelect.value=currentSettings.readerOutlineAccent||'neutral';applyAccent(accentSelect.value);
     accentSelect.addEventListener('change',()=>{currentSettings.readerOutlineAccent=accentSelect.value;applyAccent(accentSelect.value);chrome.runtime.sendMessage({action:'UPDATE_SETTINGS',settings:{readerOutlineAccent:accentSelect.value}});});
+    const linkSection=document.createElement('section');linkSection.className='reader-context-section';linkSection.dataset.readerToolSection='style';
+    linkSection.innerHTML='<label class="reader-context-label">超链接样式<select id="reader-link-style"><option value="underline">下划线</option><option value="blue">蓝色链接</option></select></label>';
+    accentSection.after(linkSection);
+    const linkSelect=linkSection.querySelector('select');
+    const applyLinkStyle=value=>{root.dataset.readerLinkStyle=value==='blue'?'blue':'underline';};
+    linkSelect.value=currentSettings.readerLinkStyle==='blue'?'blue':'underline';applyLinkStyle(linkSelect.value);
+    linkSelect.addEventListener('change',()=>{currentSettings.readerLinkStyle=linkSelect.value;applyLinkStyle(linkSelect.value);chrome.runtime.sendMessage({action:'UPDATE_SETTINGS',settings:{readerLinkStyle:linkSelect.value}}).catch(()=>{});});
     const sourceAnchors=new Map();
     contentNodes.forEach((node,index)=>{const target=root.querySelector(`#${readerHeadingLevel(node)?'head':'r'}_${index}`)||root.querySelector(`#reader_table_${index}`);if(!target)return;
       [node,...node.querySelectorAll('[id],a[name]'),node.closest('.footnote')].filter(Boolean).forEach(source=>{const id=source.id||source.getAttribute('name');if(id&&!sourceAnchors.has(id))sourceAnchors.set(id,target);});
