@@ -88,6 +88,7 @@
     current=index;const step=steps[index];
     document.body.dataset.guideStep=index;document.body.dataset.guideKey=step.key;
     q('#step-title').textContent=step.title;q('#step-description').textContent=step.description;q('#step-description').hidden=!step.description;
+    q('#guide-shortcuts').hidden=step.key!=='reader'&&step.key!=='extras';
     q('#welcome-start').hidden=index!==0;q('#welcome-extras').hidden=index!==7;
     q('#guide-reading-layout').hidden=index<1||index>4;article.hidden=index<1||index>4;
     q('#guide-page-noise').hidden=index!==3;
