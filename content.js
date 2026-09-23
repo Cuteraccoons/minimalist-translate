@@ -1340,7 +1340,7 @@
         const clone = document.createElement("div");
         clone.innerHTML = storedHtml;
         clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.("script,style,noscript,template,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
+      clone.querySelectorAll?.("script,style,noscript,template,.navbar,.navbox-editlinks,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
         return String(clone.textContent || "").replace(/\s+/g, " ").trim();
       }
 
@@ -1351,7 +1351,7 @@
 
       const clone = el.cloneNode(true);
       clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.("script,style,noscript,template,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
+      clone.querySelectorAll?.("script,style,noscript,template,.navbar,.navbox-editlinks,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
       return String(clone.textContent || "").replace(/\s+/g, " ").trim();
     } catch (_) {
       return String(el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
@@ -2720,6 +2720,7 @@
   let readerKeydownHandler = null;
   let readerContainerCache = { url:"", element:null };
   let readerImageInfoCache = new WeakMap();
+  let readerBaikeBlocks = new WeakMap();
   let readerCompositeNodes = new WeakSet();
   let readerCompositeHtmlCache = new WeakMap();
   let readerStylesheetPromise = null;
@@ -2794,6 +2795,13 @@
   }
 
   async function warmReaderLazyContent() {
+    if(location.hostname==='baike.baidu.com'){
+      const start=window.scrollY;
+      const targets=[...document.querySelectorAll('[class^="albumWrap_"],[class^="movieAndTvPosterWrapper_"],[class^="albumItem_"]')];
+      // These pages create IMG only after visibility; warming IMG selectors alone misses them.
+      try{for(const node of targets.slice(0,32)){node.scrollIntoView({block:'center',behavior:'instant'});await new Promise(resolve=>setTimeout(resolve,70));}}
+      finally{window.scrollTo({top:start,behavior:'instant'});}
+    }
     const lazyCandidates = document.querySelectorAll("img[loading='lazy'],img[data-src],img[data-lazy-src],img[data-original],source[data-srcset]");
     if (lazyCandidates.length === 0) return;
     const viewport = Math.max(600, window.innerHeight || 800);
@@ -2859,6 +2867,7 @@
     };
     const host = window.location.hostname.toLowerCase();
     if(/(^|\.)gutenberg\.org$/.test(host))return remember(document.body);
+    if(host==='baike.baidu.com'){const main=document.querySelector('[class^=mainContent_],.main-content');if(main)return remember(main);}
     if(host==='science.nasa.gov'&&document.querySelector('.entry-content'))return remember(document.querySelector('.entry-content'));
     if(host==='arxiv.org'&&document.querySelector('#abs'))return remember(document.querySelector('#abs'));
     if(host==='news.ycombinator.com'&&document.querySelector('#hnmain'))return remember(document.querySelector('#hnmain'));
@@ -3112,7 +3121,16 @@
       };
       walk(container);return blocks;
     }
+    const baike=location.hostname==='baike.baidu.com';
+    const baikeRoots=[];
+    if(baike){
+      for(const [selector,kind] of [['.J-basic-info,.basic-info','facts'],['[class^="worksWrap_"],[class^="albumWrap_"]','gallery'],['[class^="movieItem_"],[class^="albumItem_"]','card']]){
+        container.querySelectorAll(selector).forEach(node=>{if(!baikeRoots.some(parent=>parent.contains(node))){readerBaikeBlocks.set(node,kind);baikeRoots.push(node);}});
+      }
+    }
     const composites=discoverReaderComposites(container);
+    const wikipedia=/(^|\.)wikipedia\.org$/.test(location.hostname);
+    const supplemental=wikipedia?[...container.querySelectorAll('.navbox,.sistersitebox')].filter(node=>!node.parentElement.closest('.navbox,.sistersitebox')):[];
     const layoutTables=new WeakMap();
     const isLayoutTable=table=>{
       if(layoutTables.has(table))return layoutTables.get(table);
@@ -3131,7 +3149,7 @@
     const boundary=[...container.children];
     const bookStart=gutenberg&&(container.querySelector('#pg-start-separator')||boundary.find(node=>/^\*{3}\s*START OF/i.test(node.textContent.trim())));
     const bookEnd=gutenberg&&(container.querySelector('#pg-end-separator')||boundary.find(node=>/^\*{3}\s*END OF/i.test(node.textContent.trim())));
-    const raw = Array.from(new Set([...container.querySelectorAll(selector),...composites]));
+    const raw = Array.from(new Set([...container.querySelectorAll(selector),...composites,...supplemental,...baikeRoots,...(baike?container.querySelectorAll('[class^="para_"],.para'):[])]));
     if(isHackerNews)raw.push(...container.querySelectorAll('.commtext,.toptext'));
     const legacyBlocks=[...container.querySelectorAll('font,td')].filter(node=>node.querySelectorAll('br').length>=4&&!node.querySelector('p,div,section,table,pre,li,h1,h2,h3,h4,h5,h6')&&node.textContent.trim().length>180);
     raw.push(...legacyBlocks.filter(node=>!legacyBlocks.some(other=>other!==node&&other.contains(node))));
@@ -3145,6 +3163,13 @@
     const noiseContainerRe = /(?:^|[-_\s])(related|recommend|recommended|suggest|suggested|more-stories|more-from|next-article|prev-article|newsletter|comments?|responses?|discussion|outbrain|taboola|sidebar|footer|social|share|promo|sponsored|advertisement|ads?|banner|popup|modal|subscribe|signup)(?:$|[-_\s])/i;
 
     for (const node of raw) {
+      if(baike&&node.closest('[class^="catalog_"],[class^="catalogWrapper_"],.lemma-catalog,[class^="lemmaStructured_"],[class^="dynamicWiki_"],[class^="tashuoWrap_"],[class^="personalAuth_"]'))continue;
+      if(baikeRoots.includes(node)){result.push(node);continue;}
+      if(baikeRoots.some(parent=>parent.contains(node)))continue;
+      if(baike&&node.parentElement.closest('[class^="para_"],.para'))continue;
+      if(baike&&node.matches('[class^="para_"],.para')){if(getHostOriginalText(node).trim())result.push(node);continue;}
+      if(supplemental.includes(node)){result.push(node);continue;}
+      if(supplemental.some(parent=>parent.contains(node)))continue;
       if(node.tagName!=="PRE"&&node.closest("pre"))continue;
       const composite=readerCompositeAncestor(node);
       if(composite&&composite!==node)continue;
@@ -3233,13 +3258,14 @@
       // Section names such as "Related work" and "Related projects" are valid
       // article chapters. Only structural noise filtering may discard them.
       // Lists made mostly of links near the tail are usually related stories / navigation rather than article prose.
-      if (!bookPage && accumulatedText > 900 && node.tagName === "LI" && linkDensity > .8) continue;
+      if (!bookPage && !wikipedia && !baike && accumulatedText > 900 && node.tagName === "LI" && linkDensity > .8) continue;
 
       seenText.add(text);
       result.push(node);
       accumulatedText += text.length;
     }
     return result.flatMap(node=>{
+      if(readerBaikeBlocks.has(node)||readerCompositeNodes.has(node)||supplemental.includes(node))return [node];
       if(bookPage&&node.tagName==='PRE'&&!node.querySelector('code')&&node.textContent.length>600){
         return node.textContent.split(/\n\s*\n/).filter(text=>text.trim()).map((text,index)=>{const paragraph=document.createElement('p');paragraph.textContent=text.replace(/\n/g,' ');if(index===0&&node.id)paragraph.id=node.id;return paragraph;});
       }
@@ -3278,6 +3304,7 @@
     sourceElements.forEach((source,index)=>{if(readerCompositeNodes.has(source)){const token=`JJCOMPOSITEPLACEHOLDER${preservedComposites.length}END`;preservedComposites.push(readerCompositeHtml(source));cloneElements[index].replaceWith(document.createTextNode(token));}});
     sourceElements.forEach((source,index)=>{
       const copy=cloneElements[index];if(!copy)return;
+      if(readerBaikeBlocks.has(source)){copy.remove();return;}
       const css=getComputedStyle(source);
       if(source.hidden || source.getAttribute('aria-hidden')==='true' || css.display==='none' || css.visibility==='hidden' || /(?:^|\s)(?:geo-nondefault|geo-multi-punct)(?:\s|$)/.test(source.className||'')){copy.remove();return;}
       if(source.tagName==='IMG'){
@@ -3286,7 +3313,7 @@
       }
     });
     clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.("script,style,noscript,template,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
+      clone.querySelectorAll?.("script,style,noscript,template,.navbar,.navbox-editlinks,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
     // Preserve separators from nested layout wrappers before stripping host
     // markup. Wikipedia facts often place several values in sibling DIV/LI
     // nodes; blindly unwrapping them would concatenate every label.
@@ -3362,7 +3389,7 @@
         cloneWalker.currentNode.nodeValue = originalTextForNode(sourceWalker.currentNode);
       }
       clone.querySelectorAll?.(TRANSLATION_EXTENSION_SELECTOR).forEach(node => node.remove());
-      clone.querySelectorAll?.("script,style,noscript,template,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
+      clone.querySelectorAll?.("script,style,noscript,template,.navbar,.navbox-editlinks,.headerlink,.mw-editsection,.mw-editsection-like,.mw-editsection-visualeditor,.pageno,.pagenum,.pagenumber,.mw-editsection-bracket").forEach(node => node.remove());
       return String(clone.textContent || "").replace(/^\n+|\n+$/g, "");
     } catch (_) { return String(sourceNode.textContent || ""); }
   }
@@ -3572,6 +3599,50 @@
     });
   }
 
+  function readerBaikeBlockHtml(node,index,renderStyle) {
+    const type=readerBaikeBlocks.get(node);
+    if(type==='facts'){
+      const rows=[...node.querySelectorAll('dt')].map((term,row)=>{const value=term.nextElementSibling;if(!value||value.tagName!=='DD')return '';
+        return `<div class="reader-fact-row">${readerTableCellPairHtml(`r_${index}_key_${row}`,escapeHtml(term.textContent.replace(/\s+/g,'')),renderStyle,'reader-fact-key')}${readerTableCellPairHtml(`r_${index}_value_${row}`,readerInlineHtml(value),renderStyle,'reader-fact-value')}</div>`;
+      }).join('');
+      return `<section id="r_${index}" class="reader-table-block reader-infobox reader-infobox-long"><div class="reader-table-heading">基本信息</div><div class="reader-fact-list">${rows}</div></section>`;
+    }
+    if(type?.kind==='videos'){
+      return `<section id="r_${index}" class="reader-baike-videos">${type.covers.map((cover,i)=>{
+        const video=cover.querySelector('video');const title=cover.querySelector('[class^="videoTitle_"]')?.textContent.trim()||'词条视频';
+        const image=cover.querySelector('[class^="coverImg_"] img');const poster=image?readerSafeMediaUrl(getReaderImageInfo(image).src):'';
+        if(video&&(video.currentSrc||video.getAttribute('src'))){const copy=video.cloneNode(true);copy.setAttribute('title',title);if(poster)copy.setAttribute('poster',poster);return readerEmbeddedMediaHtml(copy,`${index}_${i}`);}
+        return `<figure>${poster?`<img src="${escapeHtml(poster)}" alt="" loading="lazy">`:''}<figcaption>${escapeHtml(title)} · <a href="${escapeHtml(location.href)}" target="_blank" rel="noopener noreferrer">在原网页播放</a></figcaption></figure>`;
+      }).join('')}</section>`;
+    }
+    if(type==='gallery'){
+      const cards=node.querySelectorAll('[class^="worksItem_"]');
+      if(cards.length)return `<section id="r_${index}" class="reader-baike-gallery">${[...cards].map(card=>`<figure>${readerInlineHtml(card)}</figure>`).join('')}</section>`;
+      const images=[...node.querySelectorAll('img')].filter(image=>!getReaderImageInfo(image).isIcon);const seen=new Set();
+      return `<section id="r_${index}" class="reader-baike-gallery">${images.map(image=>{const info=getReaderImageInfo(image);if(!info.src||seen.has(info.src))return '';seen.add(info.src);return `<figure><img src="${escapeHtml(info.src)}" alt="${escapeHtml(info.alt)}" loading="lazy"><figcaption>${escapeHtml(image.alt||'')}</figcaption></figure>`;}).join('')}</section>`;
+    }
+    return `<section class="reader-baike-card">${readerPairHtml({id:`r_${index}`,originalHtml:readerInlineHtml(node),renderStyle})}</section>`;
+  }
+
+  function readerSupplementHtml(node,index,renderStyle) {
+    const title=node.querySelector('.navbox-title')?.textContent.replace(/\[?(?:hide|show)\]?/gi,'').trim()||'延伸阅读';
+    const table=node.matches('table')?node:node.querySelector('table');
+    const body=table?readerTableHtml(table,index,[],new WeakMap(),renderStyle):readerPairHtml({id:`r_${index}`,originalHtml:readerInlineHtml(node),renderStyle});
+    return `<details class="reader-supplement" open><summary>${escapeHtml(title)}</summary>${body}</details>`;
+  }
+
+  function readerSemanticCellColor(cell) {
+    const css=getComputedStyle(cell);const match=css.backgroundColor.match(/^rgba?\((\d+)[, ]+(\d+)[, ]+(\d+)(?:[, /]+([\d.]+))?\)$/);
+    if(!match||match[4]!==undefined&&Number(match[4])<.95)return '';
+    const rgb=match.slice(1,4).map(Number);
+    // Preserve chromatic source data (heat maps, categories), not the host theme.
+    if(Math.max(...rgb)-Math.min(...rgb)<22)return '';
+    const linear=rgb.map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4;});
+    const luminance=.2126*linear[0]+.7152*linear[1]+.0722*linear[2];
+    const ink=luminance>.179?'#111':'#fff';
+    return ` data-reader-source-color="true" style="--reader-cell-bg:rgb(${rgb.join(',')});--reader-cell-ink:${ink}"`;
+  }
+
   function readerTableHtml(node, nodeIndex, mediaEntries, mediaIndexByNode, renderStyle) {
     const rows = Array.from(node.rows || []).filter(row => {
       if(row.closest("table")!==node)return false;
@@ -3643,7 +3714,7 @@
         const sourceAlignment = getComputedStyle(cell).textAlign;
         const alignment = ["left", "center", "right", "justify", "start", "end"].includes(sourceAlignment) ? sourceAlignment : "start";
         const sourceHtml = readerInlineHtml(cell) || escapeHtml(String(cell.innerText || "").trim()) || "&nbsp;";
-        return `<${tag} colspan="${colspan}" rowspan="${rowspan}" data-reader-align="${alignment}">${readerTableCellPairHtml(`r_${nodeIndex}_cell_${rowIndex}_${cellIndex}`, sourceHtml, renderStyle, tag === "th" ? "reader-table-header-pair" : "")}</${tag}>`;
+        return `<${tag} colspan="${colspan}" rowspan="${rowspan}" data-reader-align="${alignment}"${readerSemanticCellColor(cell)}>${readerTableCellPairHtml(`r_${nodeIndex}_cell_${rowIndex}_${cellIndex}`, sourceHtml, renderStyle, tag === "th" ? "reader-table-header-pair" : "")}</${tag}>`;
       }).join("");
       return `<tr>${cellHtml}</tr>`;
     }).join("");
@@ -3657,6 +3728,7 @@
 
     await Promise.all([ensureReaderStylesheet(), warmReaderLazyContent()]);
     readerImageInfoCache = new WeakMap();
+    readerBaikeBlocks = new WeakMap();
     readerCompositeNodes = new WeakSet();
     readerCompositeHtmlCache = new WeakMap();
     const bestContainer = findBestReaderContainer();
@@ -3671,6 +3743,13 @@
     if(/(^|\.)sspai\.com$/.test(location.hostname)){
       const cover=document.querySelector('img.article__header__banner__image');
       if(cover&&!contentNodes.some(node=>node===cover||node.contains(cover)))contentNodes.unshift(cover);
+    }
+    if(location.hostname==='baike.baidu.com'){
+      const hero=document.querySelector('[class^="posterBg_"]');
+      const heroUrl=hero&&getComputedStyle(hero).backgroundImage.match(/^url\(["']?(.*?)["']?\)$/)?.[1];
+      if(heroUrl&&readerSafeMediaUrl(heroUrl)){const image=document.createElement('img');image.src=heroUrl;image.alt=title;image.width=1000;image.height=400;contentNodes.unshift(image);}
+      const covers=[...document.querySelectorAll('[class^="videoCover_"]')].filter(node=>!node.closest('.swiper-slide-duplicate'));
+      if(covers.length){const group=document.createElement('div');readerBaikeBlocks.set(group,{kind:'videos',covers});contentNodes.splice(heroUrl?1:0,0,group);}
     }
     contentNodes = contentNodes.filter((node, index) => {
       if (index > 12 || readerHeadingLevel(node) < 1 || readerHeadingLevel(node) > 3) return true;
@@ -3846,6 +3925,8 @@
             </div>
             <div class="reader-content" id="reader-content">
               ${contentNodes.map((node, idx) => {
+                if(readerBaikeBlocks.has(node))return readerBaikeBlockHtml(node,idx,savedRenderStyle);
+                if(/(^|\.)wikipedia\.org$/.test(location.hostname)&&node.matches('.navbox,.sistersitebox'))return readerSupplementHtml(node,idx,savedRenderStyle);
                 if(readerCompositeNodes.has(node))return `<div id="r_${idx}">${readerCompositeHtml(node)}</div>`;
                 if (node.tagName === "IMG") {
                   const mediaIndex = mediaIndexByNode.get(node);
@@ -5123,20 +5204,22 @@
       const image=[...root.querySelectorAll('#reader-content img')].find(img=>img.src===entry.info.src);
       if(image){image.id=`reader_media_${index}`;image.dataset.readerMediaIndex=index;}
     });
-    const accentSection=document.createElement('section');accentSection.className='reader-context-section';accentSection.dataset.readerToolSection='style';
-    accentSection.innerHTML='<label class="reader-context-label">大纲选中色<select id="reader-outline-accent"><option value="neutral">黑白</option><option value="blue">雾蓝</option><option value="green">灰绿</option><option value="purple">淡紫</option></select></label>';
+    const addStyleChoices=(title,id,setting,choices,apply)=>{
+      const section=document.createElement('section');section.className='reader-context-section';section.dataset.readerToolSection='style';
+      const label=document.createElement('div');label.className='reader-context-label';label.id=`${id}-label`;label.textContent=title;
+      const group=document.createElement('div');group.className='reader-style-choices';group.id=id;group.setAttribute('role','group');group.setAttribute('aria-labelledby',label.id);
+      const update=value=>{group.querySelectorAll('button').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.value===value)));apply(value);};
+      choices.forEach(([value,text,color])=>{const button=document.createElement('button');button.type='button';button.dataset.value=value;
+        if(color){const chip=document.createElement('i');chip.style.background=color;chip.setAttribute('aria-hidden','true');button.append(chip);}
+        button.append(document.createTextNode(text));button.addEventListener('click',()=>{currentSettings[setting]=value;update(value);chrome.runtime.sendMessage({action:'UPDATE_SETTINGS',settings:{[setting]:value}}).catch(()=>{});});group.append(button);
+      });
+      section.append(label,group);update(choices.some(([value])=>value===currentSettings[setting])?currentSettings[setting]:choices[0][0]);return section;
+    };
+    const accentSection=addStyleChoices('大纲选中色','reader-outline-accent','readerOutlineAccent',[['neutral','黑白','#555'],['blue','雾蓝','#355b86'],['green','灰绿','#3c6654'],['purple','淡紫','#72577e']],value=>{
+      root.dataset.readerOutlineAccent=value;const palette={neutral:['#555','#ededed'],blue:['#355b86','#e8eef7'],green:['#3c6654','#e7efea'],purple:['#72577e','#eee7f2']}[value];root.style.setProperty('--outline-ink',palette[0]);root.style.setProperty('--outline-fill',palette[1]);
+    });
     root.querySelector('.reader-context-themes').closest('section').after(accentSection);
-    const accentSelect=accentSection.querySelector('select');
-    const applyAccent=value=>{root.dataset.readerOutlineAccent=value;const palette={neutral:['#555','#ededed'],blue:['#355b86','#e8eef7'],green:['#3c6654','#e7efea'],purple:['#72577e','#eee7f2']}[value]||['#555','#ededed'];root.style.setProperty('--outline-ink',palette[0]);root.style.setProperty('--outline-fill',palette[1]);};
-    accentSelect.value=currentSettings.readerOutlineAccent||'neutral';applyAccent(accentSelect.value);
-    accentSelect.addEventListener('change',()=>{currentSettings.readerOutlineAccent=accentSelect.value;applyAccent(accentSelect.value);chrome.runtime.sendMessage({action:'UPDATE_SETTINGS',settings:{readerOutlineAccent:accentSelect.value}});});
-    const linkSection=document.createElement('section');linkSection.className='reader-context-section';linkSection.dataset.readerToolSection='style';
-    linkSection.innerHTML='<label class="reader-context-label">超链接样式<select id="reader-link-style"><option value="underline">下划线</option><option value="blue">蓝色链接</option></select></label>';
-    accentSection.after(linkSection);
-    const linkSelect=linkSection.querySelector('select');
-    const applyLinkStyle=value=>{root.dataset.readerLinkStyle=value==='blue'?'blue':'underline';};
-    linkSelect.value=currentSettings.readerLinkStyle==='blue'?'blue':'underline';applyLinkStyle(linkSelect.value);
-    linkSelect.addEventListener('change',()=>{currentSettings.readerLinkStyle=linkSelect.value;applyLinkStyle(linkSelect.value);chrome.runtime.sendMessage({action:'UPDATE_SETTINGS',settings:{readerLinkStyle:linkSelect.value}}).catch(()=>{});});
+    accentSection.after(addStyleChoices('超链接样式','reader-link-style','readerLinkStyle',[['underline','下划线'],['blue','蓝色链接']],value=>{root.dataset.readerLinkStyle=value;}));
     const sourceAnchors=new Map();
     contentNodes.forEach((node,index)=>{const target=root.querySelector(`#${readerHeadingLevel(node)?'head':'r'}_${index}`)||root.querySelector(`#reader_table_${index}`);if(!target)return;
       [node,...node.querySelectorAll('[id],a[name]'),node.closest('.footnote')].filter(Boolean).forEach(source=>{const id=source.id||source.getAttribute('name');if(id&&!sourceAnchors.has(id))sourceAnchors.set(id,target);});

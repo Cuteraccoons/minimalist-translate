@@ -33,7 +33,7 @@ async page=>{
   await tab.setViewportSize({width:1440,height:1000});
   if(!await tab.locator('[data-reader-tool-tab="style"]').isVisible())await tab.locator('#reader-btn-open-settings').click();
   await tab.locator('[data-reader-tool-tab="style"]').click();
-  await tab.locator('#reader-link-style').selectOption('blue');
+  await tab.locator('#reader-link-style [data-value="blue"]').click();
   result.blue=await tab.locator('#reader-content .reader-orig-p a').last().evaluate(x=>getComputedStyle(x).color);
   await tab.locator('[data-reader-tool-tab="format"]').click();
   await tab.locator('.reader-mode-btn[data-mode="bilingual"]:visible').click();
@@ -41,7 +41,7 @@ async page=>{
   result.citations=await tab.locator('.reader-trans-p').evaluateAll(nodes=>nodes.filter(x=>x.querySelector('.raccoon-citation')).map(x=>({text:x.textContent,refs:[...x.querySelectorAll('sup a')].map(a=>({label:a.textContent,href:a.hash,vertical:getComputedStyle(a.parentElement).verticalAlign}))})));
   if(result.citations[0].refs.length!==2||!result.citations[0].text.includes('2021')||result.citations[0].refs.some(x=>x.vertical!=='super'))throw Error(JSON.stringify(result));
   await tab.locator('[data-reader-tool-tab="style"]').click();
-  await tab.locator('#reader-link-style').selectOption('underline');
+  await tab.locator('#reader-link-style [data-value="underline"]').click();
   result.underline=await tab.locator('#reader-content .reader-orig-p a').last().evaluate(x=>getComputedStyle(x).textDecorationLine);
   if(result.underline!=='underline'||result.blue!=='rgb(23, 105, 194)')throw Error(JSON.stringify(result));
  }finally{await worker.evaluate(()=>{if(self.__readerTestFetch){self.fetch=self.__readerTestFetch;delete self.__readerTestFetch;}});await tab.close();}
