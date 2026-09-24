@@ -1756,7 +1756,7 @@ html:has(#raccoon-reader-root) #raccoon-selection-bubble-root .trigger-translate
 #raccoon-reader-root .reader-copy-grid button{display:flex!important;align-items:center!important;gap:8px!important}
 #raccoon-reader-root .reader-outline-item.level-1:is(.active-heading,.active-ancestor){background:var(--outline-fill,#ededed)!important;color:var(--outline-ink,#555)!important}
 #raccoon-reader-root .reader-outline-item.level-2:is(.active-heading,.active-ancestor){color:var(--outline-ink,#555)!important;background:transparent!important}
-#raccoon-reader-root #reader-outline-accent{display:block!important;width:100%!important;margin-top:10px!important;padding:9px!important;border:1px solid var(--reader-shell-border)!important;border-radius:8px!important;background:var(--reader-card-bg)!important;color:var(--reader-text)!important;font:400 14px var(--reader-ui-font)!important}
+
 #raccoon-reader-root .reader-title{line-height:1.35!important;margin-bottom:30px!important}
 #raccoon-reader-root .reader-content ol{padding-inline-start:2em!important}
 #raccoon-reader-root .reader-content li{padding-inline-start:.35em!important;margin-block:.45em!important}
@@ -1851,8 +1851,8 @@ html:has(#raccoon-reader-root) #raccoon-selection-bubble-root .selection-tool-bt
 #raccoon-reader-root[data-theme="dark"] .reader-context-themes button i{border-color:#fff7!important}
 #raccoon-reader-root[data-theme="dark"] .reader-context-themes button.active i{outline-color:#fff!important}
 #raccoon-reader-root .reader-context-themes button:focus-visible{outline:2px dashed var(--reader-text)!important;outline-offset:1px!important}
-#raccoon-reader-root .reader-style-choices{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin-top:12px!important}
-#raccoon-reader-root .reader-style-choices button{display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:38px!important;padding:8px!important;border:1px solid var(--reader-shell-border)!important;border-radius:9px!important;background:transparent!important;color:var(--reader-text)!important;font:inherit!important;font-size:13px!important;cursor:pointer!important}
+#raccoon-reader-root .reader-style-choices{box-sizing:border-box!important;min-width:0!important;width:100%!important;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin-top:12px!important}
+#raccoon-reader-root .reader-style-choices button{box-sizing:border-box!important;min-width:0!important;width:100%!important;height:auto!important;position:static!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-height:38px!important;padding:8px!important;border:1px solid var(--reader-shell-border)!important;border-radius:9px!important;background:transparent!important;color:var(--reader-text)!important;font:inherit!important;font-size:13px!important;cursor:pointer!important}
 #raccoon-reader-root .reader-style-choices button i{width:10px!important;height:10px!important;border-radius:50%!important;flex:none!important}
 #raccoon-reader-root .reader-style-choices button[aria-pressed="true"]{background:var(--reader-card-bg,#fff)!important;border-color:var(--reader-text)!important;box-shadow:inset 0 0 0 .5px var(--reader-text)!important}
 #raccoon-reader-root .reader-style-choices button:focus-visible{outline:2px solid var(--reader-text)!important;outline-offset:2px!important}
