@@ -41,3 +41,11 @@ python3 tests/reader-live/run-baike-inventory.py --session releasefix --output d
 ## 打包
 
 外层运行 `node scripts/build-local.mjs` 生成本地加载目录，再从生成目录压 ZIP，确保 manifest.json 在 ZIP 根目录。保持 1.0.4 候选；文档与测试不进入扩展包。商店提交与正式 Release 由维护者决定。
+
+## 维基百科调查（2026-09-24）
+
+原生扩展调查 16 页、四种语言。运行 `python3 tests/reader-live/run-wiki-inventory.py --session releasefix --output docs/handoff/wiki-inventory-new.json`，前提同上述已加载源码会话。`wiki-detail-audit.js` 同样是 CLI run-code 函数模板，补查公式、主表、气候表、音频和代码。
+
+本轮只更新调查与计划，没有产品代码变更。标题/目标存在检查不是提取完整性或视觉验收；统计脚本执行成功也不表示所测功能全部通过。数学公式和人口主表问题仍未修复。
+
+本轮追加验证通过：两个 JavaScript 调查模板语法、Python 语法、证据 JSON 解析、交接文档本地链接、发布审计、翻译核心审计及 git diff --check。没有修改产品代码。

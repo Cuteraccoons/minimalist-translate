@@ -1,0 +1,905 @@
+[
+  {
+    "url": "https://en.wikipedia.org/wiki/Pythagorean_theorem",
+    "source": {
+      "codeCounts": {
+        "pre": 0,
+        "highlight": 0
+      },
+      "title": "Pythagorean theorem - Wikipedia",
+      "math": [
+        {
+          "html": "<span class=\"mwe-math-element mwe-math-element-block\" typeof=\"mw:Extension/math\" about=\"#mwt32\" id=\"mwJQ\" data-mw=\"{&quot;name&quot;:&quot;math&quot;,&quot;attrs&quot;:{&quot;display&quot;:&quot;block&quot;},&quot;body&quot;:{&quot;extsrc&quot;:&quot;a^2 + b^2 = c^2 .&quot;}}\"><span class=\"mwe-math-mathml-a11y\" style=\"display: none;\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" class=\"mathjax_ignore\" display=\"block\" alttext=\"{\\displaystyle a^{2}+b^{2}=c^{2}.}\">\n  <semantics>\n    <mrow class=\"MJX-TeXAtom-ORD\">\n      <mstyle displaystyle=\"true\" scriptlevel=\"0\">\n        <msup>\n          <mi>a</mi>\n          <mrow class=\"MJX-TeXAtom-ORD\">\n            <mn>2</mn>\n          </mrow>\n        </msup>\n        <mo>+</mo>\n        <msup>\n          <mi>b</mi>\n          <mrow class=\"MJX-TeXAtom-ORD\">\n            <mn>2</mn>\n          </mrow>\n        </msup>\n        <mo>=</mo>\n        <msup>\n          <mi>c</mi>\n          <mrow class=\"MJX-TeXAtom-ORD\">\n            <mn>2</mn>\n          </mrow>\n        </msup>\n        <mo>.</mo>\n      </mstyle>\n    </mrow>\n    <annotation encoding=\"application/x-tex\">{\\displaystyle a^{2}+b^{2}=c^{2}.}</annotation>\n  </semantics>\n</math></span><img src=\"https://wikimedia.org/api/rest_v1/media/math/render/svg/90b56b985c78deb115014efe90ce634d73dd51fa\" class=\"mwe-ma",
+          "text": "a\n          \n            2\n          \n        \n        +\n        \n          b\n          \n            2\n          \n        \n        =\n        \n          c\n          \n            2\n          \n        \n        .\n      \n    \n    {\\displaystyle a^{2}+b^{2}=c^{2}.}",
+          "math": 1,
+          "svg": 0,
+          "img": 1,
+          "display": "inline"
+        },
+        {
+          "html": "<span class=\"mwe-math-element mwe-math-element-inline\" typeof=\"mw:Extension/math\" about=\"#mwt131\" id=\"mw-Q\" data-mw=\"{&quot;name&quot;:&quot;math&quot;,&quot;attrs&quot;:{},&quot;body&quot;:{&quot;extsrc&quot;:&quot;a + b&quot;}}\"><span class=\"mwe-math-mathml-a11y\" style=\"display: none;\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" class=\"mathjax_ignore\" alttext=\"{\\displaystyle a+b}\">\n  <semantics>\n    <mrow class=\"MJX-TeXAtom-ORD\">\n      <mstyle displaystyle=\"true\" scriptlevel=\"0\">\n        <mi>a</mi>\n        <mo>+</mo>\n        <mi>b</mi>\n      </mstyle>\n    </mrow>\n    <annotation encoding=\"application/x-tex\">{\\displaystyle a+b}</annotation>\n  </semantics>\n</math></span><img src=\"https://wikimedia.org/api/rest_v1/media/math/render/svg/a2391acf09244b9dba74eb940e871a6be7e7973a\" class=\"mwe-math-fallback-image-inline mw-invert skin-invert\" aria-hidden=\"true\" style=\"vertical-align: -0.505ex; width:5.068ex; height:2.343ex;\" alt=\"{\\displaystyle a+b}\"></span>",
+          "text": "a\n        +\n        b\n      \n    \n    {\\displaystyle a+b}",
+          "math": 1,
+          "svg": 0,
+          "img": 1,
+          "display": "inline"
+        },
+        {
+          "html": "<span class=\"mwe-math-element mwe-math-element-block\" typeof=\"mw:Extension/math\" about=\"#mwt150\" id=\"mwATI\" data-mw=\"{&quot;name&quot;:&quot;math&quot;,&quot;attrs&quot;:{&quot;display&quot;:&quot;block&quot;},&quot;body&quot;:{&quot;extsrc&quot;:&quot;(b+a)^2 = c^2 + 4\\\\frac{ab}{2} = c^2+2ab,&quot;}}\"><span class=\"mwe-math-mathml-a11y\" style=\"display: none;\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" class=\"mathjax_ignore\" display=\"block\" alttext=\"{\\displaystyle (b+a)^{2}=c^{2}+4{\\frac {ab}{2}}=c^{2}+2ab,}\">\n  <semantics>\n    <mrow class=\"MJX-TeXAtom-ORD\">\n      <mstyle displaystyle=\"true\" scriptlevel=\"0\">\n        <mo stretchy=\"false\">(</mo>\n        <mi>b</mi>\n        <mo>+</mo>\n        <mi>a</mi>\n        <msup>\n          <mo stretchy=\"false\">)</mo>\n          <mrow class=\"MJX-TeXAtom-ORD\">\n            <mn>2</mn>\n          </mrow>\n        </msup>\n        <mo>=</mo>\n        <msup>\n          <mi>c</mi>\n          <mrow class=\"MJX-TeXAtom-ORD\">\n            <mn>2</mn>\n          </mrow>\n        </msup>\n        <mo>+</mo>\n        <mn>4</mn>\n        <mrow class=\"MJX-TeXAtom-ORD\">\n          <mfrac>\n            <mrow>\n              <mi>a</mi>\n              <mi>b</mi>\n            </mrow>\n            <mn>2</mn>\n          </mfrac>\n        </mrow>\n        <mo>=</mo>\n        <msup>\n      ",
+          "text": "(\n        b\n        +\n        a\n        \n          )\n          \n            2\n          \n        \n        =\n        \n          c\n          \n            2\n          \n        \n        +\n        4\n        \n          \n            \n              a\n              b\n            \n            2\n          \n        \n        =\n        \n          c\n          \n            2\n          \n        \n        +\n        2\n        a\n        b\n        ,\n      \n    \n    {\\displaystyle (b+a)^{2}=c^{2}+4{\\frac {ab}{2}}=c^{2}+2ab,}",
+          "math": 1,
+          "svg": 0,
+          "img": 1,
+          "display": "inline"
+        }
+      ],
+      "tables": [],
+      "audio": [],
+      "score": []
+    },
+    "reader": {
+      "codeBlocks": 0,
+      "mathTags": 0,
+      "svgTags": 0,
+      "mathSnippets": [
+        {
+          "found": false,
+          "outputExcerpt": null
+        },
+        {
+          "found": false,
+          "outputExcerpt": null
+        },
+        {
+          "found": false,
+          "outputExcerpt": null
+        }
+      ],
+      "tables": [],
+      "audio": 0,
+      "video": 0,
+      "mediaLinks": 0
+    }
+  },
+  {
+    "url": "https://en.wikipedia.org/wiki/List_of_countries_and_dependencies_by_population",
+    "source": {
+      "codeCounts": {
+        "pre": 0,
+        "highlight": 0
+      },
+      "title": "List of countries and dependencies by population - Wikipedia",
+      "math": [],
+      "tables": [
+        {
+          "id": "mwQg",
+          "cls": "wikitable sortable mw-datatable sort-under static-row-numbers sticky-header col1left col5left",
+          "rows": 242,
+          "chars": 16053,
+          "caption": "List of countries and territories by total population",
+          "samples": [
+            [
+              "World",
+              "8,232,000,000"
+            ],
+            [
+              "Norway",
+              "5,636,904"
+            ],
+            [
+              "Pitcairn Islands (UK)",
+              "35"
+            ]
+          ]
+        }
+      ],
+      "audio": [],
+      "score": []
+    },
+    "reader": {
+      "codeBlocks": 0,
+      "mathTags": 0,
+      "svgTags": 0,
+      "mathSnippets": [],
+      "tables": [
+        {
+          "id": "mwQg",
+          "rows": 242,
+          "sampleFound": [
+            [
+              {
+                "text": "World",
+                "found": true
+              },
+              {
+                "text": "8,232,000,000",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Norway",
+                "found": false
+              },
+              {
+                "text": "5,636,904",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Pitcairn Islands (UK)",
+                "found": false
+              },
+              {
+                "text": "35",
+                "found": true
+              }
+            ]
+          ]
+        }
+      ],
+      "audio": 0,
+      "video": 0,
+      "mediaLinks": 0
+    }
+  },
+  {
+    "url": "https://en.wikipedia.org/wiki/Climate_of_London",
+    "source": {
+      "codeCounts": {
+        "pre": 0,
+        "highlight": 0
+      },
+      "title": "Climate of London - Wikipedia",
+      "math": [],
+      "tables": [
+        {
+          "id": "mwaw",
+          "cls": "wikitable",
+          "rows": 7,
+          "chars": 394,
+          "caption": "London Climate according to major climate systems",
+          "samples": [
+            [
+              "Köppen system[16][17]",
+              "Cfb"
+            ],
+            [
+              "Alisov system[20]",
+              "— N/a"
+            ],
+            [
+              "Neef system[23][24]",
+              "— N/a"
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "cls": "wikitable mw-collapsible",
+          "rows": 6,
+          "chars": 528,
+          "samples": [
+            [
+              "Mean daily maximum °C (°F)",
+              "8.5 (47.3)"
+            ],
+            [
+              "Mean daily minimum °C (°F)",
+              "5.0 (41.0)"
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "cls": "wikitable mw-collapsible mw-collapsed",
+          "rows": 5,
+          "chars": 127,
+          "samples": [
+            [
+              "Record high °C (°F)",
+              "16.3(61.3)"
+            ],
+            [
+              "Record low °C (°F)",
+              "−9.4(15.1)"
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "cls": "wikitable mw-collapsible mw-collapsed",
+          "rows": 12,
+          "chars": 142,
+          "samples": [
+            [
+              "Record high °C (°F)",
+              "16.5(61.7)"
+            ],
+            [
+              "Mean daily minimum °C (°F)",
+              "2.0(35.6)"
+            ],
+            [
+              "Mean monthly sunshine hours",
+              "60.2"
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "cls": "wikitable mw-collapsible mw-collapsed",
+          "rows": 12,
+          "chars": 140,
+          "samples": [
+            [
+              "Record high °C (°F)",
+              "15.7(60.3)"
+            ],
+            [
+              "Mean daily minimum °C (°F)",
+              "2.3(36.1)"
+            ],
+            [
+              "Mean monthly sunshine hours",
+              "60.0"
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "cls": "wikitable mw-collapsible mw-collapsed",
+          "rows": 11,
+          "chars": 145,
+          "samples": [
+            [
+              "Record high °C (°F)",
+              "16.2(61.2)"
+            ],
+            [
+              "Mean daily minimum °C (°F)",
+              "2.0(35.6)"
+            ],
+            [
+              "Average precipitation days (≥ 1.0 mm)",
+              "11.6"
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "cls": "wikitable mw-collapsible mw-collapsed",
+          "rows": 12,
+          "chars": 100,
+          "samples": [
+            [
+              "Record high °C (°F)",
+              "16.8(62.2)"
+            ],
+            [
+              "Mean daily minimum °C (°F)",
+              "3.4(38.1)"
+            ],
+            [
+              "Mean monthly sunshine hours",
+              "44.4"
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "cls": "wikitable mw-collapsible mw-collapsed",
+          "rows": 6,
+          "chars": 43,
+          "samples": [
+            [
+              "Daily mean °C (°F)",
+              "3.5(38.3)"
+            ],
+            [
+              "Average precipitation mm (inches)",
+              "78(3.1)"
+            ],
+            [
+              "Mean monthly sunshine hours",
+              "52.4"
+            ]
+          ]
+        },
+        {
+          "id": "mw_g",
+          "cls": "wikitable",
+          "rows": 2,
+          "chars": 102,
+          "caption": "Ultraviolet index[45]",
+          "samples": [
+            [
+              "1",
+              "1"
+            ]
+          ]
+        }
+      ],
+      "audio": [],
+      "score": []
+    },
+    "reader": {
+      "codeBlocks": 0,
+      "mathTags": 0,
+      "svgTags": 0,
+      "mathSnippets": [],
+      "tables": [
+        {
+          "id": "mwaw",
+          "rows": 7,
+          "sampleFound": [
+            [
+              {
+                "text": "Köppen system[16][17]",
+                "found": true
+              },
+              {
+                "text": "Cfb",
+                "found": true
+              }
+            ],
+            [
+              {
+                "text": "Alisov system[20]",
+                "found": true
+              },
+              {
+                "text": "— N/a",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Neef system[23][24]",
+                "found": true
+              },
+              {
+                "text": "— N/a",
+                "found": false
+              }
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "rows": 6,
+          "sampleFound": [
+            [
+              {
+                "text": "Mean daily maximum °C (°F)",
+                "found": true
+              },
+              {
+                "text": "8.5 (47.3)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Mean daily minimum °C (°F)",
+                "found": true
+              },
+              {
+                "text": "5.0 (41.0)",
+                "found": false
+              }
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "rows": 5,
+          "sampleFound": [
+            [
+              {
+                "text": "Record high °C (°F)",
+                "found": false
+              },
+              {
+                "text": "16.3(61.3)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Record low °C (°F)",
+                "found": false
+              },
+              {
+                "text": "−9.4(15.1)",
+                "found": false
+              }
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "rows": 12,
+          "sampleFound": [
+            [
+              {
+                "text": "Record high °C (°F)",
+                "found": false
+              },
+              {
+                "text": "16.5(61.7)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Mean daily minimum °C (°F)",
+                "found": true
+              },
+              {
+                "text": "2.0(35.6)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Mean monthly sunshine hours",
+                "found": false
+              },
+              {
+                "text": "60.2",
+                "found": false
+              }
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "rows": 12,
+          "sampleFound": [
+            [
+              {
+                "text": "Record high °C (°F)",
+                "found": false
+              },
+              {
+                "text": "15.7(60.3)",
+                "found": true
+              }
+            ],
+            [
+              {
+                "text": "Mean daily minimum °C (°F)",
+                "found": true
+              },
+              {
+                "text": "2.3(36.1)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Mean monthly sunshine hours",
+                "found": false
+              },
+              {
+                "text": "60.0",
+                "found": false
+              }
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "rows": 11,
+          "sampleFound": [
+            [
+              {
+                "text": "Record high °C (°F)",
+                "found": false
+              },
+              {
+                "text": "16.2(61.2)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Mean daily minimum °C (°F)",
+                "found": true
+              },
+              {
+                "text": "2.0(35.6)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Average precipitation days (≥ 1.0 mm)",
+                "found": false
+              },
+              {
+                "text": "11.6",
+                "found": false
+              }
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "rows": 12,
+          "sampleFound": [
+            [
+              {
+                "text": "Record high °C (°F)",
+                "found": false
+              },
+              {
+                "text": "16.8(62.2)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Mean daily minimum °C (°F)",
+                "found": true
+              },
+              {
+                "text": "3.4(38.1)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Mean monthly sunshine hours",
+                "found": false
+              },
+              {
+                "text": "44.4",
+                "found": false
+              }
+            ]
+          ]
+        },
+        {
+          "id": "",
+          "rows": 6,
+          "sampleFound": [
+            [
+              {
+                "text": "Daily mean °C (°F)",
+                "found": false
+              },
+              {
+                "text": "3.5(38.3)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Average precipitation mm (inches)",
+                "found": false
+              },
+              {
+                "text": "78(3.1)",
+                "found": false
+              }
+            ],
+            [
+              {
+                "text": "Mean monthly sunshine hours",
+                "found": false
+              },
+              {
+                "text": "52.4",
+                "found": false
+              }
+            ]
+          ]
+        },
+        {
+          "id": "mw_g",
+          "rows": 2,
+          "sampleFound": [
+            [
+              {
+                "text": "1",
+                "found": true
+              },
+              {
+                "text": "1",
+                "found": true
+              }
+            ]
+          ]
+        }
+      ],
+      "audio": 0,
+      "video": 0,
+      "mediaLinks": 0
+    }
+  },
+  {
+    "url": "https://en.wikipedia.org/wiki/Symphony_No._5_(Beethoven)",
+    "source": {
+      "codeCounts": {
+        "pre": 0,
+        "highlight": 0
+      },
+      "title": "Symphony No. 5 (Beethoven) - Wikipedia",
+      "math": [],
+      "tables": [],
+      "audio": [
+        {
+          "src": "https://upload.wikimedia.org/wikipedia/commons/e/ee/Beet5mov1bars1to5.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/e/ee/Beet5mov1bars1to5.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/e/ee/Beet5mov1bars1to5.ogg/Beet5mov1bars1to5.ogg.mp3"
+          ],
+          "parent": "SPAN",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_1._Allegro_con_brio.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/5/5b/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_1._Allegro_con_brio.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/5/5b/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_1._Allegro_con_brio.ogg/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_1._Allegro_con_brio.ogg.mp3"
+          ],
+          "parent": "SPAN",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/wikipedia/commons/6/6b/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_2._Andante_con_moto.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/6/6b/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_2._Andante_con_moto.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/6/6b/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_2._Andante_con_moto.ogg/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_2._Andante_con_moto.ogg.mp3"
+          ],
+          "parent": "SPAN",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/score/h/c/hcxquzvvb6259bher2j9ilr4uuj9yxk/hcxquzvv.mp3",
+          "sources": [
+            "https://upload.wikimedia.org/score/h/c/hcxquzvvb6259bher2j9ilr4uuj9yxk/hcxquzvv.mp3"
+          ],
+          "parent": "DIV",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/score/i/v/ivklnd1ibgcn9syk3z3k86a5bzvqdun/ivklnd1i.mp3",
+          "sources": [
+            "https://upload.wikimedia.org/score/i/v/ivklnd1ibgcn9syk3z3k86a5bzvqdun/ivklnd1i.mp3"
+          ],
+          "parent": "DIV",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/wikipedia/commons/3/30/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_3._Allegro.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/3/30/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_3._Allegro.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/3/30/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_3._Allegro.ogg/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_3._Allegro.ogg.mp3"
+          ],
+          "parent": "SPAN",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/wikipedia/commons/6/6e/Beet5mov3bars1to4.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/6/6e/Beet5mov3bars1to4.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/6/6e/Beet5mov3bars1to4.ogg/Beet5mov3bars1to4.ogg.mp3"
+          ],
+          "parent": "SPAN",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/wikipedia/commons/3/3b/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_4._Allegro.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/3/3b/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_4._Allegro.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/3/3b/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_4._Allegro.ogg/Ludwig_van_Beethoven_-_Symphonie_5_c-moll_-_4._Allegro.ogg.mp3"
+          ],
+          "parent": "SPAN",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/wikipedia/commons/8/83/Mozart40bars1to3.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/8/83/Mozart40bars1to3.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/8/83/Mozart40bars1to3.ogg/Mozart40bars1to3.ogg.mp3"
+          ],
+          "parent": "SPAN",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/score/6/1/61juxcrcu8xta98iapk8tahs5amhbhl/61juxcrc.mp3",
+          "sources": [
+            "https://upload.wikimedia.org/score/6/1/61juxcrcu8xta98iapk8tahs5amhbhl/61juxcrc.mp3"
+          ],
+          "parent": "DIV",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/score/9/2/92jvn7b5x0u8c8yl82u2q8o1tpwxb6b/92jvn7b5.mp3",
+          "sources": [
+            "https://upload.wikimedia.org/score/9/2/92jvn7b5x0u8c8yl82u2q8o1tpwxb6b/92jvn7b5.mp3"
+          ],
+          "parent": "DIV",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/score/8/h/8hbpv38xcivz2bkuhql89x2jv1gm82v/8hbpv38x.mp3",
+          "sources": [
+            "https://upload.wikimedia.org/score/8/h/8hbpv38xcivz2bkuhql89x2jv1gm82v/8hbpv38x.mp3"
+          ],
+          "parent": "DIV",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/score/3/z/3ze3vlfr2vmp65p43d7930m9rtz6t3h/3ze3vlfr.mp3",
+          "sources": [
+            "https://upload.wikimedia.org/score/3/z/3ze3vlfr2vmp65p43d7930m9rtz6t3h/3ze3vlfr.mp3"
+          ],
+          "parent": "DIV",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        },
+        {
+          "src": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Beethoven_Symphony_No._5_Movement_2%2C_La_Folia_Variation_%28measures_166_-_183%29.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+          "sources": [
+            "https://upload.wikimedia.org/wikipedia/commons/f/fe/Beethoven_Symphony_No._5_Movement_2%2C_La_Folia_Variation_%28measures_166_-_183%29.ogg?utm_source=en.wikipedia.org&utm_campaign=index&utm_content=original",
+            "https://upload.wikimedia.org/wikipedia/commons/transcoded/f/fe/Beethoven_Symphony_No._5_Movement_2%2C_La_Folia_Variation_%28measures_166_-_183%29.ogg/Beethoven_Symphony_No._5_Movement_2%2C_La_Folia_Variation_%28measures_166_-_183%29.ogg.mp3"
+          ],
+          "parent": "SPAN",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": true
+        },
+        {
+          "src": "https://upload.wikimedia.org/score/d/2/d27s48k42oijmdum0mjnatfovgm29kw/d27s48k4.mp3",
+          "sources": [
+            "https://upload.wikimedia.org/score/d/2/d27s48k42oijmdum0mjnatfovgm29kw/d27s48k4.mp3"
+          ],
+          "parent": "DIV",
+          "parentClass": "",
+          "inTable": false,
+          "inFigure": false
+        }
+      ],
+      "score": [
+        {
+          "imgs": 1,
+          "audios": 0,
+          "svgs": 0
+        },
+        {
+          "imgs": 1,
+          "audios": 1,
+          "svgs": 0
+        },
+        {
+          "imgs": 1,
+          "audios": 1,
+          "svgs": 0
+        }
+      ]
+    },
+    "reader": {
+      "codeBlocks": 0,
+      "mathTags": 0,
+      "svgTags": 0,
+      "mathSnippets": [],
+      "tables": [],
+      "audio": 7,
+      "video": 0,
+      "mediaLinks": 10
+    }
+  },
+  {
+    "url": "https://en.wikipedia.org/wiki/Python_(programming_language)",
+    "source": {
+      "codeCounts": {
+        "pre": 4,
+        "highlight": 62
+      },
+      "title": "Python (programming language) - Wikipedia",
+      "math": [],
+      "tables": [
+        {
+          "id": "mwBCg",
+          "cls": "wikitable",
+          "rows": 17,
+          "chars": 2940,
+          "caption": "Summary of Python 3's built-in types",
+          "samples": [
+            [
+              "bool",
+              "immutable"
+            ],
+            [
+              "frozenset",
+              "immutable"
+            ],
+            [
+              "tuple",
+              "immutable"
+            ]
+          ]
+        }
+      ],
+      "audio": [],
+      "score": []
+    },
+    "reader": {
+      "codeBlocks": 3,
+      "mathTags": 0,
+      "svgTags": 0,
+      "mathSnippets": [],
+      "tables": [
+        {
+          "id": "mwBCg",
+          "rows": 17,
+          "sampleFound": [
+            [
+              {
+                "text": "bool",
+                "found": true
+              },
+              {
+                "text": "immutable",
+                "found": true
+              }
+            ],
+            [
+              {
+                "text": "frozenset",
+                "found": true
+              },
+              {
+                "text": "immutable",
+                "found": true
+              }
+            ],
+            [
+              {
+                "text": "tuple",
+                "found": true
+              },
+              {
+                "text": "immutable",
+                "found": true
+              }
+            ]
+          ]
+        }
+      ],
+      "audio": 0,
+      "video": 0,
+      "mediaLinks": 0
+    }
+  }
+]
